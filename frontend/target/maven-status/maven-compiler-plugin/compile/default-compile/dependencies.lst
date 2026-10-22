@@ -1,0 +1,13 @@
+classpath:/home/runner/.m2/repository/org/openjfx/javafx-controls/17.0.10/javafx-controls-17.0.10.jar	306:1705429649000
+classpath:/home/runner/.m2/repository/org/openjfx/javafx-controls/17.0.10/javafx-controls-17.0.10-linux.jar	2551627:1705429651000
+classpath:/home/runner/.m2/repository/org/openjfx/javafx-graphics/17.0.10/javafx-graphics-17.0.10.jar	306:1705429680000
+classpath:/home/runner/.m2/repository/org/openjfx/javafx-graphics/17.0.10/javafx-graphics-17.0.10-linux.jar	4778935:1705429682000
+classpath:/home/runner/.m2/repository/org/openjfx/javafx-base/17.0.10/javafx-base-17.0.10.jar	302:1705429641000
+classpath:/home/runner/.m2/repository/org/openjfx/javafx-base/17.0.10/javafx-base-17.0.10-linux.jar	746013:1705429642000
+classpath:/home/runner/.m2/repository/org/openjfx/javafx-fxml/17.0.10/javafx-fxml-17.0.10.jar	302:1705429666000
+classpath:/home/runner/.m2/repository/org/openjfx/javafx-fxml/17.0.10/javafx-fxml-17.0.10-linux.jar	130063:1705429676000
+classpath:/home/runner/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.17.0/jackson-databind-2.17.0.jar	1649184:1710280412000
+classpath:/home/runner/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.17.0/jackson-annotations-2.17.0.jar	78488:1710278529000
+classpath:/home/runner/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.17.0/jackson-core-2.17.0.jar	581556:1710279505000
+classpath:/home/runner/.m2/repository/net/bytebuddy/byte-buddy/1.14.9/byte-buddy-1.14.9.jar	4210756:1696849647000
+classpath:/home/runner/.m2/repository/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.17.0/jackson-datatype-jsr310-2.17.0.jar	132320:1710282813000
