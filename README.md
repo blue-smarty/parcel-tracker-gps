@@ -5,10 +5,20 @@ Real-time GPS parcel tracking: Spring Boot + MongoDB backend and a JavaFX deskto
 ## Run
 Requires JDK 17+, Maven and a MongoDB instance (default `mongodb://localhost:27017/parceltracker`, see `backend/src/main/resources/application.properties`).
 
+Start the backend and frontend in separate terminals, each opened at the repository root. Keep the backend running while using the frontend.
+
+Terminal 1:
 ```
-cd backend && mvn spring-boot:run
-cd frontend && mvn javafx:run      # -Dapi.url / -Dws.url to override server addresses
+cd backend
+mvn spring-boot:run
 ```
+
+Terminal 2:
+```
+cd frontend
+mvn javafx:run
+```
+Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` with `mvn javafx:run` to override the frontend's default server addresses (`http://localhost:8080` and `ws://localhost:8080`).
 
 ## REST API
 | Method | Path | Description |
