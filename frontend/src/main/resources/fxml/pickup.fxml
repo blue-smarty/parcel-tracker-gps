@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns:fx="http://javafx.com/fxml" spacing="4" prefWidth="460" fx:controller="com.parceltracker.controller.PickupController">
+    <padding><Insets top="16" right="16" bottom="16" left="16"/></padding>
+    <Label text="Schedule Pickup" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+    <Label text="Contact name"/>
+    <TextField fx:id="contactNameField" maxWidth="Infinity"/>
+    <Label fx:id="contactNameError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="Phone"/>
+    <TextField fx:id="contactPhoneField" maxWidth="Infinity"/>
+    <Label fx:id="contactPhoneError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="Street"/>
+    <TextField fx:id="streetField" maxWidth="Infinity"/>
+    <Label fx:id="streetError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="City"/>
+    <TextField fx:id="cityField" maxWidth="Infinity"/>
+    <Label fx:id="cityError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="Postal code"/>
+    <TextField fx:id="postalCodeField" maxWidth="Infinity"/>
+    <Label fx:id="postalCodeError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="Parcel description"/>
+    <TextField fx:id="parcelDescriptionField" maxWidth="Infinity"/>
+    <Label fx:id="parcelDescriptionError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="Weight (kg)"/>
+    <TextField fx:id="weightKgField" maxWidth="Infinity"/>
+    <Label fx:id="weightKgError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="Dimensions (optional, e.g. 30x20x10 cm)"/>
+    <TextField fx:id="dimensionsField" maxWidth="Infinity"/>
+    <Label fx:id="dimensionsError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="Pickup date"/>
+    <DatePicker fx:id="pickupDateField" maxWidth="Infinity"/>
+    <Label fx:id="pickupDateError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="Time window"/>
+    <ComboBox fx:id="timeWindowField" maxWidth="Infinity"/>
+    <Label fx:id="timeWindowError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <Label text="Notes (optional)"/>
+    <TextArea fx:id="notesField" prefRowCount="3" maxWidth="Infinity"/>
+    <Label fx:id="notesError" style="-fx-text-fill: #c62828;" managed="false" visible="false"/>
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <padding><Insets top="12"/></padding>
+        <Button fx:id="submitButton" text="Submit" defaultButton="true" disable="true"/>
+        <Button fx:id="resetButton" text="Reset"/>
+        <Button fx:id="cancelButton" text="Cancel" cancelButton="true"/>
+        <ProgressIndicator fx:id="progress" prefWidth="24" prefHeight="24" visible="false" managed="false"/>
+    </HBox>
+    <Label fx:id="statusLabel" wrapText="true"/>
+</VBox>

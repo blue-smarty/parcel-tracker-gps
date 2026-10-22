@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
+import com.parceltracker.model.Pickup;
+import com.parceltracker.model.PickupRequest;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -43,6 +45,10 @@ public class ApiService {
         return MAPPER.readValue(send(post("/api/parcels", parcel)), Parcel.class);
     }
 
+    public Pickup createPickup(PickupRequest request) throws IOException, InterruptedException {
+        return MAPPER.readValue(send(post("/api/pickups", request)), Pickup.class);
+    }
+
     public Parcel updateLocation(String id, Location location) throws IOException, InterruptedException {
         return MAPPER.readValue(send(post("/api/parcels/" + id + "/location", location)), Parcel.class);
     }
@@ -61,7 +67,7 @@ public class ApiService {
     private String send(HttpRequest request) throws IOException, InterruptedException {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() / 100 != 2) {
-            throw new IOException("HTTP " + response.statusCode() + ": " + response.body());
+            throw new ApiException(response.statusCode(), response.body());
         }
         return response.body();
     }
