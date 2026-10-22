@@ -9,9 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 
 public class MainController {
     @FXML private StackPane listContainer;
@@ -20,6 +24,8 @@ public class MainController {
     @FXML private Label detailsLabel;
     @FXML private Label connectionLabel;
     @FXML private Button refreshButton;
+    @FXML private Button pickupButton;
+    private Stage pickupStage;
 
     private ApiService api;
     private MapController mapController;
@@ -36,12 +42,32 @@ public class MainController {
         mapContainer.getChildren().add(mapController.getView());
         historyContainer.getChildren().add(historyPanel);
         refreshButton.setOnAction(e -> reload());
+        pickupButton.setOnAction(e -> openPickupForm());
         reload();
         mapController.start();
     }
 
     public void shutdown() {
         if (mapController != null) mapController.stop();
+    }
+
+    private void openPickupForm() {
+        if (pickupStage != null && pickupStage.isShowing()) {
+            pickupStage.toFront();
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/pickup.fxml"));
+            Parent root = loader.load();
+            pickupStage = new Stage();
+            PickupController controller = loader.getController();
+            controller.init(api, pickupStage::close);
+            pickupStage.setTitle("Schedule Pickup");
+            pickupStage.setScene(new Scene(root));
+            pickupStage.show();
+        } catch (java.io.IOException e) {
+            detailsLabel.setText("Cannot open pickup form: " + e.getMessage());
+        }
     }
 
     private void reload() {

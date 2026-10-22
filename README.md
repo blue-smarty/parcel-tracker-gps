@@ -16,8 +16,9 @@ mvn spring-boot:run
 Terminal 2:
 ```
 cd frontend
-mvn javafx:run
+mvn clean javafx:run
 ```
+(or from the repository root: `mvn -f frontend/pom.xml clean javafx:run`). MongoDB must be running on `localhost:27017` before starting the backend.
 Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` with `mvn javafx:run` to override the frontend's default server addresses (`http://localhost:8080` and `ws://localhost:8080`).
 
 ## REST API
@@ -30,8 +31,13 @@ Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` with `mvn javafx:run` 
 | DELETE | `/api/parcels/{id}` | Delete parcel |
 | POST | `/api/parcels/{id}/location` | Add GPS fix `{latitude, longitude, timestamp?}` |
 | GET | `/api/parcels/{id}/history` | Location history |
+| POST | `/api/pickups` | Request a pickup (201 with the created pickup, status `REQUESTED`; 400 with `{error, errors: {field: message}}` on validation failure) |
+| GET | `/api/pickups/{id}` | Pickup details |
 
 WebSocket `/ws/tracking/{parcelId}` pushes `{parcelId, trackingNumber, status, location}` on each update; use `all` as id to receive every parcel.
 
 ## Frontend
 Parcel table with search, map with markers and route of the selected parcel, details and history panels, live updates with automatic reconnect.
+
+### Schedule Pickup
+Click **Schedule Pickup** in the top bar to open the pickup form: contact name, phone, pickup address (street, city, postal code), parcel description, weight (kg), optional dimensions, pickup date, time window and notes. Fields are validated inline and Submit stays disabled until the form is valid. Submission runs in the background with a progress indicator; on success the pickup ID and status are shown and the form is cleared, on failure the server's validation errors or a connection error are displayed. Reset clears the form and Cancel closes it. The backend URL is taken from `-Dapi.url` (default `http://localhost:8080`).
