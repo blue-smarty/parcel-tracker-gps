@@ -6,11 +6,18 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 @Document(collection = "parcels")
+@CompoundIndexes({
+        @CompoundIndex(name = "status_updated_at", def = "{'status': 1, 'updated_at': 1}"),
+        @CompoundIndex(name = "status_created_at", def = "{'status': 1, 'created_at': 1}"),
+        @CompoundIndex(name = "courier_status", def = "{'courier_id': 1, 'status': 1}")
+})
 public class Parcel {
     @Id
     private String id;
@@ -46,6 +53,15 @@ public class Parcel {
     @Field("updated_at")
     private Instant updatedAt;
 
+    @Field("escalated_at")
+    private Instant escalatedAt;
+
+    @Field("location_inactive")
+    private boolean locationInactive;
+
+    @Field("finalized_at")
+    private Instant finalizedAt;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getTrackingNumber() { return trackingNumber; }
@@ -68,4 +84,10 @@ public class Parcel {
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public Instant getEscalatedAt() { return escalatedAt; }
+    public void setEscalatedAt(Instant escalatedAt) { this.escalatedAt = escalatedAt; }
+    public boolean isLocationInactive() { return locationInactive; }
+    public void setLocationInactive(boolean locationInactive) { this.locationInactive = locationInactive; }
+    public Instant getFinalizedAt() { return finalizedAt; }
+    public void setFinalizedAt(Instant finalizedAt) { this.finalizedAt = finalizedAt; }
 }
