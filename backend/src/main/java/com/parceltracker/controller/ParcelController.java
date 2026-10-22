@@ -1,6 +1,7 @@
 package com.parceltracker.controller;
 
 import com.parceltracker.model.Parcel;
+import com.parceltracker.dto.CourierAssignmentRequest;
 import com.parceltracker.service.ParcelService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -39,6 +40,11 @@ public class ParcelController {
     @PutMapping("/{id}")
     public Parcel update(@PathVariable String id, @RequestBody Parcel parcel) {
         return service.update(id, parcel);
+    }
+
+    @PutMapping("/{id}/courier")
+    public Parcel assignCourier(@PathVariable String id, @Valid @RequestBody CourierAssignmentRequest request) {
+        return service.assignCourier(id, request.getCourierId().trim());
     }
 
     @DeleteMapping("/{id}")

@@ -8,6 +8,7 @@ import com.parceltracker.service.LocationService;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -39,6 +40,7 @@ public class LocationWebSocketHandler extends TextWebSocketHandler {
     @PostConstruct
     void register() {
         locationService.addListener(this::broadcast);
+        locationService.addStatusListener(this::broadcastStatus);
     }
 
     static String parcelIdOf(WebSocketSession session) {
@@ -66,13 +68,22 @@ public class LocationWebSocketHandler extends TextWebSocketHandler {
     }
 
     public void broadcast(Parcel parcel, Location location) {
+        sendUpdate(parcel, location);
+    }
+
+    private void broadcastStatus(Parcel parcel) {
+        sendUpdate(parcel, null);
+    }
+
+    private void sendUpdate(Parcel parcel, Location location) {
         String payload;
         try {
-            payload = mapper.writeValueAsString(Map.of(
-                    "parcelId", parcel.getId(),
-                    "trackingNumber", String.valueOf(parcel.getTrackingNumber()),
-                    "status", String.valueOf(parcel.getStatus()),
-                    "location", location));
+            Map<String, Object> update = new LinkedHashMap<>();
+            update.put("parcelId", parcel.getId());
+            update.put("trackingNumber", String.valueOf(parcel.getTrackingNumber()));
+            update.put("status", String.valueOf(parcel.getStatus()));
+            update.put("location", location);
+            payload = mapper.writeValueAsString(update);
         } catch (JsonProcessingException e) {
             log.error("Cannot serialize location update", e);
             return;

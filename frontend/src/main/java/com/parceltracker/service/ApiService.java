@@ -9,6 +9,8 @@ import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.Pickup;
 import com.parceltracker.model.PickupRequest;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -53,6 +55,23 @@ public class ApiService {
         return MAPPER.readValue(send(post("/api/parcels/" + id + "/location", location)), Parcel.class);
     }
 
+    public List<Parcel> getCourierDeliveries(String courierId) throws IOException, InterruptedException {
+        return MAPPER.readValue(send(get("/api/couriers/" + pathSegment(courierId) + "/deliveries")),
+                new TypeReference<List<Parcel>>() { });
+    }
+
+    public Parcel updateCourierDeliveryStatus(String courierId, String parcelId, String status)
+            throws IOException, InterruptedException {
+        return MAPPER.readValue(send(put("/api/couriers/" + pathSegment(courierId) + "/deliveries/"
+                + pathSegment(parcelId) + "/status", java.util.Map.of("status", status))), Parcel.class);
+    }
+
+    public Parcel updateCourierDeliveryLocation(String courierId, String parcelId, Location location)
+            throws IOException, InterruptedException {
+        return MAPPER.readValue(send(post("/api/couriers/" + pathSegment(courierId) + "/deliveries/"
+                + pathSegment(parcelId) + "/location", location)), Parcel.class);
+    }
+
     private HttpRequest get(String path) {
         return HttpRequest.newBuilder(URI.create(baseUrl + path)).GET().build();
     }
@@ -62,6 +81,17 @@ public class ApiService {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
                 .build();
+    }
+
+    private HttpRequest put(String path, Object body) throws IOException {
+        return HttpRequest.newBuilder(URI.create(baseUrl + path))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
+                .build();
+    }
+
+    private static String pathSegment(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private String send(HttpRequest request) throws IOException, InterruptedException {

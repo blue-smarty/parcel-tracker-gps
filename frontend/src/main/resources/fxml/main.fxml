@@ -15,6 +15,7 @@
             <Label text="Parcel Tracker GPS" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
             <Button fx:id="refreshButton" text="Refresh"/>
             <Button fx:id="pickupButton" text="Schedule Pickup"/>
+            <Button fx:id="courierButton" text="Courier Dashboard"/>
             <Label fx:id="connectionLabel" text="○ Disconnected"/>
         </HBox>
     </top>

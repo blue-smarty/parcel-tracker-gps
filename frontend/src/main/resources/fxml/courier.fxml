@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.parceltracker.controller.CourierController">
+    <top>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
+            <Label text="Courier ID"/>
+            <TextField fx:id="courierIdField" promptText="Your assigned courier ID"/>
+            <Button fx:id="refreshButton" text="Load deliveries" onAction="#loadDeliveries"/>
+        </HBox>
+    </top>
+    <center>
+        <VBox spacing="8">
+            <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
+            <TableView fx:id="deliveriesTable" prefHeight="350"/>
+            <Label fx:id="detailsLabel" text="Select an assigned delivery." wrapText="true"/>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="Next status"/>
+                <ComboBox fx:id="statusField" promptText="Choose status"/>
+                <Button fx:id="statusButton" text="Update status"/>
+            </HBox>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="GPS latitude"/>
+                <TextField fx:id="latitudeField" promptText="-90 to 90" prefWidth="130"/>
+                <Label text="longitude"/>
+                <TextField fx:id="longitudeField" promptText="-180 to 180" prefWidth="130"/>
+                <Button fx:id="locationButton" text="Publish location"/>
+            </HBox>
+            <Label fx:id="statusLabel" wrapText="true"/>
+        </VBox>
+    </center>
+</BorderPane>
