@@ -1,0 +1,10 @@
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/ParcelTrackerApp.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/controller/MainController.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/controller/MapController.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/model/Location.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/model/Parcel.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/service/ApiService.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/service/WebSocketService.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/ui/LocationHistoryPanel.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/ui/MapPanel.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/frontend/src/main/java/com/parceltracker/ui/ParcelListPanel.java

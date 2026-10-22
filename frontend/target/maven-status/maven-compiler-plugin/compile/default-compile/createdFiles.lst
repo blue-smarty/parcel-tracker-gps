@@ -1,0 +1,12 @@
+com/parceltracker/ParcelTrackerApp.class
+com/parceltracker/ui/LocationHistoryPanel.class
+com/parceltracker/model/Parcel.class
+com/parceltracker/ui/ParcelListPanel.class
+com/parceltracker/service/WebSocketService.class
+com/parceltracker/controller/MainController.class
+com/parceltracker/controller/MapController.class
+com/parceltracker/ui/MapPanel.class
+com/parceltracker/service/ApiService$2.class
+com/parceltracker/model/Location.class
+com/parceltracker/service/ApiService$1.class
+com/parceltracker/service/ApiService.class

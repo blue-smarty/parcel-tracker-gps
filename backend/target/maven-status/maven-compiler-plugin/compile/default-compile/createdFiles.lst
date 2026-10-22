@@ -1,0 +1,12 @@
+com/parceltracker/controller/LocationController.class
+com/parceltracker/service/LocationService.class
+com/parceltracker/model/ParcelStatus.class
+com/parceltracker/model/Parcel.class
+com/parceltracker/service/ParcelService.class
+com/parceltracker/ParcelTrackerApplication.class
+com/parceltracker/websocket/WebSocketConfig.class
+com/parceltracker/model/Location.class
+com/parceltracker/websocket/LocationWebSocketHandler.class
+com/parceltracker/controller/ParcelController.class
+com/parceltracker/repository/ParcelRepository.class
+com/parceltracker/config/MongoConfig.class
