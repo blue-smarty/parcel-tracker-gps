@@ -21,7 +21,7 @@ public class MapController {
         this.api = api;
         this.ws = new WebSocketService(wsBaseUrl, "all",
                 (id, loc) -> Platform.runLater(() -> {
-                    map.updateLocation(id, loc);
+                    if (loc != null) map.updateLocation(id, loc);
                     onLiveUpdate.accept(id, loc);
                 }),
                 connected -> Platform.runLater(() -> onConnectionChange.accept(connected)));

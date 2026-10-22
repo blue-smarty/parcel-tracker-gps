@@ -78,7 +78,9 @@ public class WebSocketService implements WebSocket.Listener {
             buffer.setLength(0);
             try {
                 JsonNode node = ApiService.MAPPER.readTree(json);
-                Location loc = ApiService.MAPPER.treeToValue(node.get("location"), Location.class);
+                JsonNode location = node.get("location");
+                Location loc = location == null || location.isNull()
+                        ? null : ApiService.MAPPER.treeToValue(location, Location.class);
                 onUpdate.accept(node.get("parcelId").asText(), loc);
             } catch (Exception ignored) {
                 // malformed message; ignore

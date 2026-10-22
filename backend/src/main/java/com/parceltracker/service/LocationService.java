@@ -6,6 +6,7 @@ import com.parceltracker.model.ParcelStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 public class LocationService {
     private final ParcelService parcelService;
     private final List<BiConsumer<Parcel, Location>> listeners = new CopyOnWriteArrayList<>();
+    private final List<Consumer<Parcel>> statusListeners = new CopyOnWriteArrayList<>();
 
     public LocationService(ParcelService parcelService) {
         this.parcelService = parcelService;
@@ -20,6 +22,14 @@ public class LocationService {
 
     public void addListener(BiConsumer<Parcel, Location> listener) {
         listeners.add(listener);
+    }
+
+    public void addStatusListener(Consumer<Parcel> listener) {
+        statusListeners.add(listener);
+    }
+
+    public void publishStatusUpdate(Parcel parcel) {
+        statusListeners.forEach(listener -> listener.accept(parcel));
     }
 
     public Parcel updateLocation(String parcelId, Location location) {

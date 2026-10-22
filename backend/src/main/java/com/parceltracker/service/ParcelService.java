@@ -53,6 +53,7 @@ public class ParcelService {
         if (changes.getSender() != null) existing.setSender(changes.getSender());
         if (changes.getRecipient() != null) existing.setRecipient(changes.getRecipient());
         if (changes.getDestination() != null) existing.setDestination(changes.getDestination());
+        if (changes.getCourierId() != null) existing.setCourierId(changes.getCourierId());
         if (changes.getStatus() != null) existing.setStatus(changes.getStatus());
         existing.setUpdatedAt(Instant.now());
         return repository.save(existing);
@@ -64,6 +65,13 @@ public class ParcelService {
     }
 
     public Parcel save(Parcel parcel) {
+        return repository.save(parcel);
+    }
+
+    public Parcel assignCourier(String id, String courierId) {
+        Parcel parcel = get(id);
+        parcel.setCourierId(courierId);
+        parcel.setUpdatedAt(Instant.now());
         return repository.save(parcel);
     }
 }

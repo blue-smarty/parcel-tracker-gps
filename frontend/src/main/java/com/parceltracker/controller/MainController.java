@@ -25,7 +25,9 @@ public class MainController {
     @FXML private Label connectionLabel;
     @FXML private Button refreshButton;
     @FXML private Button pickupButton;
+    @FXML private Button courierButton;
     private Stage pickupStage;
+    private Stage courierStage;
 
     private ApiService api;
     private MapController mapController;
@@ -43,6 +45,7 @@ public class MainController {
         historyContainer.getChildren().add(historyPanel);
         refreshButton.setOnAction(e -> reload());
         pickupButton.setOnAction(e -> openPickupForm());
+        courierButton.setOnAction(e -> openCourierDashboard());
         reload();
         mapController.start();
     }
@@ -67,6 +70,25 @@ public class MainController {
             pickupStage.show();
         } catch (java.io.IOException e) {
             detailsLabel.setText("Cannot open pickup form: " + e.getMessage());
+        }
+    }
+
+    private void openCourierDashboard() {
+        if (courierStage != null && courierStage.isShowing()) {
+            courierStage.toFront();
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/courier.fxml"));
+            Parent root = loader.load();
+            courierStage = new Stage();
+            CourierController controller = loader.getController();
+            controller.init(api);
+            courierStage.setTitle("Courier Dashboard");
+            courierStage.setScene(new Scene(root, 850, 600));
+            courierStage.show();
+        } catch (java.io.IOException e) {
+            detailsLabel.setText("Cannot open courier dashboard: " + e.getMessage());
         }
     }
 
@@ -102,6 +124,10 @@ public class MainController {
     }
 
     private void onLiveUpdate(String parcelId, Location location) {
+        if (location == null) {
+            reload();
+            return;
+        }
         for (Parcel p : parcels) {
             if (p.getId().equals(parcelId)) {
                 p.setCurrentLocation(location);

@@ -25,6 +25,10 @@ public class Parcel {
     @NotBlank
     private String recipient;
 
+    @Indexed
+    @Field("courier_id")
+    private String courierId;
+
     @Valid
     @Field("current_location")
     private Location currentLocation;
@@ -50,6 +54,8 @@ public class Parcel {
     public void setSender(String sender) { this.sender = sender; }
     public String getRecipient() { return recipient; }
     public void setRecipient(String recipient) { this.recipient = recipient; }
+    public String getCourierId() { return courierId; }
+    public void setCourierId(String courierId) { this.courierId = courierId; }
     public Location getCurrentLocation() { return currentLocation; }
     public void setCurrentLocation(Location currentLocation) { this.currentLocation = currentLocation; }
     public String getDestination() { return destination; }
