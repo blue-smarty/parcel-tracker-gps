@@ -16,6 +16,7 @@ class CourierApi {
   final _storage = const FlutterSecureStorage();
   String? _courierId;
   String? _password;
+  String? _csrfToken;
 
   String? get courierId => _courierId;
 
@@ -36,6 +37,7 @@ class CourierApi {
     } catch (_) {
       _courierId = null;
       _password = null;
+      _csrfToken = null;
       rethrow;
     }
     queue.useCourier(_courierId!);
@@ -112,6 +114,11 @@ class CourierApi {
     final credential = base64Encode(utf8.encode('$id:${_password ?? ''}'));
     final uri = Uri.parse('$baseUrl$path');
     final headers = {'Authorization': 'Basic $credential', 'Content-Type': 'application/json'};
+    if (method.toUpperCase() != 'GET') {
+      _csrfToken ??= await _fetchCsrfToken(credential);
+      headers['X-XSRF-TOKEN'] = _csrfToken!;
+      headers['Cookie'] = 'XSRF-TOKEN=${_csrfToken!}';
+    }
     final request = http.Request(method, uri)
       ..headers.addAll(headers)
       ..body = body == null ? '' : jsonEncode(body);
@@ -120,6 +127,19 @@ class CourierApi {
       throw HttpException('Request failed (${response.statusCode}): ${response.body}', uri: uri);
     }
     return response.body.isEmpty ? null : jsonDecode(response.body);
+  }
+
+  Future<String> _fetchCsrfToken(String credential) async {
+    final response = await _client.get(
+      Uri.parse('$baseUrl/api/csrf'),
+      headers: {'Authorization': 'Basic $credential'},
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw HttpException('Could not get a request token (${response.statusCode}).');
+    }
+    final token = (jsonDecode(response.body) as Map<String, dynamic>)['token'] as String?;
+    if (token == null || token.isEmpty) throw const HttpException('The server did not provide a request token.');
+    return token;
   }
 
   String _requireId() {

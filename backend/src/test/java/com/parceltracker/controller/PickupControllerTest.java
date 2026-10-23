@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.context.annotation.Import;
 import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.repository.CourierAccountRepository;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 @WebMvcTest(PickupController.class)
 @Import(SecurityConfig.class)
@@ -38,7 +39,8 @@ class PickupControllerTest {
         Pickup p = new Pickup();
         p.setId("abc");
         when(service.create(any(PickupRequest.class))).thenReturn(p);
-        mvc.perform(post("/api/pickups").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/pickups")        .with(csrf())
+        .contentType(MediaType.APPLICATION_JSON)
                         .content(json(LocalDate.now().plusDays(1).toString(), "2.5", "+61 400 000 000")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("abc"))
@@ -47,7 +49,8 @@ class PickupControllerTest {
 
     @Test
     void invalidReturns400WithFieldErrors() throws Exception {
-        mvc.perform(post("/api/pickups").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/pickups")        .with(csrf())
+        .contentType(MediaType.APPLICATION_JSON)
                         .content(json(LocalDate.now().minusDays(1).toString(), "0", "abc")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.pickupDate").exists())

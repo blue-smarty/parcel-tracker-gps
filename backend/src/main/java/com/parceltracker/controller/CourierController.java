@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/couriers/{courierId}")
-@CrossOrigin
 public class CourierController {
     private final CourierService service;
 
