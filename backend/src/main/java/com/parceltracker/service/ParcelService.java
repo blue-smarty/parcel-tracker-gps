@@ -13,9 +13,11 @@ import com.parceltracker.repository.ParcelRepository;
 @Service
 public class ParcelService {
     private final ParcelRepository repository;
+    private final DemoPricingService pricing;
 
-    public ParcelService(ParcelRepository repository) {
+    public ParcelService(ParcelRepository repository, DemoPricingService pricing) {
         this.repository = repository;
+        this.pricing = pricing;
     }
 
     public Parcel create(Parcel parcel) {
@@ -26,6 +28,11 @@ public class ParcelService {
         }
         if (parcel.getStatus() == null) {
             parcel.setStatus(ParcelStatus.CREATED);
+        }
+        if (parcel.getDistanceKm() != null && parcel.getWeightKg() != null
+                && parcel.getDeliverySpeed() != null) {
+            parcel.setEstimatedPrice(pricing.estimate(parcel.getDistanceKm(), parcel.getWeightKg(),
+                    parcel.getDeliverySpeed()));
         }
         parcel.getLocationHistory().clear();
         if (parcel.getCurrentLocation() != null) {

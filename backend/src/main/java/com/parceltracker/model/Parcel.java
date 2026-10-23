@@ -1,7 +1,9 @@
 package com.parceltracker.model;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,11 +38,37 @@ public class Parcel {
     @Field("courier_id")
     private String courierId;
 
+    @Field("pickup_address")
+    private String pickupAddress;
+
     @Valid
     @Field("current_location")
     private Location currentLocation;
 
     private String destination;
+
+    @Field("package_size")
+    private String packageSize;
+
+    @DecimalMin(value = "0.0", inclusive = false)
+    @Field("weight_kg")
+    private Double weightKg;
+
+    @Field("delivery_speed")
+    private String deliverySpeed;
+
+    @Positive
+    @Field("distance_km")
+    private Double distanceKm;
+
+    @Field("estimated_price")
+    private Double estimatedPrice;
+
+    @Field("payment_method")
+    private String paymentMethod;
+
+    @Field("customer_contact")
+    private String customerContact;
 
     private ParcelStatus status = ParcelStatus.CREATED;
 
@@ -72,10 +100,26 @@ public class Parcel {
     public void setRecipient(String recipient) { this.recipient = recipient; }
     public String getCourierId() { return courierId; }
     public void setCourierId(String courierId) { this.courierId = courierId; }
+    public String getPickupAddress() { return pickupAddress; }
+    public void setPickupAddress(String pickupAddress) { this.pickupAddress = pickupAddress; }
     public Location getCurrentLocation() { return currentLocation; }
     public void setCurrentLocation(Location currentLocation) { this.currentLocation = currentLocation; }
     public String getDestination() { return destination; }
     public void setDestination(String destination) { this.destination = destination; }
+    public String getPackageSize() { return packageSize; }
+    public void setPackageSize(String packageSize) { this.packageSize = packageSize; }
+    public Double getWeightKg() { return weightKg; }
+    public void setWeightKg(Double weightKg) { this.weightKg = weightKg; }
+    public String getDeliverySpeed() { return deliverySpeed; }
+    public void setDeliverySpeed(String deliverySpeed) { this.deliverySpeed = deliverySpeed; }
+    public Double getDistanceKm() { return distanceKm; }
+    public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
+    public Double getEstimatedPrice() { return estimatedPrice; }
+    public void setEstimatedPrice(Double estimatedPrice) { this.estimatedPrice = estimatedPrice; }
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+    public String getCustomerContact() { return customerContact; }
+    public void setCustomerContact(String customerContact) { this.customerContact = customerContact; }
     public ParcelStatus getStatus() { return status; }
     public void setStatus(ParcelStatus status) { this.status = status; }
     public List<Location> getLocationHistory() { return locationHistory; }

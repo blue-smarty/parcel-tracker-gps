@@ -38,7 +38,7 @@ public class ParcelController {
     }
 
     @PutMapping("/{id}")
-    public Parcel update(@PathVariable String id, @RequestBody Parcel parcel) {
+    public Parcel update(@PathVariable String id, @Valid @RequestBody Parcel parcel) {
         return service.update(id, parcel);
     }
 
