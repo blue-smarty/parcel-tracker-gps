@@ -29,6 +29,7 @@ public class CourierController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize("#courierId == authentication.name")
     public CourierIdentity identity(Authentication authentication) {
         return new CourierIdentity(authentication.getName());
     }

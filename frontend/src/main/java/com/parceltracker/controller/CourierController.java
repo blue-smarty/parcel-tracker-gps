@@ -29,11 +29,13 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.PasswordField;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 public class CourierController {
     @FXML private TextField courierIdField;
+    @FXML private PasswordField courierPasswordField;
     @FXML private TableView<Parcel> deliveriesTable;
     @FXML private Label detailsLabel;
     @FXML private Label statusLabel;
@@ -105,9 +107,15 @@ public class CourierController {
     private void reload() {
         String courierId = courierIdField.getText() == null ? "" : courierIdField.getText().trim();
         if (courierId.isEmpty()) {
-            statusLabel.setText("Enter your courier ID to load assigned deliveries.");
+            statusLabel.setText("Enter your courier ID and password to load assigned deliveries.");
             return;
         }
+        String password = courierPasswordField.getText();
+        if (password == null || password.isBlank()) {
+            statusLabel.setText("Enter your courier ID and password to load assigned deliveries.");
+            return;
+        }
+        api.setCourierCredentials(courierId, password);
         run("courier-deliveries", () -> {
             int synced = offlineQueue.flush(api);
             return new DeliveryLoad(api.getCourierDeliveries(courierId), synced);

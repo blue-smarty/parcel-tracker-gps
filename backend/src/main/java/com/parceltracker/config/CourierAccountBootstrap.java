@@ -32,9 +32,7 @@ public class CourierAccountBootstrap implements ApplicationRunner {
         if (courierId.isBlank() || password.length() < 12) {
             throw new IllegalStateException("Configure both bootstrap courier ID and a password of at least 12 characters");
         }
-        if (accounts.existsById(courierId)) {
-            throw new IllegalStateException("Bootstrap courier ID already exists; provision accounts without overwriting them");
-        }
+        if (accounts.existsById(courierId)) return;
         accounts.save(new CourierAccount(courierId, passwordEncoder.encode(password)));
     }
 }

@@ -3,6 +3,7 @@ package com.parceltracker.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -18,11 +19,19 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.context.annotation.Import;
+import com.parceltracker.config.SecurityConfig;
+import com.parceltracker.repository.CourierAccountRepository;
 
 @WebMvcTest(CourierController.class)
+@Import(SecurityConfig.class)
+@WithMockUser(username = "courier-1", roles = "COURIER")
 class CourierControllerTest {
     @Autowired private MockMvc mvc;
     @MockBean private CourierService service;
+    @MockBean private CourierAccountRepository accounts;
 
     @Test
     void updatesCourierDeliveryStatus() throws Exception {
@@ -86,5 +95,20 @@ class CourierControllerTest {
                 .andExpect(jsonPath("$.completedDeliveries").value(2))
                 .andExpect(jsonPath("$.tips").value(3.5))
                 .andExpect(jsonPath("$.payouts").value(20.0));
+    }
+
+    @Test
+    @WithAnonymousUser
+    void requiresAuthentication() throws Exception {
+        mvc.perform(get("/api/couriers/courier-1/me"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void preventsAccessToAnotherCouriersDeliveries() throws Exception {
+        mvc.perform(get("/api/couriers/courier-2/deliveries"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(service);
     }
 }
