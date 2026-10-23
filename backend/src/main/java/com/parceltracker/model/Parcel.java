@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Pattern;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ public class Parcel {
     private String destination;
 
     @Field("package_size")
+    @Pattern(regexp = "SMALL|MEDIUM|LARGE")
     private String packageSize;
 
     @DecimalMin(value = "0.0", inclusive = false)
@@ -56,6 +58,7 @@ public class Parcel {
     private Double weightKg;
 
     @Field("delivery_speed")
+    @Pattern(regexp = "SAME_DAY|SCHEDULED")
     private String deliverySpeed;
 
     @Field("scheduled_date")
@@ -72,6 +75,7 @@ public class Parcel {
     private Double estimatedPrice;
 
     @Field("payment_method")
+    @Pattern(regexp = "DEMO_CARD|DEMO_MOBILE_WALLET|CASH_ON_DELIVERY")
     private String paymentMethod;
 
     @Field("customer_contact")

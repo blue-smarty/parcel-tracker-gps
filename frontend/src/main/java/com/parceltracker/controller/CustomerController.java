@@ -269,6 +269,8 @@ public class CustomerController {
                 + "Estimated total: " + CURRENCY.format(selected.getEstimatedPrice() == null
                 ? 0.0 : selected.getEstimatedPrice()) + "\n"
                 + "Payment: " + valueOrUnknown(selected.getPaymentMethod())
+                + "\nDelivery proof: " + ("DELIVERED".equals(selected.getStatus())
+                ? "status confirmation only (demo; no photo or signature stored)" : "not delivered")
                 + "\nThis receipt is not proof of payment.";
         new Alert(Alert.AlertType.INFORMATION, receipt).showAndWait();
     }
