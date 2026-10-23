@@ -17,6 +17,7 @@
             <Button fx:id="pickupButton" text="Schedule Pickup"/>
             <Button fx:id="courierButton" text="Courier Dashboard"/>
             <Button fx:id="customerButton" text="Customer App (Demo)"/>
+            <Button fx:id="adminButton" text="Admin &amp; Dispatcher"/>
             <Label fx:id="connectionLabel" text="○ Disconnected"/>
         </HBox>
     </top>

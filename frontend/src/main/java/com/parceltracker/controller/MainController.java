@@ -27,10 +27,13 @@ public class MainController {
     @FXML private Button pickupButton;
     @FXML private Button courierButton;
     @FXML private Button customerButton;
+    @FXML private Button adminButton;
     private Stage pickupStage;
     private Stage courierStage;
     private Stage customerStage;
+    private Stage adminStage;
     private CustomerController customerController;
+    private AdminController adminController;
 
     private ApiService api;
     private MapController mapController;
@@ -50,12 +53,32 @@ public class MainController {
         pickupButton.setOnAction(e -> openPickupForm());
         courierButton.setOnAction(e -> openCourierDashboard());
         customerButton.setOnAction(e -> openCustomerApp());
+        adminButton.setOnAction(e -> openAdminPanel(wsBaseUrl));
         reload();
         mapController.start();
     }
 
     public void shutdown() {
         if (mapController != null) mapController.stop();
+        if (adminController != null) adminController.shutdown();
+    }
+
+    private void openAdminPanel(String wsBaseUrl) {
+        if (adminStage != null && adminStage.isShowing()) {
+            adminStage.toFront();
+            return;
+        }
+        adminController = new AdminController();
+        adminController.init(api, wsBaseUrl);
+        adminStage = new Stage();
+        adminStage.setTitle("Admin & Dispatcher Command Center — Demo");
+        adminStage.setScene(new Scene(adminController, 1320, 900));
+        adminStage.setOnHidden(event -> {
+            adminController.shutdown();
+            adminController = null;
+            adminStage = null;
+        });
+        adminStage.show();
     }
 
     private void openCustomerApp() {

@@ -57,6 +57,11 @@ public class ApiService {
         return MAPPER.readValue(send(post("/api/parcels/" + id + "/location", location)), Parcel.class);
     }
 
+    public Parcel assignCourier(String parcelId, String courierId) throws IOException, InterruptedException {
+        return MAPPER.readValue(send(put("/api/parcels/" + pathSegment(parcelId) + "/courier",
+                java.util.Map.of("courierId", courierId))), Parcel.class);
+    }
+
     public List<Parcel> getCourierDeliveries(String courierId) throws IOException, InterruptedException {
         return MAPPER.readValue(send(get("/api/couriers/" + pathSegment(courierId) + "/deliveries")),
                 new TypeReference<List<Parcel>>() { });
