@@ -19,7 +19,13 @@ cd frontend
 mvn clean javafx:run
 ```
 (or from the repository root: `mvn -f frontend/pom.xml clean javafx:run`). MongoDB must be running on `localhost:27017` before starting the backend.
-Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` with `mvn javafx:run` to override the frontend's default server addresses (`http://localhost:8080` and `ws://localhost:8080`).
+The frontend's parcel tracker, dispatcher, and courier dashboards are independently launchable programs. From `frontend`, choose one:
+```
+mvn javafx:run
+mvn javafx:run -Dfrontend.mainClass=com.parceltracker.DispatcherApp
+mvn javafx:run -Dfrontend.mainClass=com.parceltracker.CourierApp
+```
+Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override the server addresses (defaults: `http://localhost:8080` and `ws://localhost:8080`; courier uses only the API URL). The tracker app also retains shortcuts for opening the dispatcher and courier dashboards as windows.
 
 ## REST API
 | Method | Path | Description |

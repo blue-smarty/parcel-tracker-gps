@@ -8,6 +8,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>17.0.10</javafx.version>
+        <frontend.mainClass>com.parceltracker.ParcelTrackerApp</frontend.mainClass>
     </properties>
     <dependencies>
         <dependency>
@@ -62,7 +63,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.parceltracker.ParcelTrackerApp</mainClass>
+                    <mainClass>${frontend.mainClass}</mainClass>
                 </configuration>
             </plugin>
         </plugins>
