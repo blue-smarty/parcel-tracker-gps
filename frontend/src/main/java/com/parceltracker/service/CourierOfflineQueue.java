@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class CourierOfflineQueue {
     private final Path file;
@@ -22,10 +23,12 @@ public class CourierOfflineQueue {
         this.file = file;
     }
 
-    public synchronized void enqueue(CourierUpdate update) throws IOException {
+    public synchronized boolean enqueue(CourierUpdate update) throws IOException {
         List<CourierUpdate> updates = read();
+        if (updates.stream().anyMatch(existing -> isDuplicate(existing, update))) return false;
         updates.add(update);
         write(updates);
+        return true;
     }
 
     public synchronized int size() throws IOException {
@@ -75,6 +78,22 @@ public class CourierOfflineQueue {
                     update.getLocation());
             case PROOF -> api.completeCourierDelivery(update.getCourierId(), update.getParcelId(), update.getProof());
         }
+    }
+
+    private static boolean isDuplicate(CourierUpdate existing, CourierUpdate candidate) {
+        if (existing.getType() != candidate.getType()
+                || !Objects.equals(existing.getCourierId(), candidate.getCourierId())
+                || !Objects.equals(existing.getParcelId(), candidate.getParcelId())) {
+            return false;
+        }
+        return switch (candidate.getType()) {
+            case DECISION -> true;
+            case STATUS -> Objects.equals(existing.getStatus(), candidate.getStatus());
+            case PROOF -> true;
+            case LOCATION -> existing.getLocation() != null && candidate.getLocation() != null
+                    && Objects.equals(existing.getLocation().getLatitude(), candidate.getLocation().getLatitude())
+                    && Objects.equals(existing.getLocation().getLongitude(), candidate.getLocation().getLongitude());
+        };
     }
 
     public static class CourierUpdate {

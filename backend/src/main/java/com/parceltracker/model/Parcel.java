@@ -1,5 +1,6 @@
 package com.parceltracker.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.DecimalMax;
@@ -168,6 +169,7 @@ public class Parcel {
     public void setLocationInactive(boolean locationInactive) { this.locationInactive = locationInactive; }
     public Instant getFinalizedAt() { return finalizedAt; }
     public void setFinalizedAt(Instant finalizedAt) { this.finalizedAt = finalizedAt; }
+    @JsonIgnore
     public DeliveryProof getProofOfDelivery() { return proofOfDelivery; }
     public void setProofOfDelivery(DeliveryProof proofOfDelivery) { this.proofOfDelivery = proofOfDelivery; }
 }

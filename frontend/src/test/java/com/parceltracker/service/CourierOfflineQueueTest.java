@@ -1,6 +1,8 @@
 package com.parceltracker.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.parceltracker.model.DeliveryProof;
 import java.nio.file.Path;
@@ -24,5 +26,20 @@ class CourierOfflineQueueTest {
         queue.enqueue(update);
 
         assertEquals(1, new CourierOfflineQueue(queueFile).size());
+    }
+
+    @Test
+    void preventsConflictingDuplicateDecisionsFromBlockingTheQueue() throws Exception {
+        CourierOfflineQueue queue = new CourierOfflineQueue(tempDir.resolve("decisions.json"));
+        CourierOfflineQueue.CourierUpdate accept = new CourierOfflineQueue.CourierUpdate(
+                CourierOfflineQueue.CourierUpdate.Type.DECISION, "courier-1", "parcel-1");
+        accept.setAccepted(true);
+        CourierOfflineQueue.CourierUpdate reject = new CourierOfflineQueue.CourierUpdate(
+                CourierOfflineQueue.CourierUpdate.Type.DECISION, "courier-1", "parcel-1");
+        reject.setAccepted(false);
+
+        assertTrue(queue.enqueue(accept));
+        assertFalse(queue.enqueue(reject));
+        assertEquals(1, queue.size());
     }
 }

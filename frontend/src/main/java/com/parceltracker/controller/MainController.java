@@ -109,7 +109,7 @@ public class MainController {
             CourierController controller = loader.getController();
             controller.init(api);
             courierStage.setTitle("Courier Dashboard");
-            courierStage.setScene(new Scene(root, 850, 600));
+            courierStage.setScene(new Scene(root, 1000, 850));
             courierStage.show();
         } catch (java.io.IOException e) {
             detailsLabel.setText("Cannot open courier dashboard: " + e.getMessage());

@@ -346,6 +346,8 @@ public class CourierController {
             longitude = nearest.getDestinationLongitude();
         }
 
+        int omitted = Math.max(0, ordered.size() - 10);
+        if (omitted > 0) ordered = new ArrayList<>(ordered.subList(0, 10));
         Parcel destination = ordered.get(ordered.size() - 1);
         StringBuilder url = new StringBuilder("https://www.google.com/maps/dir/?api=1&origin=")
                 .append(encode(start.getLatitude() + "," + start.getLongitude()))
@@ -365,7 +367,8 @@ public class CourierController {
             }
             Desktop.getDesktop().browse(URI.create(url.toString()));
             statusLabel.setText("Opened directions with " + ordered.size()
-                    + " stops in nearest-neighbor order. Navigation runs in your maps app.");
+                    + " stops in nearest-neighbor order. Navigation runs in your maps app."
+                    + (omitted == 0 ? "" : " " + omitted + " additional stop(s) were omitted."));
         } catch (Exception exception) {
             statusLabel.setText("Could not open route: " + exception.getMessage());
         }
@@ -426,8 +429,10 @@ public class CourierController {
                 return;
             }
             try {
-                offlineQueue.enqueue(update);
-                statusLabel.setText("Connection unavailable. Update saved for retry when you load deliveries.");
+                boolean queued = offlineQueue.enqueue(update);
+                statusLabel.setText(queued
+                        ? "Connection unavailable. Update saved for retry when you load deliveries."
+                        : "A matching update is already queued; load deliveries to retry it before making another change.");
             } catch (IOException queueError) {
                 statusLabel.setText("Could not save offline update: " + queueError.getMessage());
             }

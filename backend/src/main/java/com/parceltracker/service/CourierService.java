@@ -57,7 +57,9 @@ public class CourierService {
             parcel.setCourierId(null);
         }
         parcel.setUpdatedAt(Instant.now());
-        return repository.save(parcel);
+        Parcel saved = repository.save(parcel);
+        locationService.publishStatusUpdate(saved);
+        return saved;
     }
 
     public Parcel completeDelivery(String courierId, String parcelId, DeliveryProof proof) {
