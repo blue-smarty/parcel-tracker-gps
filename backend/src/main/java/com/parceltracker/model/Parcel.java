@@ -1,7 +1,9 @@
 package com.parceltracker.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Pattern;
@@ -71,6 +73,16 @@ public class Parcel {
     @Field("distance_km")
     private Double distanceKm;
 
+    @Field("destination_latitude")
+    @DecimalMin("-90.0")
+    @DecimalMax("90.0")
+    private Double destinationLatitude;
+
+    @Field("destination_longitude")
+    @DecimalMin("-180.0")
+    @DecimalMax("180.0")
+    private Double destinationLongitude;
+
     @Field("estimated_price")
     private Double estimatedPrice;
 
@@ -101,6 +113,10 @@ public class Parcel {
     @Field("finalized_at")
     private Instant finalizedAt;
 
+    @Valid
+    @Field("proof_of_delivery")
+    private DeliveryProof proofOfDelivery;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getTrackingNumber() { return trackingNumber; }
@@ -129,6 +145,10 @@ public class Parcel {
     public void setScheduledWindow(String scheduledWindow) { this.scheduledWindow = scheduledWindow; }
     public Double getDistanceKm() { return distanceKm; }
     public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
+    public Double getDestinationLatitude() { return destinationLatitude; }
+    public void setDestinationLatitude(Double destinationLatitude) { this.destinationLatitude = destinationLatitude; }
+    public Double getDestinationLongitude() { return destinationLongitude; }
+    public void setDestinationLongitude(Double destinationLongitude) { this.destinationLongitude = destinationLongitude; }
     public Double getEstimatedPrice() { return estimatedPrice; }
     public void setEstimatedPrice(Double estimatedPrice) { this.estimatedPrice = estimatedPrice; }
     public String getPaymentMethod() { return paymentMethod; }
@@ -149,4 +169,7 @@ public class Parcel {
     public void setLocationInactive(boolean locationInactive) { this.locationInactive = locationInactive; }
     public Instant getFinalizedAt() { return finalizedAt; }
     public void setFinalizedAt(Instant finalizedAt) { this.finalizedAt = finalizedAt; }
+    @JsonIgnore
+    public DeliveryProof getProofOfDelivery() { return proofOfDelivery; }
+    public void setProofOfDelivery(DeliveryProof proofOfDelivery) { this.proofOfDelivery = proofOfDelivery; }
 }

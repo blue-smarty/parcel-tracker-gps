@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
+import com.parceltracker.model.DeliveryProof;
+import com.parceltracker.model.CourierEarnings;
 import com.parceltracker.model.Pickup;
 import com.parceltracker.model.PickupRequest;
 import java.net.URLEncoder;
@@ -58,6 +60,23 @@ public class ApiService {
     public List<Parcel> getCourierDeliveries(String courierId) throws IOException, InterruptedException {
         return MAPPER.readValue(send(get("/api/couriers/" + pathSegment(courierId) + "/deliveries")),
                 new TypeReference<List<Parcel>>() { });
+    }
+
+    public CourierEarnings getCourierEarnings(String courierId) throws IOException, InterruptedException {
+        return MAPPER.readValue(send(get("/api/couriers/" + pathSegment(courierId) + "/earnings")),
+                CourierEarnings.class);
+    }
+
+    public Parcel decideCourierDelivery(String courierId, String parcelId, boolean accepted)
+            throws IOException, InterruptedException {
+        return MAPPER.readValue(send(put("/api/couriers/" + pathSegment(courierId) + "/deliveries/"
+                + pathSegment(parcelId) + "/decision", java.util.Map.of("accepted", accepted))), Parcel.class);
+    }
+
+    public Parcel completeCourierDelivery(String courierId, String parcelId, DeliveryProof proof)
+            throws IOException, InterruptedException {
+        return MAPPER.readValue(send(post("/api/couriers/" + pathSegment(courierId) + "/deliveries/"
+                + pathSegment(parcelId) + "/proof", proof)), Parcel.class);
     }
 
     public Parcel updateCourierDeliveryStatus(String courierId, String parcelId, String status)

@@ -12,6 +12,7 @@ import org.springframework.data.mongodb.repository.Query;
 public interface ParcelRepository extends MongoRepository<Parcel, String> {
     Optional<Parcel> findByTrackingNumber(String trackingNumber);
     List<Parcel> findByCourierIdAndStatusNotIn(String courierId, Collection<ParcelStatus> statuses);
+    List<Parcel> findByCourierIdAndStatus(String courierId, ParcelStatus status);
 
     @Query(value = "{ '_id': ?0 }", fields = "{ 'current_location': 1, 'tracking_number': 1 }")
     Optional<Parcel> findLatestLocationById(String id);

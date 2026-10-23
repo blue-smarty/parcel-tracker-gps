@@ -4,6 +4,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,5 +48,43 @@ class CourierControllerTest {
                         .content("{\"status\":\"DELIVERED\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Invalid delivery status transition"));
+    }
+
+    @Test
+    void acceptsDeliveryRequest() throws Exception {
+        Parcel parcel = new Parcel();
+        parcel.setStatus(ParcelStatus.ACCEPTED);
+        when(service.decideRequest("courier-1", "parcel-1", true)).thenReturn(parcel);
+
+        mvc.perform(put("/api/couriers/courier-1/deliveries/parcel-1/decision")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"accepted\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+    }
+
+    @Test
+    void submitsProofOfDelivery() throws Exception {
+        Parcel parcel = new Parcel();
+        parcel.setStatus(ParcelStatus.DELIVERED);
+        when(service.completeDelivery(eq("courier-1"), eq("parcel-1"), any())).thenReturn(parcel);
+
+        mvc.perform(post("/api/couriers/courier-1/deliveries/parcel-1/proof")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"barcode\":\"BAR-123\",\"tipAmount\":2.5,\"payoutAmount\":8.0}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DELIVERED"));
+    }
+
+    @Test
+    void returnsEarningsSummary() throws Exception {
+        when(service.getEarnings("courier-1"))
+                .thenReturn(new com.parceltracker.dto.CourierEarnings(2, 3.5, 20.0));
+
+        mvc.perform(get("/api/couriers/courier-1/earnings"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.completedDeliveries").value(2))
+                .andExpect(jsonPath("$.tips").value(3.5))
+                .andExpect(jsonPath("$.payouts").value(20.0));
     }
 }

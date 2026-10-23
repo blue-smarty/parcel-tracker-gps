@@ -6,6 +6,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
@@ -17,6 +18,8 @@
             <Label text="Courier ID"/>
             <TextField fx:id="courierIdField" promptText="Your assigned courier ID"/>
             <Button fx:id="refreshButton" text="Load deliveries" onAction="#loadDeliveries"/>
+            <Button fx:id="routeButton" text="Optimize &amp; navigate"/>
+            <Button fx:id="earningsButton" text="Refresh earnings"/>
         </HBox>
     </top>
     <center>
@@ -24,6 +27,10 @@
             <padding><Insets top="8" right="12" bottom="8" left="12"/></padding>
             <TableView fx:id="deliveriesTable" prefHeight="350"/>
             <Label fx:id="detailsLabel" text="Select an assigned delivery." wrapText="true"/>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Button fx:id="acceptButton" text="Accept request"/>
+                <Button fx:id="rejectButton" text="Reject request"/>
+            </HBox>
             <HBox spacing="8" alignment="CENTER_LEFT">
                 <Label text="Next status"/>
                 <ComboBox fx:id="statusField" promptText="Choose status"/>
@@ -36,6 +43,21 @@
                 <TextField fx:id="longitudeField" promptText="-180 to 180" prefWidth="130"/>
                 <Button fx:id="locationButton" text="Publish location"/>
             </HBox>
+            <Label text="Proof of delivery — draw recipient signature and optionally add a barcode or drop-off photo." wrapText="true"/>
+            <Canvas fx:id="signatureCanvas" width="460" height="90"/>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Button fx:id="clearSignatureButton" text="Clear signature"/>
+                <TextField fx:id="barcodeField" promptText="Barcode (optional)" prefWidth="180"/>
+                <Button fx:id="photoButton" text="Choose drop-off photo"/>
+                <Label fx:id="photoLabel" text="No photo selected" wrapText="true"/>
+            </HBox>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <TextField fx:id="dropOffNoteField" promptText="Drop-off note (optional)" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="tipAmountField" promptText="Tip" prefWidth="100"/>
+                <TextField fx:id="payoutAmountField" promptText="Payout" prefWidth="110"/>
+                <Button fx:id="proofButton" text="Submit proof &amp; complete"/>
+            </HBox>
+            <Label fx:id="earningsLabel" text="Completed deliveries: 0 | tips: $0.00 | payouts: $0.00" wrapText="true"/>
             <Label fx:id="statusLabel" wrapText="true"/>
         </VBox>
     </center>

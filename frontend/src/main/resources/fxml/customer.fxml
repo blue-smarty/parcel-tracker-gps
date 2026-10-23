@@ -46,6 +46,11 @@
                                     </HBox>
                                     <TextField fx:id="deliveryAddressField" promptText="Delivery address"/>
                                     <HBox spacing="8">
+                                        <TextField fx:id="destinationLatitudeField" promptText="Destination latitude (optional)" prefWidth="220"/>
+                                        <TextField fx:id="destinationLongitudeField" promptText="Destination longitude (optional)" prefWidth="220"/>
+                                    </HBox>
+                                    <Label text="Destination coordinates enable courier route planning." wrapText="true"/>
+                                    <HBox spacing="8">
                                         <TextField fx:id="weightField" promptText="Weight (kg)" prefWidth="140"/>
                                         <ComboBox fx:id="packageSizeField" promptText="Package size" prefWidth="150"/>
                                         <TextField fx:id="distanceField" promptText="Route distance (km)" prefWidth="170"/>
