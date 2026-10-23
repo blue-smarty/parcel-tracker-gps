@@ -19,6 +19,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Base64;
+import java.net.CookieManager;
 
 public class ApiService {
     public static final ObjectMapper MAPPER = new ObjectMapper()
@@ -26,11 +28,21 @@ public class ApiService {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
-    private final HttpClient client = HttpClient.newHttpClient();
+    private final HttpClient client = HttpClient.newBuilder()
+            .cookieHandler(new CookieManager())
+            .build();
     private final String baseUrl;
+    private String courierAuthorization;
+    private String csrfToken;
 
     public ApiService(String baseUrl) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+    }
+
+    public void setCourierCredentials(String courierId, String password) {
+        String credentials = courierId + ":" + password;
+        courierAuthorization = "Basic " + Base64.getEncoder()
+                .encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
     }
 
     public List<Parcel> getParcels() throws IOException, InterruptedException {
@@ -97,21 +109,26 @@ public class ApiService {
     }
 
     private HttpRequest get(String path) {
-        return HttpRequest.newBuilder(URI.create(baseUrl + path)).GET().build();
+        return withCourierAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path))).GET().build();
     }
 
     private HttpRequest post(String path, Object body) throws IOException {
-        return HttpRequest.newBuilder(URI.create(baseUrl + path))
+        return withCourierAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path)))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
                 .build();
     }
 
     private HttpRequest put(String path, Object body) throws IOException {
-        return HttpRequest.newBuilder(URI.create(baseUrl + path))
+        return withCourierAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path)))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
                 .build();
+    }
+
+    private HttpRequest.Builder withCourierAuthorization(HttpRequest.Builder builder) {
+        if (courierAuthorization != null) builder.header("Authorization", courierAuthorization);
+        return builder;
     }
 
     private static String pathSegment(String value) {
@@ -119,10 +136,33 @@ public class ApiService {
     }
 
     private String send(HttpRequest request) throws IOException, InterruptedException {
+        if (!"GET".equalsIgnoreCase(request.method())) {
+            request = withHeader(request, "X-XSRF-TOKEN", getCsrfToken());
+        }
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() / 100 != 2) {
             throw new ApiException(response.statusCode(), response.body());
         }
         return response.body();
+    }
+
+    private synchronized String getCsrfToken() throws IOException, InterruptedException {
+        if (csrfToken == null) {
+            HttpResponse<String> response = client.send(get("/api/csrf"), HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() / 100 != 2) {
+                throw new ApiException(response.statusCode(), response.body());
+            }
+            csrfToken = MAPPER.readTree(response.body()).path("token").asText();
+            if (csrfToken.isBlank()) throw new IOException("The server did not provide a CSRF token");
+        }
+        return csrfToken;
+    }
+
+    private static HttpRequest withHeader(HttpRequest request, String name, String value) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(request.uri())
+                .method(request.method(), request.bodyPublisher().orElse(HttpRequest.BodyPublishers.noBody()));
+        request.headers().map().forEach((header, values) ->
+                values.forEach(headerValue -> builder.header(header, headerValue)));
+        return builder.header(name, value).build();
     }
 }

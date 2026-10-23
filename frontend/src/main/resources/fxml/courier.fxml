@@ -4,6 +4,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.canvas.Canvas?>
@@ -17,6 +18,7 @@
             <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
             <Label text="Courier ID"/>
             <TextField fx:id="courierIdField" promptText="Your assigned courier ID"/>
+            <PasswordField fx:id="courierPasswordField" promptText="Courier password"/>
             <Button fx:id="refreshButton" text="Load deliveries" onAction="#loadDeliveries"/>
             <Button fx:id="routeButton" text="Optimize &amp; navigate"/>
             <Button fx:id="earningsButton" text="Refresh earnings"/>

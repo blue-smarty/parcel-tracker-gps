@@ -1,0 +1,26 @@
+name: parcel_tracker_courier
+description: Cross-platform courier app for Parcel Tracker GPS.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cryptography: 2.7.0
+  flutter_secure_storage: 9.2.2
+  geolocator: 13.0.2
+  http: 1.2.2
+  image_picker: 1.1.2
+  mobile_scanner: 6.0.2
+  path_provider: 2.1.5
+  url_launcher: 6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
