@@ -2,6 +2,7 @@ package com.parceltracker.controller;
 
 import com.parceltracker.model.Parcel;
 import com.parceltracker.service.ApiService;
+import com.parceltracker.service.SupportTicketStore;
 import com.parceltracker.ui.MapPanel;
 import java.text.NumberFormat;
 import java.time.LocalDate;
@@ -62,6 +63,7 @@ public class CustomerController {
 
     private final MapPanel map = new MapPanel();
     private final Map<String, String> previousStatuses = new HashMap<>();
+    private final SupportTicketStore supportTickets = new SupportTicketStore();
     private ApiService api;
     private Parcel selected;
 
@@ -313,15 +315,16 @@ public class CustomerController {
 
     private void openSupportChat() {
         TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("Demo support chat");
-        dialog.setHeaderText("Simulated support");
-        dialog.setContentText("Enter a message (not sent):");
+        dialog.setTitle("Demo support request");
+        dialog.setHeaderText("Local demo support");
+        dialog.setContentText("Enter a message for the local support queue:");
         dialog.showAndWait().filter(message -> !message.isBlank()).ifPresent(message -> {
-            Alert reply = new Alert(Alert.AlertType.INFORMATION,
-                    "Demo support received your message locally: “" + message.trim()
-                            + "”\nA real support agent is not connected.");
-            reply.setHeaderText("Simulated reply");
-            reply.showAndWait();
+            try {
+                supportTickets.create(selected == null ? null : selected.getTrackingNumber(), message);
+                trackingStatusLabel.setText("Support request added to the local demo queue.");
+            } catch (RuntimeException e) {
+                trackingStatusLabel.setText("Could not save support request: " + e.getMessage());
+            }
         });
     }
 
