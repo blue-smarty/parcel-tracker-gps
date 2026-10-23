@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.annotation.Id;
@@ -56,6 +57,12 @@ public class Parcel {
 
     @Field("delivery_speed")
     private String deliverySpeed;
+
+    @Field("scheduled_date")
+    private LocalDate scheduledDate;
+
+    @Field("scheduled_window")
+    private String scheduledWindow;
 
     @Positive
     @Field("distance_km")
@@ -112,6 +119,10 @@ public class Parcel {
     public void setWeightKg(Double weightKg) { this.weightKg = weightKg; }
     public String getDeliverySpeed() { return deliverySpeed; }
     public void setDeliverySpeed(String deliverySpeed) { this.deliverySpeed = deliverySpeed; }
+    public LocalDate getScheduledDate() { return scheduledDate; }
+    public void setScheduledDate(LocalDate scheduledDate) { this.scheduledDate = scheduledDate; }
+    public String getScheduledWindow() { return scheduledWindow; }
+    public void setScheduledWindow(String scheduledWindow) { this.scheduledWindow = scheduledWindow; }
     public Double getDistanceKm() { return distanceKm; }
     public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
     public Double getEstimatedPrice() { return estimatedPrice; }
