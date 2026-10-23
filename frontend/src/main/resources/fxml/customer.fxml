@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.parceltracker.controller.CustomerController">
+    <top>
+        <VBox spacing="8">
+            <padding><Insets top="12" right="12" bottom="8" left="12"/></padding>
+            <Label text="Customer App — NON-PRODUCTION DEMO" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+            <Label text="Demo registration is stored locally. Payments, notifications, ratings and support are simulations; no real payment or identity provider is connected."
+                   wrapText="true" style="-fx-text-fill: #9a3412;"/>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <TextField fx:id="customerNameField" promptText="Your name" prefWidth="190"/>
+                <TextField fx:id="customerContactField" promptText="Email or phone" prefWidth="220"/>
+                <Button fx:id="saveProfileButton" text="Save demo profile"/>
+                <Button fx:id="socialSignInButton" text="Demo social sign-in"/>
+                <Label fx:id="profileStatusLabel" wrapText="true"/>
+            </HBox>
+        </VBox>
+    </top>
+    <center>
+        <TabPane>
+            <tabs>
+                <Tab text="Book a delivery" closable="false">
+                    <content>
+                        <ScrollPane fitToWidth="true">
+                            <content>
+                                <VBox spacing="8">
+                                    <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+                                    <Label text="Delivery details" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                                    <HBox spacing="8">
+                                        <TextField fx:id="recipientField" promptText="Recipient name" HBox.hgrow="ALWAYS"/>
+                                        <TextField fx:id="pickupAddressField" promptText="Pickup address" HBox.hgrow="ALWAYS"/>
+                                    </HBox>
+                                    <TextField fx:id="deliveryAddressField" promptText="Delivery address"/>
+                                    <HBox spacing="8">
+                                        <TextField fx:id="weightField" promptText="Weight (kg)" prefWidth="140"/>
+                                        <ComboBox fx:id="packageSizeField" promptText="Package size" prefWidth="150"/>
+                                        <TextField fx:id="distanceField" promptText="Route distance (km)" prefWidth="170"/>
+                                    </HBox>
+                                    <HBox spacing="8">
+                                        <ComboBox fx:id="deliverySpeedField" promptText="Delivery speed" prefWidth="190"/>
+                                        <DatePicker fx:id="scheduledDateField" promptText="Scheduled date"/>
+                                        <ComboBox fx:id="scheduledWindowField" promptText="Time window" prefWidth="170"/>
+                                    </HBox>
+                                    <HBox spacing="8">
+                                        <ComboBox fx:id="paymentMethodField" promptText="Demo payment option" prefWidth="230"/>
+                                        <Button fx:id="estimateButton" text="Estimate price"/>
+                                    </HBox>
+                                    <Label fx:id="priceLabel" wrapText="true" text="Enter distance, weight and delivery speed for a demo estimate."/>
+                                    <Button fx:id="bookButton" text="Place demo order" defaultButton="true"/>
+                                    <Label fx:id="bookingStatusLabel" wrapText="true"/>
+                                </VBox>
+                            </content>
+                        </ScrollPane>
+                    </content>
+                </Tab>
+                <Tab text="Track &amp; support" closable="false">
+                    <content>
+                        <VBox spacing="8">
+                            <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
+                            <Label fx:id="notificationLabel" wrapText="true" text="Live status notifications appear here while the tracking feed is connected."/>
+                            <TableView fx:id="ordersTable" prefHeight="220"/>
+                            <Label fx:id="trackingDetailsLabel" wrapText="true" text="Select one of your demo customer orders."/>
+                            <HBox fx:id="customerMapContainer" minHeight="220" prefHeight="260"/>
+                            <HBox spacing="8">
+                                <Button fx:id="receiptButton" text="View digital receipt" disable="true"/>
+                                <Button fx:id="ratingButton" text="Rate delivery" disable="true"/>
+                                <Button fx:id="supportButton" text="Demo support chat"/>
+                                <Button fx:id="refreshOrdersButton" text="Refresh"/>
+                            </HBox>
+                            <Label fx:id="trackingStatusLabel" wrapText="true"/>
+                        </VBox>
+                    </content>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </center>
+</BorderPane>

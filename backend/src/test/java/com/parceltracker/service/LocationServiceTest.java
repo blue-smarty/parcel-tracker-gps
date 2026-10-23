@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 class LocationServiceTest {
     private final ParcelRepository repo = mock(ParcelRepository.class);
-    private final ParcelService parcels = new ParcelService(repo);
+    private final ParcelService parcels = new ParcelService(repo, new DemoPricingService());
     private final LocationService service = new LocationService(parcels);
 
     @Test
@@ -43,5 +43,20 @@ class LocationServiceTest {
         Parcel saved = parcels.create(p);
         assertTrue(saved.getTrackingNumber().startsWith("TRK-"));
         assertNotNull(saved.getCreatedAt());
+    }
+
+    @Test
+    void createCalculatesDemoPriceFromDistanceWeightAndSpeed() {
+        when(repo.save(any(Parcel.class))).thenAnswer(i -> i.getArgument(0));
+        Parcel parcel = new Parcel();
+        parcel.setSender("a");
+        parcel.setRecipient("b");
+        parcel.setDistanceKm(10.0);
+        parcel.setWeightKg(2.0);
+        parcel.setDeliverySpeed("SAME_DAY");
+
+        Parcel saved = parcels.create(parcel);
+
+        assertEquals(31.5, saved.getEstimatedPrice());
     }
 }

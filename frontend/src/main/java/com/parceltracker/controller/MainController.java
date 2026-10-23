@@ -26,8 +26,11 @@ public class MainController {
     @FXML private Button refreshButton;
     @FXML private Button pickupButton;
     @FXML private Button courierButton;
+    @FXML private Button customerButton;
     private Stage pickupStage;
     private Stage courierStage;
+    private Stage customerStage;
+    private CustomerController customerController;
 
     private ApiService api;
     private MapController mapController;
@@ -46,12 +49,33 @@ public class MainController {
         refreshButton.setOnAction(e -> reload());
         pickupButton.setOnAction(e -> openPickupForm());
         courierButton.setOnAction(e -> openCourierDashboard());
+        customerButton.setOnAction(e -> openCustomerApp());
         reload();
         mapController.start();
     }
 
     public void shutdown() {
         if (mapController != null) mapController.stop();
+    }
+
+    private void openCustomerApp() {
+        if (customerStage != null && customerStage.isShowing()) {
+            customerStage.toFront();
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/customer.fxml"));
+            Parent root = loader.load();
+            customerController = loader.getController();
+            customerController.init(api);
+            customerStage = new Stage();
+            customerStage.setTitle("Customer App — Demo");
+            customerStage.setScene(new Scene(root, 900, 760));
+            customerStage.setOnHidden(e -> customerController = null);
+            customerStage.show();
+        } catch (java.io.IOException e) {
+            detailsLabel.setText("Cannot open customer app: " + e.getMessage());
+        }
     }
 
     private void openPickupForm() {
@@ -102,6 +126,7 @@ public class MainController {
                     listPanel.setParcels(list);
                     mapController.showParcels(list);
                     detailsLabel.setText("Loaded " + list.size() + " parcels");
+                    if (customerController != null) customerController.onTrackingRefresh(list);
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> detailsLabel.setText("Cannot load parcels: " + e.getMessage()));
@@ -128,6 +153,7 @@ public class MainController {
             reload();
             return;
         }
+        if (customerController != null) customerController.onLiveLocation(parcelId, location);
         for (Parcel p : parcels) {
             if (p.getId().equals(parcelId)) {
                 p.setCurrentLocation(location);

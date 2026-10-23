@@ -51,6 +51,9 @@ Open **Courier Dashboard** and enter the courier ID assigned to a parcel to load
 ### Schedule Pickup
 Click **Schedule Pickup** in the top bar to open the pickup form: contact name, phone, pickup address (street, city, postal code), parcel description, weight (kg), optional dimensions, pickup date, time window and notes. Fields are validated inline and Submit stays disabled until the form is valid. Submission runs in the background with a progress indicator; on success the pickup ID and status are shown and the form is cleared, on failure the server's validation errors or a connection error are displayed. Reset clears the form and Cancel closes it. The backend URL is taken from `-Dapi.url` (default `http://localhost:8080`).
 
+### Customer App (Non-production demo)
+Choose **Customer App (Demo)** to save a local demo profile and create parcel orders with pickup/delivery addresses, package size, weight, delivery speed, scheduled time window, route distance and a demo payment option. Pricing is a server-calculated estimate using the entered distance, weight and delivery speed; it is not a route lookup or a binding quote. Orders appear in **Track & support**, where the existing GPS map and tracking feed show location/status updates. The window also offers a demo receipt, local-only rating and simulated support chat. Demo card/mobile wallet payments do not collect payment details or charge money; profile data is stored in local Java Preferences, not a customer account. No real email/phone/social verification, push service, payment provider, proof-of-delivery capture or support agent is connected.
+
 ## Scheduled jobs
 Backend jobs live in `com.parceltracker.scheduler`. Each job is idempotent, logs `start`/`end` with candidate, processed and error counts, and isolates per-parcel errors.
 

@@ -2,6 +2,7 @@ package com.parceltracker.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,8 +12,18 @@ public class Parcel {
     private String trackingNumber;
     private String sender;
     private String recipient;
+    private String pickupAddress;
     private Location currentLocation;
     private String destination;
+    private String packageSize;
+    private Double weightKg;
+    private String deliverySpeed;
+    private LocalDate scheduledDate;
+    private String scheduledWindow;
+    private Double distanceKm;
+    private Double estimatedPrice;
+    private String paymentMethod;
+    private String customerContact;
     private String status;
     private List<Location> locationHistory = new ArrayList<>();
     private Instant createdAt;
@@ -26,10 +37,30 @@ public class Parcel {
     public void setSender(String sender) { this.sender = sender; }
     public String getRecipient() { return recipient; }
     public void setRecipient(String recipient) { this.recipient = recipient; }
+    public String getPickupAddress() { return pickupAddress; }
+    public void setPickupAddress(String pickupAddress) { this.pickupAddress = pickupAddress; }
     public Location getCurrentLocation() { return currentLocation; }
     public void setCurrentLocation(Location currentLocation) { this.currentLocation = currentLocation; }
     public String getDestination() { return destination; }
     public void setDestination(String destination) { this.destination = destination; }
+    public String getPackageSize() { return packageSize; }
+    public void setPackageSize(String packageSize) { this.packageSize = packageSize; }
+    public Double getWeightKg() { return weightKg; }
+    public void setWeightKg(Double weightKg) { this.weightKg = weightKg; }
+    public String getDeliverySpeed() { return deliverySpeed; }
+    public void setDeliverySpeed(String deliverySpeed) { this.deliverySpeed = deliverySpeed; }
+    public LocalDate getScheduledDate() { return scheduledDate; }
+    public void setScheduledDate(LocalDate scheduledDate) { this.scheduledDate = scheduledDate; }
+    public String getScheduledWindow() { return scheduledWindow; }
+    public void setScheduledWindow(String scheduledWindow) { this.scheduledWindow = scheduledWindow; }
+    public Double getDistanceKm() { return distanceKm; }
+    public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
+    public Double getEstimatedPrice() { return estimatedPrice; }
+    public void setEstimatedPrice(Double estimatedPrice) { this.estimatedPrice = estimatedPrice; }
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+    public String getCustomerContact() { return customerContact; }
+    public void setCustomerContact(String customerContact) { this.customerContact = customerContact; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public List<Location> getLocationHistory() { return locationHistory; }
