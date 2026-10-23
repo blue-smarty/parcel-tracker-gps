@@ -21,6 +21,8 @@ public class Parcel {
     private LocalDate scheduledDate;
     private String scheduledWindow;
     private Double distanceKm;
+    private Double destinationLatitude;
+    private Double destinationLongitude;
     private Double estimatedPrice;
     private String paymentMethod;
     private String customerContact;
@@ -28,6 +30,7 @@ public class Parcel {
     private List<Location> locationHistory = new ArrayList<>();
     private Instant createdAt;
     private Instant updatedAt;
+    private DeliveryProof proofOfDelivery;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -55,6 +58,10 @@ public class Parcel {
     public void setScheduledWindow(String scheduledWindow) { this.scheduledWindow = scheduledWindow; }
     public Double getDistanceKm() { return distanceKm; }
     public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
+    public Double getDestinationLatitude() { return destinationLatitude; }
+    public void setDestinationLatitude(Double destinationLatitude) { this.destinationLatitude = destinationLatitude; }
+    public Double getDestinationLongitude() { return destinationLongitude; }
+    public void setDestinationLongitude(Double destinationLongitude) { this.destinationLongitude = destinationLongitude; }
     public Double getEstimatedPrice() { return estimatedPrice; }
     public void setEstimatedPrice(Double estimatedPrice) { this.estimatedPrice = estimatedPrice; }
     public String getPaymentMethod() { return paymentMethod; }
@@ -69,4 +76,6 @@ public class Parcel {
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public DeliveryProof getProofOfDelivery() { return proofOfDelivery; }
+    public void setProofOfDelivery(DeliveryProof proofOfDelivery) { this.proofOfDelivery = proofOfDelivery; }
 }

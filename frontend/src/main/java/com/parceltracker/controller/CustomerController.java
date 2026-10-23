@@ -37,6 +37,8 @@ public class CustomerController {
     @FXML private TextField recipientField;
     @FXML private TextField pickupAddressField;
     @FXML private TextField deliveryAddressField;
+    @FXML private TextField destinationLatitudeField;
+    @FXML private TextField destinationLongitudeField;
     @FXML private TextField weightField;
     @FXML private ComboBox<String> packageSizeField;
     @FXML private TextField distanceField;
@@ -148,6 +150,8 @@ public class CustomerController {
         String recipient = trim(recipientField.getText());
         String pickup = trim(pickupAddressField.getText());
         String delivery = trim(deliveryAddressField.getText());
+        String destinationLatitudeText = trim(destinationLatitudeField.getText());
+        String destinationLongitudeText = trim(destinationLongitudeField.getText());
         String size = packageSizeField.getValue();
         String speed = deliverySpeedField.getValue();
         String payment = paymentMethodField.getValue();
@@ -176,6 +180,25 @@ public class CustomerController {
             bookingStatusLabel.setText("Choose a non-past date and time window for scheduled delivery.");
             return;
         }
+        Double destinationLatitude;
+        Double destinationLongitude;
+        if (destinationLatitudeText.isEmpty() && destinationLongitudeText.isEmpty()) {
+            destinationLatitude = null;
+            destinationLongitude = null;
+        } else {
+            try {
+                destinationLatitude = Double.parseDouble(destinationLatitudeText.replace(',', '.'));
+                destinationLongitude = Double.parseDouble(destinationLongitudeText.replace(',', '.'));
+                if (!Double.isFinite(destinationLatitude) || destinationLatitude < -90 || destinationLatitude > 90
+                        || !Double.isFinite(destinationLongitude) || destinationLongitude < -180
+                        || destinationLongitude > 180) {
+                    throw new NumberFormatException();
+                }
+            } catch (NumberFormatException exception) {
+                bookingStatusLabel.setText("Enter both valid destination coordinates (latitude -90 to 90, longitude -180 to 180), or leave both blank.");
+                return;
+            }
+        }
 
         Parcel parcel = new Parcel();
         parcel.setSender(name);
@@ -183,6 +206,8 @@ public class CustomerController {
         parcel.setCustomerContact(contact);
         parcel.setPickupAddress(pickup);
         parcel.setDestination(delivery);
+        parcel.setDestinationLatitude(destinationLatitude);
+        parcel.setDestinationLongitude(destinationLongitude);
         parcel.setPackageSize(size.toUpperCase(Locale.ROOT));
         parcel.setWeightKg(weight);
         parcel.setDeliverySpeed("Same-day".equals(speed) ? "SAME_DAY" : "SCHEDULED");

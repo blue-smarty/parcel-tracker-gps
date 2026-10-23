@@ -4,7 +4,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
 
 public class DeliveryProof {
-    @Size(max = 120)
+    @Size(max = 20_000)
     private String recipientSignature;
 
     @Size(max = 120)
