@@ -12,6 +12,7 @@ public class Parcel {
     private String trackingNumber;
     private String sender;
     private String recipient;
+    private String courierId;
     private String pickupAddress;
     private Location currentLocation;
     private String destination;
@@ -30,6 +31,7 @@ public class Parcel {
     private List<Location> locationHistory = new ArrayList<>();
     private Instant createdAt;
     private Instant updatedAt;
+    private Instant escalatedAt;
     private DeliveryProof proofOfDelivery;
 
     public String getId() { return id; }
@@ -40,6 +42,8 @@ public class Parcel {
     public void setSender(String sender) { this.sender = sender; }
     public String getRecipient() { return recipient; }
     public void setRecipient(String recipient) { this.recipient = recipient; }
+    public String getCourierId() { return courierId; }
+    public void setCourierId(String courierId) { this.courierId = courierId; }
     public String getPickupAddress() { return pickupAddress; }
     public void setPickupAddress(String pickupAddress) { this.pickupAddress = pickupAddress; }
     public Location getCurrentLocation() { return currentLocation; }
@@ -76,6 +80,8 @@ public class Parcel {
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public Instant getEscalatedAt() { return escalatedAt; }
+    public void setEscalatedAt(Instant escalatedAt) { this.escalatedAt = escalatedAt; }
     public DeliveryProof getProofOfDelivery() { return proofOfDelivery; }
     public void setProofOfDelivery(DeliveryProof proofOfDelivery) { this.proofOfDelivery = proofOfDelivery; }
 }
