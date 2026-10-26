@@ -38,6 +38,10 @@ Add usage descriptions to `ios/Runner/Info.plist`:
 
 Location is shared only while the app is active and permission is granted; this app does not request background location. The app asks for location when signing in and the OS camera permission when scanning or capturing proof.
 
+## OpenStreetMap
+
+The delivery map shows the courier's current device location and assigned delivery destinations with coordinates. Map tiles are provided by OpenStreetMap's standard tile service and the map displays the required contributor attribution. The public tile service has a usage policy and is not a guaranteed production tile host; use a tile provider suited to your expected traffic for production deployments.
+
 ## Backend accounts and security
 
 Create the first courier account by setting `PARCEL_BOOTSTRAP_COURIER_ID` and `PARCEL_BOOTSTRAP_PASSWORD` when starting the backend. The password must be at least 12 characters. The bootstrap is non-overwriting and can stay configured across restarts; provision additional accounts through a trusted operator. Courier accounts are stored in MongoDB with BCrypt password hashes. Basic credentials are sent with each API request, so deploy the backend behind HTTPS and use a trusted certificate.

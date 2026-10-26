@@ -10,10 +10,12 @@ dependencies:
   flutter:
     sdk: flutter
   cryptography: 2.7.0
+  flutter_map: ^7.0.2
   flutter_secure_storage: 9.2.2
   geolocator: 13.0.2
   http: 1.2.2
   image_picker: 1.1.2
+  latlong2: ^0.9.1
   mobile_scanner: 6.0.2
   path_provider: 2.1.5
   url_launcher: 6.3.1
