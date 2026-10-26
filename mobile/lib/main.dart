@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -42,6 +44,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _deliveries = [];
   Map<String, dynamic> _earnings = {};
   StreamSubscription<Position>? _locationSubscription;
+  final ValueNotifier<Position?> _currentPosition = ValueNotifier<Position?>(null);
   bool _busy = false;
   String? _message;
   int _queued = 0;
@@ -57,6 +60,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _locationSubscription?.cancel();
+    _currentPosition.dispose();
     _courierField.dispose();
     _passwordField.dispose();
     super.dispose();
@@ -139,6 +143,10 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
         distanceFilter: 100,
       ),
     ).listen((position) async {
+      if (mounted) {
+        _currentPosition.value = position;
+        setState(() {});
+      }
       for (final parcel in _deliveries.where(_canShareLocation)) {
         try {
           await _api.updateLocation('${parcel['id']}', position.latitude, position.longitude);
@@ -220,6 +228,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       setState(() {
         _deliveries = [];
         _earnings = {};
+        _currentPosition.value = null;
         _queued = 0;
         _message = null;
       });
@@ -235,6 +244,12 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
         actions: [
           if (signedIn)
             IconButton(
+              tooltip: 'Open delivery map',
+              onPressed: _openMap,
+              icon: const Icon(Icons.map_outlined),
+            ),
+          if (signedIn)
+            IconButton(
               tooltip: 'Sign out',
               onPressed: _signOut,
               icon: const Icon(Icons.logout),
@@ -246,6 +261,17 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
           : signedIn
               ? _deliveryList()
               : _signInForm(),
+    );
+  }
+
+  void _openMap() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _CourierMapScreen(
+          deliveries: _deliveries,
+          currentPosition: _currentPosition,
+        ),
+      ),
     );
   }
 
@@ -352,6 +378,121 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+class _CourierMapScreen extends StatelessWidget {
+  const _CourierMapScreen({
+    required this.deliveries,
+    required this.currentPosition,
+  });
+
+  final List<Map<String, dynamic>> deliveries;
+  final ValueListenable<Position?> currentPosition;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<Position?>(
+        valueListenable: currentPosition,
+        builder: (context, position, _) => _buildMap(context, position),
+      );
+
+  Widget _buildMap(BuildContext context, Position? position) {
+    final destinations = deliveries
+        .map((parcel) => _destinationMarker(parcel))
+        .whereType<Marker>()
+        .toList();
+    final current = position == null
+        ? null
+        : LatLng(position.latitude, position.longitude);
+    final center = current ??
+        (destinations.isNotEmpty
+            ? destinations.first.point
+            : const LatLng(0, 0));
+    final markers = <Marker>[
+      ...destinations,
+      if (current != null)
+        Marker(
+          point: current,
+          width: 112,
+          height: 72,
+          child: const _MapPin(label: 'You', color: Colors.indigo),
+        ),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Delivery map')),
+      body: FlutterMap(
+        options: MapOptions(
+          initialCenter: center,
+          initialZoom: current != null || destinations.isNotEmpty ? 12 : 2,
+        ),
+        children: [
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'com.parceltracker.parcel_tracker_courier',
+          ),
+          MarkerLayer(markers: markers),
+          RichAttributionWidget(
+            attributions: [
+              TextSourceAttribution('© OpenStreetMap contributors'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Marker? _destinationMarker(Map<String, dynamic> parcel) {
+    final latitude = _coordinate(parcel['destinationLatitude']);
+    final longitude = _coordinate(parcel['destinationLongitude']);
+    if (latitude == null ||
+        longitude == null ||
+        !latitude.isFinite ||
+        !longitude.isFinite ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180) {
+      return null;
+    }
+    final label = '${parcel['trackingNumber'] ?? parcel['id'] ?? 'Delivery'}';
+    return Marker(
+      point: LatLng(latitude, longitude),
+      width: 160,
+      height: 72,
+      child: _MapPin(label: label, color: Colors.deepOrange),
+    );
+  }
+
+  double? _coordinate(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+}
+
+class _MapPin extends StatelessWidget {
+  const _MapPin({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            constraints: const BoxConstraints(maxWidth: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: const [BoxShadow(blurRadius: 3, color: Colors.black26)],
+            ),
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          Icon(Icons.location_pin, color: color, size: 36),
+        ],
+      );
 }
 
 class _ProofSheet extends StatefulWidget {
