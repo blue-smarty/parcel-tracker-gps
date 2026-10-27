@@ -42,9 +42,19 @@
                                     <Label text="Delivery details" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
                                     <HBox spacing="8">
                                         <TextField fx:id="recipientField" promptText="Recipient name" HBox.hgrow="ALWAYS"/>
-                                        <TextField fx:id="pickupAddressField" promptText="Pickup address" HBox.hgrow="ALWAYS"/>
+                                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                            <HBox spacing="5">
+                                                <TextField fx:id="pickupAddressField" promptText="Pickup address (suggestions after 3 characters)" HBox.hgrow="ALWAYS"/>
+                                                <Button fx:id="pickupLocationButton" text="Use approximate location"/>
+                                            </HBox>
+                                        </VBox>
                                     </HBox>
-                                    <TextField fx:id="deliveryAddressField" promptText="Delivery address"/>
+                                    <HBox spacing="5">
+                                        <TextField fx:id="deliveryAddressField" promptText="Delivery address (suggestions after 3 characters)" HBox.hgrow="ALWAYS"/>
+                                        <Button fx:id="deliveryLocationButton" text="Use approximate location"/>
+                                    </HBox>
+                                    <Label fx:id="addressStatusLabel" wrapText="true"
+                                           text="Address suggestions use Photon/OpenStreetMap. Approximate location uses your network IP via ipapi.co; enter addresses manually if preferred."/>
                                     <HBox spacing="8">
                                         <TextField fx:id="destinationLatitudeField" promptText="Destination latitude (optional)" prefWidth="220"/>
                                         <TextField fx:id="destinationLongitudeField" promptText="Destination longitude (optional)" prefWidth="220"/>

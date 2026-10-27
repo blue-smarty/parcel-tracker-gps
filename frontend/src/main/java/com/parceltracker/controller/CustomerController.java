@@ -1,6 +1,7 @@
 package com.parceltracker.controller;
 
 import com.parceltracker.model.Parcel;
+import com.parceltracker.service.AddressLookupService;
 import com.parceltracker.service.ApiService;
 import com.parceltracker.service.SupportTicketStore;
 import com.parceltracker.ui.MapPanel;
@@ -8,23 +9,29 @@ import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.prefs.Preferences;
+import javafx.animation.PauseTransition;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.HBox;
+import javafx.geometry.Side;
+import javafx.util.Duration;
 
 public class CustomerController {
     private static final Preferences PROFILE = Preferences.userNodeForPackage(CustomerController.class);
@@ -38,6 +45,9 @@ public class CustomerController {
     @FXML private TextField recipientField;
     @FXML private TextField pickupAddressField;
     @FXML private TextField deliveryAddressField;
+    @FXML private Button pickupLocationButton;
+    @FXML private Button deliveryLocationButton;
+    @FXML private Label addressStatusLabel;
     @FXML private TextField destinationLatitudeField;
     @FXML private TextField destinationLongitudeField;
     @FXML private TextField weightField;
@@ -64,6 +74,9 @@ public class CustomerController {
     private final MapPanel map = new MapPanel();
     private final Map<String, String> previousStatuses = new HashMap<>();
     private final SupportTicketStore supportTickets = new SupportTicketStore();
+    private final AddressLookupService addressLookup = new AddressLookupService();
+    private final Map<TextField, PauseTransition> addressTimers = new IdentityHashMap<>();
+    private final Map<TextField, Long> addressSearchVersions = new IdentityHashMap<>();
     private ApiService api;
     private Parcel selected;
 
@@ -83,6 +96,10 @@ public class CustomerController {
                 (observable, previous, parcel) -> selectOrder(parcel));
         saveProfileButton.setOnAction(event -> saveProfile());
         socialSignInButton.setOnAction(event -> useDemoSocialProfile());
+        setupAddressSuggestions(pickupAddressField, false);
+        setupAddressSuggestions(deliveryAddressField, true);
+        pickupLocationButton.setOnAction(event -> useApproximateLocation(pickupAddressField));
+        deliveryLocationButton.setOnAction(event -> useApproximateLocation(deliveryAddressField));
         estimateButton.setOnAction(event -> updateEstimate());
         bookButton.setOnAction(event -> bookOrder());
         refreshOrdersButton.setOnAction(event -> refreshOrders());
@@ -98,6 +115,68 @@ public class CustomerController {
         weightField.textProperty().addListener((observable, previous, value) -> updateEstimate());
         deliverySpeedField.valueProperty().addListener((observable, previous, value) -> updateEstimate());
         refreshOrders();
+    }
+
+    private void setupAddressSuggestions(TextField field, boolean destination) {
+        PauseTransition timer = new PauseTransition(Duration.millis(350));
+        addressTimers.put(field, timer);
+        addressSearchVersions.put(field, 0L);
+        ContextMenu suggestionsMenu = new ContextMenu();
+        field.textProperty().addListener((observable, previous, query) -> {
+            long version = addressSearchVersions.get(field) + 1;
+            addressSearchVersions.put(field, version);
+            timer.stop();
+            suggestionsMenu.hide();
+            if (query == null || query.trim().length() < 3) return;
+            String search = query.trim();
+            timer.setOnFinished(event -> run("address-suggest", () -> addressLookup.suggest(search), matches -> {
+                if (!versionIsCurrent(field, version, search) || matches.isEmpty()) return;
+                List<MenuItem> items = matches.stream().map(match -> {
+                    MenuItem item = new MenuItem(match.address());
+                    item.setOnAction(action -> {
+                        field.setText(match.address());
+                        if (destination) {
+                            destinationLatitudeField.setText(Double.toString(match.latitude()));
+                            destinationLongitudeField.setText(Double.toString(match.longitude()));
+                        }
+                        addressStatusLabel.setText("Address suggestion supplied by Photon/OpenStreetMap.");
+                    });
+                    return item;
+                }).toList();
+                suggestionsMenu.getItems().setAll(items);
+                if (field.isFocused() && field.getScene() != null && field.getScene().getWindow().isShowing()) {
+                    suggestionsMenu.show(field, Side.BOTTOM, 0, 0);
+                }
+            }, error -> {
+                if (versionIsCurrent(field, version, search)) {
+                    addressStatusLabel.setText("Address suggestions are unavailable; enter the address manually.");
+                }
+            }));
+            timer.playFromStart();
+        });
+    }
+
+    private boolean versionIsCurrent(TextField field, long version, String search) {
+        return addressSearchVersions.get(field) == version && field.getText().trim().equals(search);
+    }
+
+    private void useApproximateLocation(TextField field) {
+        Button button = field == pickupAddressField ? pickupLocationButton : deliveryLocationButton;
+        button.setDisable(true);
+        addressStatusLabel.setText("Looking up approximate network location…");
+        run("customer-address-location", addressLookup::approximateCurrentLocation, location -> {
+            field.setText(location.address());
+            if (field == deliveryAddressField) {
+                destinationLatitudeField.setText(Double.toString(location.latitude()));
+                destinationLongitudeField.setText(Double.toString(location.longitude()));
+            }
+            addressStatusLabel.setText("Approximate network location filled; it may be inaccurate. "
+                    + "Location lookup was provided by ipapi.co and Photon/OpenStreetMap.");
+            button.setDisable(false);
+        }, error -> {
+            addressStatusLabel.setText("Could not look up network location; enter the address manually.");
+            button.setDisable(false);
+        });
     }
 
     private void addColumn(String title, double width, java.util.function.Function<Parcel, String> value) {
