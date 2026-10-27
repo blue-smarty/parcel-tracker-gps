@@ -55,6 +55,18 @@ public class Parcel {
     @Pattern(regexp = "SMALL|MEDIUM|LARGE")
     private String packageSize;
 
+    @Positive
+    @Field("width_cm")
+    private Double widthCm;
+
+    @Positive
+    @Field("length_cm")
+    private Double lengthCm;
+
+    @Positive
+    @Field("height_cm")
+    private Double heightCm;
+
     @DecimalMin(value = "0.0", inclusive = false)
     @Field("weight_kg")
     private Double weightKg;
@@ -135,6 +147,12 @@ public class Parcel {
     public void setDestination(String destination) { this.destination = destination; }
     public String getPackageSize() { return packageSize; }
     public void setPackageSize(String packageSize) { this.packageSize = packageSize; }
+    public Double getWidthCm() { return widthCm; }
+    public void setWidthCm(Double widthCm) { this.widthCm = widthCm; }
+    public Double getLengthCm() { return lengthCm; }
+    public void setLengthCm(Double lengthCm) { this.lengthCm = lengthCm; }
+    public Double getHeightCm() { return heightCm; }
+    public void setHeightCm(Double heightCm) { this.heightCm = heightCm; }
     public Double getWeightKg() { return weightKg; }
     public void setWeightKg(Double weightKg) { this.weightKg = weightKg; }
     public String getDeliverySpeed() { return deliverySpeed; }
