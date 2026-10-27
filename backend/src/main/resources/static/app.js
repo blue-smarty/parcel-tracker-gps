@@ -112,6 +112,46 @@
     byId('priceEstimate').textContent = money(Math.round((5 + distance * 1.2 + weight * 0.5) * multiplier * 100) / 100);
   }
 
+  async function geocode(address) {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`,
+      { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`Address lookup failed (HTTP ${response.status}).`);
+    const results = await response.json();
+    if (!results.length) throw new Error(`Could not find "${address}".`);
+    return { lat: Number(results[0].lat), lon: Number(results[0].lon) };
+  }
+
+  function haversineKm(a, b) {
+    const rad = degrees => degrees * Math.PI / 180;
+    const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2
+      + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lon - a.lon) / 2) ** 2;
+    return 2 * 6371.0088 * Math.asin(Math.sqrt(h));
+  }
+
+  async function calculateDistance() {
+    const pickup = byId('pickupAddress').value.trim();
+    const delivery = byId('destination').value.trim();
+    if (!pickup || !delivery) {
+      setMessage('distanceMessage', 'Enter both the pickup and delivery addresses first.', 'error');
+      return;
+    }
+    const button = byId('calcDistanceButton');
+    button.disabled = true;
+    setMessage('distanceMessage', 'Calculating distance…');
+    try {
+      const from = await geocode(pickup);
+      const to = await geocode(delivery);
+      const km = Math.max(0.1, Math.round(haversineKm(from, to) * 10) / 10);
+      byId('distanceKm').value = km;
+      updateEstimate();
+      setMessage('distanceMessage', `About ${km} km in a straight line. Road distance may be longer; you can edit the value.`, 'success');
+    } catch (error) {
+      setMessage('distanceMessage', `Could not calculate distance: ${error.message}`, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function toggleSchedule() {
     const scheduled = byId('deliverySpeed').value === 'SCHEDULED';
     byId('scheduleFields').hidden = !scheduled;
@@ -560,6 +600,7 @@
   function bindEvents() {
     document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => setView(button.dataset.view)));
     byId('bookingForm').addEventListener('submit', bookParcel);
+    byId('calcDistanceButton').addEventListener('click', calculateDistance);
     ['distanceKm', 'weightKg'].forEach(id => byId(id).addEventListener('input', updateEstimate));
     byId('deliverySpeed').addEventListener('change', updateEstimate);
     byId('deliverySpeed').addEventListener('change', toggleSchedule);

@@ -74,6 +74,10 @@
                     </div>
                   </fieldset>
                   <label>Distance (km)<input id="distanceKm" type="number" min="0.1" step="0.1" placeholder="e.g. 8.5" required></label>
+                  <div class="distance-action">
+                    <button type="button" id="calcDistanceButton" class="button button-secondary">Calculate from addresses</button>
+                  </div>
+                  <p id="distanceMessage" class="field-note span-two status-message" role="status">Looks up both addresses on OpenStreetMap and estimates the straight-line distance. Addresses are sent to that service.</p>
                   <label>Weight (kg)<input id="weightKg" type="number" min="0.1" step="0.1" placeholder="e.g. 2" required></label>
                   <label>Delivery speed<select id="deliverySpeed"><option value="SCHEDULED">Scheduled</option><option value="SAME_DAY">Same-day</option></select></label>
                   <label>Payment demo<select id="paymentMethod"><option value="DEMO_CARD">Demo card</option><option value="DEMO_MOBILE_WALLET">Demo mobile wallet</option><option value="CASH_ON_DELIVERY">Cash on delivery</option></select></label>
