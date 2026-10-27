@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102a43">
+  <title>ParcelPilot — Parcel operations</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="ParcelPilot home">
+        <span class="brand-mark">P</span>
+        <span>parcel<span class="brand-light">pilot</span></span>
+      </a>
+      <div class="topbar-right">
+        <span class="demo-tag">DEMO WORKSPACE</span>
+        <span class="live-indicator"><i id="connectionDot"></i><span id="connectionText">Connecting…</span></span>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div>
+          <p class="eyebrow">PARCEL OPERATIONS, MADE SIMPLE</p>
+          <h1>Everything moving.<br><span>All in one place.</span></h1>
+          <p class="intro-copy">Book deliveries, follow every update, and keep dispatch moving — right from your browser.</p>
+        </div>
+        <div class="intro-art" aria-hidden="true">
+          <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
+          <div class="art-pin">↗</div><div class="art-dot dot-one"></div><div class="art-dot dot-two"></div>
+        </div>
+      </section>
+
+      <nav class="tabs" aria-label="Workspace">
+        <button class="tab active" data-view="customerView"><span>01</span> Customer</button>
+        <button class="tab" data-view="dispatchView"><span>02</span> Dispatch</button>
+        <span class="tab-rule"></span>
+        <span class="tab-hint">CUSTOMER + OPERATIONS PORTAL</span>
+      </nav>
+
+      <section id="customerView" class="view active-view">
+        <div class="section-heading">
+          <div><p class="eyebrow">CUSTOMER PORTAL</p><h2>Send something with care.</h2></div>
+          <button class="button button-quiet" id="refreshOrdersButton">↻ <span>Refresh orders</span></button>
+        </div>
+        <div class="customer-grid">
+          <div class="panel booking-panel">
+            <div class="panel-heading"><div><p class="eyebrow">NEW DELIVERY</p><h3>Book a parcel</h3></div><span class="step-badge">01 / 02</span></div>
+            <form id="bookingForm">
+              <div class="form-section">
+                <h4>Your details</h4>
+                <div class="field-grid two">
+                  <label>Your name<input id="customerName" name="customerName" autocomplete="name" required></label>
+                  <label>Email or phone<input id="customerContact" name="customerContact" autocomplete="email" required></label>
+                </div>
+                <p class="field-note">Your demo profile is saved only in this browser.</p>
+              </div>
+              <div class="form-section">
+                <h4>Delivery details</h4>
+                <div class="field-grid two">
+                  <label>Recipient<input id="recipient" required></label>
+                  <label>Package size<select id="packageSize" required><option value="">Choose size</option><option value="SMALL">Small</option><option value="MEDIUM">Medium</option><option value="LARGE">Large</option></select></label>
+                  <label class="span-two">Pickup address<input id="pickupAddress" autocomplete="street-address" required></label>
+                  <label class="span-two">Delivery address<input id="destination" required></label>
+                  <label>Distance (km)<input id="distanceKm" type="number" min="0.1" step="0.1" placeholder="e.g. 8.5" required></label>
+                  <label>Weight (kg)<input id="weightKg" type="number" min="0.1" step="0.1" placeholder="e.g. 2" required></label>
+                  <label>Delivery speed<select id="deliverySpeed"><option value="SCHEDULED">Scheduled</option><option value="SAME_DAY">Same-day</option></select></label>
+                  <label>Payment demo<select id="paymentMethod"><option value="DEMO_CARD">Demo card</option><option value="DEMO_MOBILE_WALLET">Demo mobile wallet</option><option value="CASH_ON_DELIVERY">Cash on delivery</option></select></label>
+                </div>
+                <div id="scheduleFields" class="field-grid two schedule-fields">
+                  <label>Delivery date<input id="scheduledDate" type="date"></label>
+                  <label>Time window<select id="scheduledWindow"><option value="">Choose a window</option><option>08:00-10:00</option><option>10:00-12:00</option><option>12:00-14:00</option><option>14:00-16:00</option><option>16:00-18:00</option></select></label>
+                </div>
+                <details class="coordinates">
+                  <summary>Optional destination coordinates</summary>
+                  <div class="field-grid two">
+                    <label>Latitude<input id="destinationLatitude" type="number" min="-90" max="90" step="any" placeholder="e.g. 37.7749"></label>
+                    <label>Longitude<input id="destinationLongitude" type="number" min="-180" max="180" step="any" placeholder="e.g. -122.4194"></label>
+                  </div>
+                </details>
+              </div>
+              <div class="estimate-row"><span>Estimated demo price</span><strong id="priceEstimate">$—</strong></div>
+              <p class="field-note">Estimate uses your entered route distance, weight and speed. It is not a quote; no payment is collected.</p>
+              <button class="button button-primary full-button" id="bookButton" type="submit">Create demo delivery <span>→</span></button>
+              <p id="bookingMessage" class="form-message" role="status"></p>
+            </form>
+          </div>
+
+          <div class="customer-side">
+            <div class="panel orders-panel">
+              <div class="panel-heading"><div><p class="eyebrow">YOUR ACTIVITY</p><h3>Track your deliveries</h3></div><span id="orderCount" class="count-pill">0</span></div>
+              <div id="ordersList" class="orders-list"><div class="empty-state">Your deliveries will appear here after you book.</div></div>
+              <p id="ordersMessage" class="field-note status-message" role="status">Orders are saved to this browser for demo tracking.</p>
+            </div>
+            <div class="panel tracking-panel">
+              <div class="panel-heading"><div><p class="eyebrow">LIVE TRACKING</p><h3 id="trackingTitle">Select an order</h3></div><span id="trackingStatus" class="status-chip">WAITING</span></div>
+              <div id="customerMap" class="map-canvas map-empty"><div class="map-grid"></div><span class="map-empty-label">Live location will appear when GPS is available</span></div>
+              <div id="trackingDetails" class="tracking-details">Select a delivery to see its route and status.</div>
+              <div class="tracking-actions">
+                <button id="receiptButton" class="button button-quiet" disabled>View receipt</button>
+                <button id="supportButton" class="button button-quiet" disabled>Contact demo support</button>
+              </div>
+              <p id="customerNotice" class="field-note status-message" role="status"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dispatchView" class="view">
+        <div class="section-heading">
+          <div><p class="eyebrow">DISPATCH WORKSPACE</p><h2>Keep every delivery on course.</h2></div>
+          <button class="button button-quiet" id="refreshDispatchButton">↻ <span>Refresh operations</span></button>
+        </div>
+        <div class="metric-grid">
+          <div class="metric-card"><span>ACTIVE DELIVERIES</span><strong id="activeMetric">—</strong><i>Across your fleet</i></div>
+          <div class="metric-card"><span>NEEDS ASSIGNMENT</span><strong id="unassignedMetric">—</strong><i>Ready for a courier</i></div>
+          <div class="metric-card"><span>DELIVERED VALUE</span><strong id="valueMetric">—</strong><i>Estimated demo value</i></div>
+          <div class="metric-card"><span>ESCALATIONS</span><strong id="escalatedMetric">—</strong><i>Stale assignments</i></div>
+        </div>
+        <div class="dispatch-grid">
+          <div class="panel dispatch-list-panel">
+            <div class="panel-heading dispatch-heading"><div><p class="eyebrow">PARCEL QUEUE</p><h3>Delivery operations</h3></div><select id="dispatchFilter" aria-label="Filter parcels"><option value="ACTIVE">Active parcels</option><option value="ALL">All parcels</option><option value="UNASSIGNED">Needs assignment</option></select></div>
+            <div class="table-wrap">
+              <table><thead><tr><th>TRACKING</th><th>RECIPIENT</th><th>STATUS</th><th>COURIER</th><th></th></tr></thead><tbody id="dispatchRows"><tr><td colspan="5" class="empty-state">Loading parcels…</td></tr></tbody></table>
+            </div>
+            <div class="assignment-box">
+              <div class="assignment-title"><strong>Assign a courier</strong><span>Use an active, provisioned courier ID</span></div>
+              <div class="assignment-controls"><input id="courierIdInput" placeholder="Courier ID" aria-label="Courier ID"><button id="assignButton" class="button button-primary" disabled>Assign selected</button></div>
+              <details class="auto-dispatch">
+                <summary>Auto-dispatch by active workload</summary>
+                <label>Provisioned courier IDs (comma separated)<input id="courierIdsInput" placeholder="courier-101, courier-102"></label>
+                <button id="autoDispatchButton" class="button button-secondary">Dispatch unassigned parcels</button>
+              </details>
+              <p id="dispatchMessage" class="form-message" role="status"></p>
+            </div>
+          </div>
+          <div class="panel map-panel">
+            <div class="panel-heading"><div><p class="eyebrow">FLEET SNAPSHOT</p><h3>Live parcel locations</h3></div><span class="live-label"><i></i> LIVE</span></div>
+            <div id="dispatchMap" class="map-canvas map-empty"><div class="map-grid"></div><span class="map-empty-label">Location markers appear when courier GPS is available</span></div>
+            <div class="map-legend"><span><i class="legend-dot"></i> Active parcel</span><span><i class="legend-dot selected-dot"></i> Selected</span><span id="mapCoordinates">Coordinates plotted to scale</span></div>
+            <div id="selectedParcelDetails" class="selected-parcel"><span class="field-note">Select a parcel to see its details.</span></div>
+          </div>
+        </div>
+        <div class="panel support-panel">
+          <div class="panel-heading"><div><p class="eyebrow">LOCAL DEMO QUEUE</p><h3>Customer support requests</h3></div><span id="supportCount" class="count-pill">0 open</span></div>
+          <div id="supportList" class="support-list"><div class="empty-state">Support messages from this browser will appear here.</div></div>
+          <p class="field-note">Requests stay in this browser; no support agent is connected.</p>
+        </div>
+        <p class="demo-warning"><strong>Demo only.</strong> Dispatch access is not authenticated. Do not expose this portal or its API to the public internet without adding role-based authorization.</p>
+      </section>
+    </main>
+    <footer><span>PARCELPILOT <b>·</b> DEMO OPERATIONS</span><span>Payments and customer profiles are simulated.</span></footer>
+  </div>
+</body>
+</html>
