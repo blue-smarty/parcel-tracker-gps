@@ -132,8 +132,8 @@
     return {
       sender: byId('customerName').value.trim(),
       customerContact: byId('customerContact').value.trim(),
-      recipient: byId('recipient').value.trim(),
       pickupAddress: byId('pickupAddress').value.trim(),
+      recipient: byId('recipient').value.trim(),
       destination: byId('destination').value.trim(),
       destinationLatitude,
       destinationLongitude,
