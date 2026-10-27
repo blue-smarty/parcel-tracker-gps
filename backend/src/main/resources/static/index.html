@@ -63,8 +63,15 @@
                 <div class="field-grid two">
                   <label>Recipient<input id="recipient" required></label>
                   <label>Package size<select id="packageSize" required><option value="">Choose size</option><option value="SMALL">Small</option><option value="MEDIUM">Medium</option><option value="LARGE">Large</option></select></label>
-                  <label class="span-two">Pickup address<input id="pickupAddress" autocomplete="street-address" required></label>
-                  <label class="span-two">Delivery address<input id="destination" required></label>
+                  <label class="span-two">Pickup address
+                    <span class="address-entry"><input id="pickupAddress" autocomplete="street-address" list="pickupAddressSuggestions" required><button class="button button-quiet location-button" type="button" data-location-target="pickupAddress">Use my location</button></span>
+                    <datalist id="pickupAddressSuggestions"></datalist>
+                  </label>
+                  <label class="span-two">Delivery address
+                    <span class="address-entry"><input id="destination" autocomplete="street-address" list="deliveryAddressSuggestions" required><button class="button button-quiet location-button" type="button" data-location-target="destination">Use my location</button></span>
+                    <datalist id="deliveryAddressSuggestions"></datalist>
+                  </label>
+                  <p id="addressMessage" class="field-note span-two" role="status">Address suggestions use OpenStreetMap data via Photon. Browser location requires your permission.</p>
                   <fieldset class="span-two dimensions-fieldset">
                     <legend>Package dimensions (W x L x H, cm)</legend>
                     <div class="field-grid three">

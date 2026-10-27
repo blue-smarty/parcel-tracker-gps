@@ -14,7 +14,10 @@
     socket: null,
     csrfToken: null,
     lastStatuses: new Map(),
-    refreshTimer: null
+    refreshTimer: null,
+    addressTimers: new Map(),
+    addressControllers: new Map(),
+    addressSuggestions: new Map()
   };
   const byId = id => document.getElementById(id);
   const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value) || 0);
@@ -93,6 +96,109 @@
 
   function saveProfile(name, contact) {
     localStorage.setItem(keys.profile, JSON.stringify({ name, contact }));
+  }
+
+  function formatAddress(properties) {
+    const street = [properties.housenumber, properties.street].filter(Boolean).join(' ');
+    return [...new Set([properties.name, street, properties.postcode, properties.city,
+      properties.state, properties.country].filter(Boolean))].join(', ');
+  }
+
+  async function lookupAddress(query, signal) {
+    const url = new URL('https://photon.komoot.io/api/');
+    url.search = new URLSearchParams({ q: query, limit: '5', lang: 'en' });
+    const response = await fetch(url, { signal });
+    if (!response.ok) throw new Error(`Address lookup failed (HTTP ${response.status}).`);
+    const body = await response.json();
+    return (body.features || []).map(feature => ({
+      label: formatAddress(feature.properties || {}),
+      latitude: feature.geometry?.coordinates?.[1],
+      longitude: feature.geometry?.coordinates?.[0]
+    })).filter(item => item.label);
+  }
+
+  function suggestAddresses(input) {
+    const query = input.value.trim();
+    const datalistId = input.id === 'pickupAddress' ? 'pickupAddressSuggestions' : 'deliveryAddressSuggestions';
+    const datalist = byId(datalistId);
+    const key = input.id;
+    if ((state.addressSuggestions.get(key) || []).some(item => item.label === query)) return;
+    window.clearTimeout(state.addressTimers.get(key));
+    state.addressControllers.get(key)?.abort();
+    datalist.replaceChildren();
+    state.addressSuggestions.delete(key);
+    if (query.length < 3) return;
+    state.addressTimers.set(key, window.setTimeout(async () => {
+      const controller = new AbortController();
+      state.addressControllers.set(key, controller);
+      try {
+        const suggestions = await lookupAddress(query, controller.signal);
+        if (input.value.trim() !== query) return;
+        state.addressSuggestions.set(key, suggestions);
+        datalist.replaceChildren(...suggestions.map(item => {
+          const option = document.createElement('option');
+          option.value = item.label;
+          return option;
+        }));
+      } catch (error) {
+        if (error.name !== 'AbortError') setMessage('addressMessage', 'Address suggestions are unavailable right now.');
+      }
+    }, 350));
+  }
+
+  async function reverseGeocode(latitude, longitude) {
+    const url = new URL('https://photon.komoot.io/reverse');
+    url.search = new URLSearchParams({ lat: String(latitude), lon: String(longitude), lang: 'en' });
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Address lookup failed (HTTP ${response.status}).`);
+    const body = await response.json();
+    const feature = body.features?.[0];
+    if (!feature) throw new Error('No address was found for this location.');
+    return {
+      label: formatAddress(feature.properties || {}),
+      latitude: feature.geometry?.coordinates?.[1] ?? latitude,
+      longitude: feature.geometry?.coordinates?.[0] ?? longitude
+    };
+  }
+
+  function useBrowserLocation(button) {
+    if (!navigator.geolocation) {
+      setMessage('addressMessage', 'This browser does not support device location.', 'error');
+      return;
+    }
+    const target = byId(button.dataset.locationTarget);
+    button.disabled = true;
+    setMessage('addressMessage', 'Getting your location…');
+    navigator.geolocation.getCurrentPosition(async position => {
+      try {
+        const address = await reverseGeocode(position.coords.latitude, position.coords.longitude);
+        target.value = address.label;
+        if (target.id === 'destination') {
+          byId('destinationLatitude').value = address.latitude;
+          byId('destinationLongitude').value = address.longitude;
+        }
+        setMessage('addressMessage', 'Address filled from your device location.', 'success');
+      } catch (error) {
+        setMessage('addressMessage', `Could not find an address: ${error.message}`, 'error');
+      } finally {
+        button.disabled = false;
+      }
+    }, error => {
+      const message = error.code === 1
+        ? 'Location permission was denied. You can enter the address manually.'
+        : 'Could not get your location. You can enter the address manually.';
+      setMessage('addressMessage', message, 'error');
+      button.disabled = false;
+    }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+  }
+
+  function applySuggestedCoordinates(input) {
+    if (input.id !== 'destination') return;
+    const suggestion = (state.addressSuggestions.get(input.id) || [])
+      .find(item => item.label === input.value.trim());
+    if (!suggestion || !Number.isFinite(suggestion.latitude) || !Number.isFinite(suggestion.longitude)) return;
+    byId('destinationLatitude').value = suggestion.latitude;
+    byId('destinationLongitude').value = suggestion.longitude;
   }
 
   function initializeProfile() {
@@ -560,6 +666,13 @@
   function bindEvents() {
     document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => setView(button.dataset.view)));
     byId('bookingForm').addEventListener('submit', bookParcel);
+    ['pickupAddress', 'destination'].forEach(id => {
+      const input = byId(id);
+      input.addEventListener('input', () => suggestAddresses(input));
+      input.addEventListener('change', () => applySuggestedCoordinates(input));
+    });
+    document.querySelectorAll('[data-location-target]').forEach(button =>
+      button.addEventListener('click', () => useBrowserLocation(button)));
     ['distanceKm', 'weightKg'].forEach(id => byId(id).addEventListener('input', updateEstimate));
     byId('deliverySpeed').addEventListener('change', updateEstimate);
     byId('deliverySpeed').addEventListener('change', toggleSchedule);
