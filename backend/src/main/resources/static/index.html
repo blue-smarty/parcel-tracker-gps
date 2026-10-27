@@ -65,6 +65,14 @@
                   <label>Package size<select id="packageSize" required><option value="">Choose size</option><option value="SMALL">Small</option><option value="MEDIUM">Medium</option><option value="LARGE">Large</option></select></label>
                   <label class="span-two">Pickup address<input id="pickupAddress" autocomplete="street-address" required></label>
                   <label class="span-two">Delivery address<input id="destination" required></label>
+                  <fieldset class="span-two dimensions-fieldset">
+                    <legend>Package dimensions (W x L x H, cm)</legend>
+                    <div class="field-grid three">
+                      <label>Width (W)<input id="widthCm" type="number" min="0.1" step="0.1" required></label>
+                      <label>Length (L)<input id="lengthCm" type="number" min="0.1" step="0.1" required></label>
+                      <label>Height (H)<input id="heightCm" type="number" min="0.1" step="0.1" required></label>
+                    </div>
+                  </fieldset>
                   <label>Distance (km)<input id="distanceKm" type="number" min="0.1" step="0.1" placeholder="e.g. 8.5" required></label>
                   <label>Weight (kg)<input id="weightKg" type="number" min="0.1" step="0.1" placeholder="e.g. 2" required></label>
                   <label>Delivery speed<select id="deliverySpeed"><option value="SCHEDULED">Scheduled</option><option value="SAME_DAY">Same-day</option></select></label>
