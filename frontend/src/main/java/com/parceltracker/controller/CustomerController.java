@@ -77,6 +77,7 @@ public class CustomerController {
     private final AddressLookupService addressLookup = new AddressLookupService();
     private final Map<TextField, PauseTransition> addressTimers = new IdentityHashMap<>();
     private final Map<TextField, Long> addressSearchVersions = new IdentityHashMap<>();
+    private final Map<TextField, Boolean> programmaticAddressUpdates = new IdentityHashMap<>();
     private ApiService api;
     private Parcel selected;
 
@@ -127,6 +128,7 @@ public class CustomerController {
             addressSearchVersions.put(field, version);
             timer.stop();
             suggestionsMenu.hide();
+            if (Boolean.TRUE.equals(programmaticAddressUpdates.get(field))) return;
             if (query == null || query.trim().length() < 3) return;
             String search = query.trim();
             timer.setOnFinished(event -> run("address-suggest", () -> addressLookup.suggest(search), matches -> {
@@ -134,7 +136,7 @@ public class CustomerController {
                 List<MenuItem> items = matches.stream().map(match -> {
                     MenuItem item = new MenuItem(match.address());
                     item.setOnAction(action -> {
-                        field.setText(match.address());
+                        setAddressText(field, match.address());
                         if (destination) {
                             destinationLatitudeField.setText(Double.toString(match.latitude()));
                             destinationLongitudeField.setText(Double.toString(match.longitude()));
@@ -165,7 +167,7 @@ public class CustomerController {
         button.setDisable(true);
         addressStatusLabel.setText("Looking up approximate network location…");
         run("customer-address-location", addressLookup::approximateCurrentLocation, location -> {
-            field.setText(location.address());
+            setAddressText(field, location.address());
             if (field == deliveryAddressField) {
                 destinationLatitudeField.setText(Double.toString(location.latitude()));
                 destinationLongitudeField.setText(Double.toString(location.longitude()));
@@ -177,6 +179,12 @@ public class CustomerController {
             addressStatusLabel.setText("Could not look up network location; enter the address manually.");
             button.setDisable(false);
         });
+    }
+
+    private void setAddressText(TextField field, String address) {
+        programmaticAddressUpdates.put(field, true);
+        field.setText(address);
+        programmaticAddressUpdates.remove(field);
     }
 
     private void addColumn(String title, double width, java.util.function.Function<Parcel, String> value) {
