@@ -3,6 +3,7 @@ package com.parceltracker;
 import com.parceltracker.controller.AdminController;
 import com.parceltracker.controller.AdminLoginDialog;
 import com.parceltracker.service.ApiService;
+import com.parceltracker.service.BrandingTheme;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -35,6 +36,7 @@ public class DispatcherApp extends Application {
                     controller = new AdminController();
                     controller.init(api, wsUrl);
                     stage.setScene(new Scene(controller, 1320, 900));
+                    BrandingTheme.apply(stage, controller.getBranding());
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> {

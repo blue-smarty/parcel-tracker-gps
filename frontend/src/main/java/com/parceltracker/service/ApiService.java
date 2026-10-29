@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.parceltracker.model.Branding;
 import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.DeliveryProof;
@@ -59,6 +60,32 @@ public class ApiService {
 
     public void clearAdminCredentials() {
         adminAuthorization = null;
+    }
+
+    public Branding getBranding() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/api/branding"))
+                .timeout(java.time.Duration.ofSeconds(4)).GET().build();
+        return MAPPER.readValue(send(request), Branding.class);
+    }
+
+    public Branding updateBranding(Branding branding) throws IOException, InterruptedException {
+        return MAPPER.readValue(send(put("/api/admin/branding", branding)), Branding.class);
+    }
+
+    public List<String> getAdminCouriers() throws IOException, InterruptedException {
+        var nodes = MAPPER.readTree(send(get("/api/admin/couriers")));
+        List<String> ids = new java.util.ArrayList<>();
+        nodes.forEach(node -> ids.add(node.path("courierId").asText()));
+        return ids;
+    }
+
+    public void createCourierAccount(String courierId, String password) throws IOException, InterruptedException {
+        send(post("/api/admin/couriers", java.util.Map.of("courierId", courierId, "password", password)));
+    }
+
+    public void resetCourierPassword(String courierId, String password) throws IOException, InterruptedException {
+        send(put("/api/admin/couriers/" + pathSegment(courierId) + "/password",
+                java.util.Map.of("password", password)));
     }
 
     public List<Parcel> getParcels() throws IOException, InterruptedException {

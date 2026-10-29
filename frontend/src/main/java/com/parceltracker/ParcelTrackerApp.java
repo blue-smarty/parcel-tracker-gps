@@ -1,6 +1,7 @@
 package com.parceltracker;
 
 import com.parceltracker.controller.MainController;
+import com.parceltracker.service.BrandingTheme;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -19,6 +20,7 @@ public class ParcelTrackerApp extends Application {
                 System.getProperty("ws.url", "ws://localhost:8080"));
         stage.setTitle("Parcel Tracker GPS");
         stage.setScene(new Scene(root, 1200, 750));
+        BrandingTheme.apply(stage, BrandingTheme.load(controller.getApi()));
         stage.show();
     }
 

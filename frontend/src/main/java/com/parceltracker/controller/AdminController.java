@@ -1,8 +1,10 @@
 package com.parceltracker.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.parceltracker.model.Branding;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.service.ApiService;
+import com.parceltracker.service.BrandingTheme;
 import com.parceltracker.service.SupportTicketStore;
 import com.parceltracker.service.SupportTicketStore.Ticket;
 import java.io.File;
@@ -23,7 +25,10 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ListView;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -32,6 +37,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -83,6 +89,10 @@ public class AdminController extends BorderPane {
         reloadParcels();
     }
 
+    public Branding getBranding() {
+        return BrandingTheme.load(api);
+    }
+
     public void shutdown() {
         if (mapController != null) mapController.stop();
     }
@@ -97,7 +107,7 @@ public class AdminController extends BorderPane {
         primary.setDividerPositions(0.38);
         VBox.setVgrow(primary, Priority.ALWAYS);
 
-        TabPane tabs = new TabPane(buildFleetTab(), buildSupportTab());
+        TabPane tabs = new TabPane(buildFleetTab(), buildSupportTab(), buildCourierAccountsTab(), buildBrandingTab());
         tabs.setPrefHeight(280);
         VBox body = new VBox(10, primary, tabs);
         VBox.setVgrow(body, Priority.ALWAYS);
@@ -220,6 +230,167 @@ public class AdminController extends BorderPane {
                 new Label("Courier IDs and commission rates are local demo settings; commission is not used for real payouts.")));
         tab.setClosable(false);
         return tab;
+    }
+
+    private final ListView<String> courierAccounts = new ListView<>();
+    private final TextField newCourierIdField = new TextField();
+    private final PasswordField newCourierPasswordField = new PasswordField();
+    private final PasswordField resetPasswordField = new PasswordField();
+    private final Label courierAccountStatus = new Label();
+    private final TextField appNameField = new TextField();
+    private final ColorPicker primaryPicker = new ColorPicker();
+    private final ColorPicker accentPicker = new ColorPicker();
+    private final ImageView logoPreview = new ImageView();
+    private final Label brandingStatus = new Label();
+    private String logoContentType;
+    private String logoBase64;
+
+    private Tab buildCourierAccountsTab() {
+        courierAccounts.setPrefHeight(120);
+        newCourierIdField.setPromptText("New courier ID");
+        newCourierPasswordField.setPromptText("Password (12+ characters)");
+        resetPasswordField.setPromptText("New password for selected courier");
+        Button create = new Button("Create courier");
+        create.setOnAction(event -> runAccountAction(
+                () -> api.createCourierAccount(newCourierIdField.getText().trim(), newCourierPasswordField.getText()),
+                "Courier created", () -> {
+                    newCourierIdField.clear();
+                    newCourierPasswordField.clear();
+                }));
+        Button reset = new Button("Reset password");
+        reset.setOnAction(event -> {
+            String selected = courierAccounts.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                courierAccountStatus.setText("Select a courier first");
+                return;
+            }
+            runAccountAction(() -> api.resetCourierPassword(selected, resetPasswordField.getText()),
+                    "Password reset for " + selected, resetPasswordField::clear);
+        });
+        Button refresh = new Button("Refresh");
+        refresh.setOnAction(event -> loadCourierAccounts());
+        Tab tab = new Tab("Courier accounts", new VBox(8, courierAccounts,
+                new HBox(8, newCourierIdField, newCourierPasswordField, create),
+                new HBox(8, resetPasswordField, reset, refresh), courierAccountStatus));
+        tab.setClosable(false);
+        tab.setOnSelectionChanged(event -> {
+            if (tab.isSelected() && api != null) loadCourierAccounts();
+        });
+        return tab;
+    }
+
+    private interface ApiAction {
+        void run() throws Exception;
+    }
+
+    private void runAccountAction(ApiAction action, String success, Runnable onSuccess) {
+        runBackground(action, () -> {
+            courierAccountStatus.setText(success);
+            onSuccess.run();
+            loadCourierAccounts();
+        }, courierAccountStatus);
+    }
+
+    private void runBackground(ApiAction action, Runnable onSuccess, Label status) {
+        Task<Void> task = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                action.run();
+                return null;
+            }
+        };
+        task.setOnSucceeded(event -> onSuccess.run());
+        task.setOnFailed(event -> status.setText("Failed: " + task.getException().getMessage()));
+        Thread thread = new Thread(task, "admin-action");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void loadCourierAccounts() {
+        Task<List<String>> task = new Task<>() {
+            @Override
+            protected List<String> call() throws Exception {
+                return api.getAdminCouriers();
+            }
+        };
+        task.setOnSucceeded(event -> courierAccounts.getItems().setAll(task.getValue()));
+        task.setOnFailed(event -> courierAccountStatus.setText("Cannot load couriers: " + task.getException().getMessage()));
+        Thread thread = new Thread(task, "load-couriers");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private Tab buildBrandingTab() {
+        logoPreview.setFitHeight(48);
+        logoPreview.setPreserveRatio(true);
+        Button chooseLogo = new Button("Choose logo (PNG/JPEG, max 256 KB)");
+        chooseLogo.setOnAction(event -> chooseLogo());
+        Button clearLogo = new Button("Remove logo");
+        clearLogo.setOnAction(event -> {
+            logoBase64 = null;
+            logoContentType = null;
+            logoPreview.setImage(null);
+        });
+        Button save = new Button("Save branding for all apps");
+        save.setOnAction(event -> saveBranding());
+        appNameField.setPromptText("App name");
+        Branding current = Branding.defaults();
+        applyBrandingToForm(current);
+        Tab tab = new Tab("Branding", new VBox(8,
+                new HBox(8, new Label("App name"), appNameField),
+                new HBox(8, new Label("Primary colour"), primaryPicker, new Label("Accent colour"), accentPicker),
+                new HBox(8, chooseLogo, clearLogo, logoPreview),
+                save, brandingStatus,
+                new Label("Changes apply to the customer, courier and dispatcher apps the next time they start.")));
+        tab.setClosable(false);
+        tab.setOnSelectionChanged(event -> {
+            if (tab.isSelected() && api != null) applyBrandingToForm(BrandingTheme.load(api));
+        });
+        return tab;
+    }
+
+    private void applyBrandingToForm(Branding branding) {
+        appNameField.setText(branding.appName());
+        primaryPicker.setValue(javafx.scene.paint.Color.web(branding.primaryColor()));
+        accentPicker.setValue(javafx.scene.paint.Color.web(branding.accentColor()));
+        logoBase64 = branding.logoBase64();
+        logoContentType = branding.logoContentType();
+        logoPreview.setImage(BrandingTheme.logo(branding));
+    }
+
+    private void chooseLogo() {
+        FileChooser chooser = new FileChooser();
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG or JPEG", "*.png", "*.jpg", "*.jpeg"));
+        File file = chooser.showOpenDialog(getScene() == null ? null : getScene().getWindow());
+        if (file == null) return;
+        try {
+            if (file.length() > 256 * 1024) {
+                brandingStatus.setText("Logo must be 256 KB or smaller");
+                return;
+            }
+            byte[] bytes = java.nio.file.Files.readAllBytes(file.toPath());
+            logoContentType = file.getName().toLowerCase(Locale.ROOT).endsWith(".png") ? "image/png" : "image/jpeg";
+            logoBase64 = java.util.Base64.getEncoder().encodeToString(bytes);
+            logoPreview.setImage(new javafx.scene.image.Image(new java.io.ByteArrayInputStream(bytes)));
+        } catch (java.io.IOException e) {
+            brandingStatus.setText("Cannot read logo: " + e.getMessage());
+        }
+    }
+
+    private static String hex(javafx.scene.paint.Color color) {
+        return String.format("#%02x%02x%02x", Math.round(color.getRed() * 255),
+                Math.round(color.getGreen() * 255), Math.round(color.getBlue() * 255));
+    }
+
+    private void saveBranding() {
+        Branding branding = new Branding(appNameField.getText().trim(), hex(primaryPicker.getValue()),
+                hex(accentPicker.getValue()), logoContentType, logoBase64);
+        runBackground(() -> api.updateBranding(branding), () -> {
+            brandingStatus.setText("Branding saved");
+            if (getScene() != null && getScene().getWindow() instanceof javafx.stage.Stage stage) {
+                BrandingTheme.apply(stage, branding);
+            }
+        }, brandingStatus);
     }
 
     private Tab buildSupportTab() {
