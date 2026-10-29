@@ -13,6 +13,7 @@
     selectedDispatchId: null,
     socket: null,
     csrfToken: null,
+    adminAuthorization: null,
     lastStatuses: new Map(),
     refreshTimer: null
   };
@@ -47,6 +48,10 @@
   async function api(path, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
     const headers = new Headers(options.headers || {});
+    if (state.adminAuthorization && (path.startsWith('/api/admin/')
+        || (method === 'PUT' && path.startsWith('/api/parcels/')))) {
+      headers.set('Authorization', state.adminAuthorization);
+    }
     if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
     if (method !== 'GET' && method !== 'HEAD') headers.set('X-XSRF-TOKEN', await getCsrfToken());
     const response = await fetch(path, {
@@ -290,6 +295,7 @@
   }
 
   async function refreshDispatch() {
+    if (!state.adminAuthorization) return;
     try {
       state.parcels = await api('/api/parcels');
       if (!state.parcels.some(parcel => parcel.id === state.selectedDispatchId)) {
@@ -300,6 +306,42 @@
     } catch (error) {
       setMessage('dispatchMessage', `Could not load operations: ${error.message}`, 'error');
     }
+  }
+
+  async function signInAdmin(event) {
+    event.preventDefault();
+    const username = byId('adminUsername').value.trim();
+    const password = byId('adminPassword').value;
+    const loginButton = byId('adminLoginButton');
+    loginButton.disabled = true;
+    setMessage('adminLoginMessage', 'Verifying admin credentials…');
+    try {
+      const bytes = new TextEncoder().encode(`${username}:${password}`);
+      const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+      state.adminAuthorization = `Basic ${btoa(binary)}`;
+      const identity = await api('/api/admin/me');
+      if (!identity.username) throw new Error('The server did not confirm the admin identity.');
+      byId('adminPassword').value = '';
+      byId('dispatchLogin').hidden = true;
+      byId('dispatchWorkspace').hidden = false;
+      await refreshDispatch();
+    } catch (error) {
+      state.adminAuthorization = null;
+      setMessage('adminLoginMessage', `Sign-in failed: ${error.message}`, 'error');
+    } finally {
+      byId('adminPassword').value = '';
+      loginButton.disabled = false;
+    }
+  }
+
+  function signOutAdmin() {
+    state.adminAuthorization = null;
+    state.parcels = [];
+    byId('dispatchWorkspace').hidden = true;
+    byId('dispatchLogin').hidden = false;
+    byId('adminUsername').value = '';
+    byId('adminPassword').value = '';
+    setMessage('adminLoginMessage', 'You have signed out.');
   }
 
   function filteredParcels() {
@@ -565,6 +607,8 @@
     byId('deliverySpeed').addEventListener('change', toggleSchedule);
     byId('refreshOrdersButton').addEventListener('click', refreshCustomerOrders);
     byId('refreshDispatchButton').addEventListener('click', refreshDispatch);
+    byId('adminLoginForm').addEventListener('submit', signInAdmin);
+    byId('adminLogoutButton').addEventListener('click', signOutAdmin);
     byId('dispatchFilter').addEventListener('change', renderDispatch);
     byId('assignButton').addEventListener('click', assignSelected);
     byId('autoDispatchButton').addEventListener('click', autoDispatch);
@@ -580,7 +624,6 @@
     toggleSchedule();
     updateEstimate();
     refreshCustomerOrders();
-    refreshDispatch();
     renderSupportTickets();
     connectSocket();
     window.setInterval(() => {

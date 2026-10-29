@@ -33,6 +33,7 @@ public class ApiService {
             .build();
     private final String baseUrl;
     private String courierAuthorization;
+    private String adminAuthorization;
     private String csrfToken;
 
     public ApiService(String baseUrl) {
@@ -40,9 +41,24 @@ public class ApiService {
     }
 
     public void setCourierCredentials(String courierId, String password) {
-        String credentials = courierId + ":" + password;
-        courierAuthorization = "Basic " + Base64.getEncoder()
-                .encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+        courierAuthorization = basicAuthorization(courierId, password);
+    }
+
+    public void authenticateAdmin(String username, String password) throws IOException, InterruptedException {
+        String authorization = basicAuthorization(username, password);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/api/admin/me"))
+                .header("Authorization", authorization)
+                .GET()
+                .build();
+        String response = send(request);
+        if (MAPPER.readTree(response).path("username").asText().isBlank()) {
+            throw new IOException("The server did not confirm the admin identity");
+        }
+        adminAuthorization = authorization;
+    }
+
+    public void clearAdminCredentials() {
+        adminAuthorization = null;
     }
 
     public List<Parcel> getParcels() throws IOException, InterruptedException {
@@ -109,26 +125,35 @@ public class ApiService {
     }
 
     private HttpRequest get(String path) {
-        return withCourierAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path))).GET().build();
+        return withAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path)), path, "GET")
+                .GET().build();
     }
 
     private HttpRequest post(String path, Object body) throws IOException {
-        return withCourierAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path)))
+        return withAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path)), path, "POST")
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
                 .build();
     }
 
     private HttpRequest put(String path, Object body) throws IOException {
-        return withCourierAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path)))
+        return withAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path)), path, "PUT")
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
                 .build();
     }
 
-    private HttpRequest.Builder withCourierAuthorization(HttpRequest.Builder builder) {
-        if (courierAuthorization != null) builder.header("Authorization", courierAuthorization);
+    private HttpRequest.Builder withAuthorization(HttpRequest.Builder builder, String path, String method) {
+        boolean adminEndpoint = path.startsWith("/api/admin/")
+                || (path.startsWith("/api/parcels/") && ("PUT".equals(method) || "DELETE".equals(method)));
+        String authorization = adminEndpoint ? adminAuthorization : courierAuthorization;
+        if (authorization != null) builder.header("Authorization", authorization);
         return builder;
+    }
+
+    private static String basicAuthorization(String username, String password) {
+        String credentials = username + ":" + password;
+        return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
     }
 
     private static String pathSegment(String value) {

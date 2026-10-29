@@ -32,6 +32,7 @@ public class MainController {
     private Stage courierStage;
     private Stage customerStage;
     private Stage adminStage;
+    private boolean adminLoginInProgress;
     private CustomerController customerController;
     private AdminController adminController;
 
@@ -61,6 +62,7 @@ public class MainController {
     public void shutdown() {
         if (mapController != null) mapController.stop();
         if (adminController != null) adminController.shutdown();
+        api.clearAdminCredentials();
     }
 
     private void openAdminPanel(String wsBaseUrl) {
@@ -68,6 +70,30 @@ public class MainController {
             adminStage.toFront();
             return;
         }
+        if (adminLoginInProgress) return;
+        AdminLoginDialog.showAndWait(adminButton.getScene().getWindow()).ifPresent(credentials -> {
+            adminLoginInProgress = true;
+            adminButton.setDisable(true);
+            runAsync(() -> {
+                try {
+                    api.authenticateAdmin(credentials.username(), credentials.password());
+                    Platform.runLater(() -> {
+                        adminLoginInProgress = false;
+                        adminButton.setDisable(false);
+                        showAdminPanel(wsBaseUrl);
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> {
+                        adminLoginInProgress = false;
+                        adminButton.setDisable(false);
+                        detailsLabel.setText("Admin sign-in failed: " + e.getMessage());
+                    });
+                }
+            });
+        });
+    }
+
+    private void showAdminPanel(String wsBaseUrl) {
         adminController = new AdminController();
         adminController.init(api, wsBaseUrl);
         adminStage = new Stage();
@@ -77,6 +103,7 @@ public class MainController {
             adminController.shutdown();
             adminController = null;
             adminStage = null;
+            api.clearAdminCredentials();
         });
         adminStage.show();
     }
