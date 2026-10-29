@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/parcels")
-@CrossOrigin
 public class ParcelController {
     private final ParcelService service;
 
