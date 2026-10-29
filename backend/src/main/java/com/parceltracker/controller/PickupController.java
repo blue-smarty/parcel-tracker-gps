@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/pickups")
-@CrossOrigin
 public class PickupController {
     private final PickupService service;
 

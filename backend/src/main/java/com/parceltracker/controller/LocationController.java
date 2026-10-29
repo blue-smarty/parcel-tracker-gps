@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/parcels/{id}")
-@CrossOrigin
 public class LocationController {
     private final LocationService service;
 
