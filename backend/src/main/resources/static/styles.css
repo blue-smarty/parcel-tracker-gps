@@ -137,6 +137,10 @@ input::placeholder { color: #adb8c0; }
 .metric-card i { color: #9aa6ae; font-size: 10px; font-style: normal; }
 .dispatch-list-panel, .map-panel, .support-panel { padding: 19px; }
 .dispatch-heading select { width: auto; min-width: 145px; height: 33px; margin: 0; font-size: 10px; }
+.admin-login-panel { max-width: 560px; margin: 0 auto; padding: 22px 24px; }
+.admin-login-panel form { display: grid; gap: 10px; }
+.admin-login-panel form > .button { justify-self: start; }
+.dispatch-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin: -8px 0 14px; color: var(--muted); font-size: 11px; }
 .table-wrap { width: 100%; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; text-align: left; }
 th { padding: 10px 7px; border-bottom: 1px solid var(--line); color: #93a0a9; font-size: 8px; letter-spacing: .6px; }

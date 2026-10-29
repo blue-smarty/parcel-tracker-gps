@@ -122,6 +122,19 @@
           <div><p class="eyebrow">DISPATCH WORKSPACE</p><h2>Keep every delivery on course.</h2></div>
           <button class="button button-quiet" id="refreshDispatchButton">↻ <span>Refresh operations</span></button>
         </div>
+        <div id="dispatchLogin" class="panel admin-login-panel">
+          <div class="panel-heading"><div><p class="eyebrow">ADMIN ACCESS</p><h3>Sign in to dispatch</h3></div></div>
+          <form id="adminLoginForm">
+            <div class="field-grid two">
+              <label>Username<input id="adminUsername" autocomplete="username" required></label>
+              <label>Password<input id="adminPassword" type="password" autocomplete="current-password" required></label>
+            </div>
+            <button id="adminLoginButton" class="button button-primary" type="submit">Sign in</button>
+            <p id="adminLoginMessage" class="form-message" role="status">Use your administrator account to access dispatch.</p>
+          </form>
+        </div>
+        <div id="dispatchWorkspace" hidden>
+        <div class="dispatch-toolbar"><span>Signed in to the admin workspace.</span><button id="adminLogoutButton" class="button button-quiet">Sign out</button></div>
         <div class="metric-grid">
           <div class="metric-card"><span>ACTIVE DELIVERIES</span><strong id="activeMetric">—</strong><i>Across your fleet</i></div>
           <div class="metric-card"><span>NEEDS ASSIGNMENT</span><strong id="unassignedMetric">—</strong><i>Ready for a courier</i></div>
@@ -157,7 +170,8 @@
           <div id="supportList" class="support-list"><div class="empty-state">Support messages from this browser will appear here.</div></div>
           <p class="field-note">Requests stay in this browser; no support agent is connected.</p>
         </div>
-        <p class="demo-warning"><strong>Demo only.</strong> Dispatch access is not authenticated. Do not expose this portal or its API to the public internet without adding role-based authorization.</p>
+        <p class="demo-warning"><strong>Demo only.</strong> Fleet records, document review, commissions and support requests remain local to this browser. Use HTTPS when exposing admin credentials beyond localhost.</p>
+        </div>
       </section>
     </main>
     <footer><span>PARCELPILOT <b>·</b> DEMO OPERATIONS</span><span>Payments and customer profiles are simulated.</span></footer>
