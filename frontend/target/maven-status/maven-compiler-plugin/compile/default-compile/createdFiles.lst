@@ -7,7 +7,7 @@ com/parceltracker/DispatcherApp.class
 com/parceltracker/controller/CustomerController.class
 com/parceltracker/service/SupportTicketStore$Ticket.class
 com/parceltracker/service/ApiService$3.class
-com/parceltracker/service/CourierOfflineQueue$2.class
+com/parceltracker/controller/AdminLoginDialog.class
 com/parceltracker/service/PickupFormValidator$Form.class
 com/parceltracker/controller/CourierController$DeliveryLoad.class
 com/parceltracker/controller/AdminController$3.class
@@ -26,9 +26,9 @@ com/parceltracker/service/CourierOfflineQueue$CourierUpdate.class
 com/parceltracker/controller/AdminController$4.class
 com/parceltracker/controller/CourierController$1.class
 com/parceltracker/ui/ParcelListPanel.class
-com/parceltracker/service/WebSocketService.class
-com/parceltracker/controller/AdminController$FleetDriver.class
 com/parceltracker/controller/MapController.class
+com/parceltracker/controller/AdminController$FleetDriver.class
+com/parceltracker/service/WebSocketService.class
 com/parceltracker/model/Location.class
 com/parceltracker/service/ApiService$1.class
 com/parceltracker/service/ApiService.class
@@ -43,4 +43,5 @@ com/parceltracker/controller/AdminController$1.class
 com/parceltracker/service/ApiService$2.class
 com/parceltracker/model/CourierEarnings.class
 com/parceltracker/service/PickupFormValidator$Parsed.class
+com/parceltracker/controller/AdminLoginDialog$Credentials.class
 com/parceltracker/controller/CustomerController$CheckedSupplier.class
