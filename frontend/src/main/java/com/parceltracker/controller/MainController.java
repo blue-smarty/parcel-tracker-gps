@@ -2,7 +2,9 @@ package com.parceltracker.controller;
 
 import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
+import com.parceltracker.model.Branding;
 import com.parceltracker.service.ApiService;
+import com.parceltracker.service.BrandingTheme;
 import com.parceltracker.ui.LocationHistoryPanel;
 import com.parceltracker.ui.ParcelListPanel;
 import java.util.ArrayList;
@@ -43,8 +45,15 @@ public class MainController {
     private final List<Parcel> parcels = new ArrayList<>();
     private Parcel selected;
 
+    private Branding branding = Branding.defaults();
+
+    public ApiService getApi() {
+        return api;
+    }
+
     public void init(String httpBaseUrl, String wsBaseUrl) {
         api = new ApiService(httpBaseUrl);
+        branding = BrandingTheme.load(api);
         listPanel = new ParcelListPanel(this::select);
         mapController = new MapController(api, wsBaseUrl, this::onLiveUpdate, this::onConnection);
         listContainer.getChildren().add(listPanel);
@@ -105,6 +114,7 @@ public class MainController {
             adminStage = null;
             api.clearAdminCredentials();
         });
+        BrandingTheme.apply(adminStage, branding);
         adminStage.show();
     }
 
@@ -122,6 +132,7 @@ public class MainController {
             customerStage.setTitle("Customer App — Demo");
             customerStage.setScene(new Scene(root, 900, 760));
             customerStage.setOnHidden(e -> customerController = null);
+            BrandingTheme.apply(customerStage, branding);
             customerStage.show();
         } catch (java.io.IOException e) {
             detailsLabel.setText("Cannot open customer app: " + e.getMessage());
@@ -141,6 +152,7 @@ public class MainController {
             controller.init(api, pickupStage::close);
             pickupStage.setTitle("Schedule Pickup");
             pickupStage.setScene(new Scene(root));
+            BrandingTheme.apply(pickupStage, branding);
             pickupStage.show();
         } catch (java.io.IOException e) {
             detailsLabel.setText("Cannot open pickup form: " + e.getMessage());
@@ -160,6 +172,7 @@ public class MainController {
             controller.init(api);
             courierStage.setTitle("Courier Dashboard");
             courierStage.setScene(new Scene(root, 1000, 850));
+            BrandingTheme.apply(courierStage, branding);
             courierStage.show();
         } catch (java.io.IOException e) {
             detailsLabel.setText("Cannot open courier dashboard: " + e.getMessage());
