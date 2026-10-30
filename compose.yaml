@@ -1,0 +1,31 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8080}:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/parceltracker
+      PARCEL_ADMIN_USERNAME: "${PARCEL_ADMIN_USERNAME:?Set PARCEL_ADMIN_USERNAME in .env}"
+      PARCEL_ADMIN_PASSWORD: "${PARCEL_ADMIN_PASSWORD:?Set PARCEL_ADMIN_PASSWORD in .env}"
+      PARCEL_BOOTSTRAP_COURIER_ID: "${PARCEL_BOOTSTRAP_COURIER_ID:-}"
+      PARCEL_BOOTSTRAP_PASSWORD: "${PARCEL_BOOTSTRAP_PASSWORD:-}"
+      PARCEL_ALLOWED_ORIGINS: "${PARCEL_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}"
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    volumes:
+      - parcel-tracker-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  parcel-tracker-data:
