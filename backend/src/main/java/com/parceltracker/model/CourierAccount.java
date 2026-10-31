@@ -1,15 +1,18 @@
 package com.parceltracker.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
-@Document(collection = "courier_accounts")
+@Entity
+@Table(name = "courier_accounts")
 public class CourierAccount {
     @Id
+    @Column(name = "courier_id")
     private String courierId;
 
-    @Field("password_hash")
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
     public CourierAccount() {

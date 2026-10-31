@@ -2,34 +2,44 @@ package com.parceltracker.model;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
-@Document(collection = "pickups")
+@Entity
+@Table(name = "pickups")
 public class Pickup {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     private String street;
     private String city;
-    @Field("postal_code")
+    @Column(name = "postal_code")
     private String postalCode;
-    @Field("contact_name")
+    @Column(name = "contact_name")
     private String contactName;
-    @Field("contact_phone")
+    @Column(name = "contact_phone")
     private String contactPhone;
-    @Field("parcel_description")
+    @Column(name = "parcel_description", columnDefinition = "text")
     private String parcelDescription;
-    @Field("weight_kg")
+    @Column(name = "weight_kg")
     private double weightKg;
     private String dimensions;
-    @Field("pickup_date")
+    @Column(name = "pickup_date")
     private LocalDate pickupDate;
-    @Field("time_window")
+    @Column(name = "time_window")
     private String timeWindow;
+    @Column(columnDefinition = "text")
     private String notes;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private PickupStatus status = PickupStatus.REQUESTED;
-    @Field("created_at")
+    @Column(name = "created_at")
     private Instant createdAt;
 
     public String getId() { return id; }

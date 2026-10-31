@@ -1,6 +1,15 @@
 package com.parceltracker.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.DecimalMax;
@@ -11,25 +20,22 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.CompoundIndex;
-import org.springframework.data.mongodb.core.index.CompoundIndexes;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
-@Document(collection = "parcels")
-@CompoundIndexes({
-        @CompoundIndex(name = "status_updated_at", def = "{'status': 1, 'updated_at': 1}"),
-        @CompoundIndex(name = "status_created_at", def = "{'status': 1, 'created_at': 1}"),
-        @CompoundIndex(name = "courier_status", def = "{'courier_id': 1, 'status': 1}")
+@Entity
+@Table(name = "parcels", indexes = {
+        @Index(name = "status_updated_at", columnList = "status, updated_at"),
+        @Index(name = "status_created_at", columnList = "status, created_at"),
+        @Index(name = "courier_status", columnList = "courier_id, status"),
+        @Index(name = "parcels_courier_id_idx", columnList = "courier_id")
 })
 public class Parcel {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Indexed(unique = true)
-    @Field("tracking_number")
+    @Column(name = "tracking_number", nullable = false, unique = true)
     private String trackingNumber;
 
     @NotBlank
@@ -38,95 +44,99 @@ public class Parcel {
     @NotBlank
     private String recipient;
 
-    @Indexed
-    @Field("courier_id")
+    @Column(name = "courier_id")
     private String courierId;
 
-    @Field("pickup_address")
+    @Column(name = "pickup_address")
     private String pickupAddress;
 
     @Valid
-    @Field("current_location")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "current_location", columnDefinition = "jsonb")
     private Location currentLocation;
 
     private String destination;
 
-    @Field("package_size")
+    @Column(name = "package_size")
     @Pattern(regexp = "SMALL|MEDIUM|LARGE")
     private String packageSize;
 
     @Positive
-    @Field("width_cm")
+    @Column(name = "width_cm")
     private Double widthCm;
 
     @Positive
-    @Field("length_cm")
+    @Column(name = "length_cm")
     private Double lengthCm;
 
     @Positive
-    @Field("height_cm")
+    @Column(name = "height_cm")
     private Double heightCm;
 
     @DecimalMin(value = "0.0", inclusive = false)
-    @Field("weight_kg")
+    @Column(name = "weight_kg")
     private Double weightKg;
 
-    @Field("delivery_speed")
+    @Column(name = "delivery_speed")
     @Pattern(regexp = "SAME_DAY|SCHEDULED")
     private String deliverySpeed;
 
-    @Field("scheduled_date")
+    @Column(name = "scheduled_date")
     private LocalDate scheduledDate;
 
-    @Field("scheduled_window")
+    @Column(name = "scheduled_window")
     private String scheduledWindow;
 
     @Positive
-    @Field("distance_km")
+    @Column(name = "distance_km")
     private Double distanceKm;
 
-    @Field("destination_latitude")
+    @Column(name = "destination_latitude")
     @DecimalMin("-90.0")
     @DecimalMax("90.0")
     private Double destinationLatitude;
 
-    @Field("destination_longitude")
+    @Column(name = "destination_longitude")
     @DecimalMin("-180.0")
     @DecimalMax("180.0")
     private Double destinationLongitude;
 
-    @Field("estimated_price")
+    @Column(name = "estimated_price")
     private Double estimatedPrice;
 
-    @Field("payment_method")
+    @Column(name = "payment_method")
     @Pattern(regexp = "DEMO_CARD|DEMO_MOBILE_WALLET|CASH_ON_DELIVERY")
     private String paymentMethod;
 
-    @Field("customer_contact")
+    @Column(name = "customer_contact")
     private String customerContact;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private ParcelStatus status = ParcelStatus.CREATED;
 
-    @Field("location_history")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "location_history", nullable = false, columnDefinition = "jsonb")
     private List<Location> locationHistory = new ArrayList<>();
 
-    @Field("created_at")
+    @Column(name = "created_at")
     private Instant createdAt;
 
-    @Field("updated_at")
+    @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @Field("escalated_at")
+    @Column(name = "escalated_at")
     private Instant escalatedAt;
 
-    @Field("location_inactive")
+    @Column(name = "location_inactive", nullable = false)
     private boolean locationInactive;
 
-    @Field("finalized_at")
+    @Column(name = "finalized_at")
     private Instant finalizedAt;
 
     @Valid
-    @Field("proof_of_delivery")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "proof_of_delivery", columnDefinition = "jsonb")
     private DeliveryProof proofOfDelivery;
 
     public String getId() { return id; }

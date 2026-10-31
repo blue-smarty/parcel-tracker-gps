@@ -1,7 +1,7 @@
 package com.parceltracker.repository;
 
 import com.parceltracker.model.CourierAccount;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CourierAccountRepository extends MongoRepository<CourierAccount, String> {
+public interface CourierAccountRepository extends JpaRepository<CourierAccount, String> {
 }

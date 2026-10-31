@@ -1,7 +1,7 @@
 package com.parceltracker.repository;
 
 import com.parceltracker.model.BrandingSettings;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface BrandingRepository extends MongoRepository<BrandingSettings, String> {
+public interface BrandingRepository extends JpaRepository<BrandingSettings, String> {
 }

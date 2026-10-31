@@ -1,9 +1,12 @@
 package com.parceltracker.model;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 
-@Document(collection = "branding")
+@Entity
+@Table(name = "branding")
 public class BrandingSettings {
     public static final String SINGLETON_ID = "default";
 
@@ -13,6 +16,7 @@ public class BrandingSettings {
     private String primaryColor;
     private String accentColor;
     private String logoContentType;
+    @Column(columnDefinition = "text")
     private String logoBase64;
 
     public BrandingSettings() {

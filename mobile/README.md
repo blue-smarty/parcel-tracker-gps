@@ -44,7 +44,7 @@ The delivery map shows the courier's current device location and assigned delive
 
 ## Backend accounts and security
 
-Create the first courier account by setting `PARCEL_BOOTSTRAP_COURIER_ID` and `PARCEL_BOOTSTRAP_PASSWORD` when starting the backend. The password must be at least 12 characters. The bootstrap is non-overwriting and can stay configured across restarts; provision additional accounts through a trusted operator. Courier accounts are stored in MongoDB with BCrypt password hashes. Basic credentials are sent with each API request, so deploy the backend behind HTTPS and use a trusted certificate.
+Create the first courier account by setting `PARCEL_BOOTSTRAP_COURIER_ID` and `PARCEL_BOOTSTRAP_PASSWORD` when starting the backend. The password must be at least 12 characters. The bootstrap is non-overwriting and can stay configured across restarts; provision additional accounts through a trusted operator. Courier accounts are stored in PostgreSQL with BCrypt password hashes. Basic credentials are sent with each API request, so deploy the backend behind HTTPS and use a trusted certificate.
 
 The encrypted offline queue is separate for each courier on a device. It retries queued actions when the courier refreshes the delivery list or returns to the app. Pending queued actions remain on the device after sign-out. The client obtains a CSRF token from `GET /api/csrf` and sends it with state-changing API requests.
 
