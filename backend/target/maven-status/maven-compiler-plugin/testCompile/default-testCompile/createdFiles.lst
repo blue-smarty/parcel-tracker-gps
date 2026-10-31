@@ -1,10 +1,10 @@
 com/parceltracker/controller/CsrfControllerTest.class
-com/parceltracker/service/CourierServiceTest.class
 com/parceltracker/controller/PickupControllerTest.class
+com/parceltracker/service/CourierServiceTest.class
 com/parceltracker/controller/AdminControllerTest.class
 com/parceltracker/config/CourierAccountBootstrapTest.class
-com/parceltracker/service/LocationServiceTest.class
 com/parceltracker/controller/ParcelAdminAuthorizationTest.class
+com/parceltracker/service/LocationServiceTest.class
 com/parceltracker/scheduler/SchedulerJobsTest.class
 com/parceltracker/service/DemoPricingServiceTest.class
 com/parceltracker/controller/AdminManagementTest.class

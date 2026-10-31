@@ -3,20 +3,22 @@
 Real-time GPS parcel tracking: Spring Boot + PostgreSQL backend, a browser-based customer and dispatch portal, and JavaFX/mobile courier clients.
 
 ## Run
-Requires JDK 17+, Maven and PostgreSQL 16+. For a local database, start Docker and run these commands from the repository root in one terminal:
+Requires JDK 17+, Maven and PostgreSQL 16+. For a local database, start Docker and run these commands from the repository root in one terminal (macOS/Linux, bash or zsh; replace the example passwords with your own):
 
 ```
-read -rsp 'PostgreSQL password: ' DATABASE_PASSWORD; echo; export DATABASE_PASSWORD
+export DATABASE_PASSWORD='replace-with-a-long-db-password'
+export PARCEL_ADMIN_USERNAME=admin
+export PARCEL_ADMIN_PASSWORD='replace-with-a-long-admin-password'
+export PARCEL_BOOTSTRAP_COURIER_ID=courier-001
+export PARCEL_BOOTSTRAP_PASSWORD='replace-with-a-long-courier-password'
 docker compose up -d postgres
 cd backend
-export PARCEL_ADMIN_USERNAME=admin
-read -rsp 'Admin password: ' PARCEL_ADMIN_PASSWORD; echo; export PARCEL_ADMIN_PASSWORD
-export PARCEL_BOOTSTRAP_COURIER_ID=courier-001
-read -rsp 'Courier password: ' PARCEL_BOOTSTRAP_PASSWORD; echo; export PARCEL_BOOTSTRAP_PASSWORD
 mvn spring-boot:run
 ```
 
-All passwords must be at least 12 characters. The password prompts hide what you type; keep the same terminal open while using the app. The local PostgreSQL database uses `DATABASE_PASSWORD`; for a managed database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead, and require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
+On Windows PowerShell, set each variable with `$env:NAME = 'value'` (for example `$env:DATABASE_PASSWORD = 'replace-with-a-long-db-password'`) instead of `export`.
+
+All passwords must be at least 12 characters. Keep the same terminal open while using the app; `docker compose` fails with "required variable DATABASE_PASSWORD is missing" if the variable is not set in that terminal. The local PostgreSQL database uses `DATABASE_PASSWORD`; for a managed database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead, and require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
 
 Open [http://localhost:8080](http://localhost:8080) for the customer and dispatch portal. Keep the backend and PostgreSQL running while using the site.
 
