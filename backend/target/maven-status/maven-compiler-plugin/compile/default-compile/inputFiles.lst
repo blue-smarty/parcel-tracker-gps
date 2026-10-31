@@ -2,11 +2,13 @@
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/scheduler/CourierLocationInactivityJob.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/websocket/LocationWebSocketHandler.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/dto/CourierAssignmentRequest.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/controller/AdminCourierController.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/controller/ParcelController.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/model/Location.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/service/ParcelService.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/dto/CourierIdentity.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/dto/CourierDecisionRequest.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/model/BrandingSettings.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/controller/CourierController.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/websocket/WebSocketConfig.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/config/MongoConfig.java
@@ -14,12 +16,14 @@
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/config/SecurityConfig.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/scheduler/JobRunner.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/repository/PickupRepository.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/repository/BrandingRepository.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/model/DeliveryProof.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/service/DemoPricingService.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/scheduler/SchedulerProperties.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/controller/CsrfController.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/repository/ParcelRepository.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/scheduler/SchedulingConfig.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/controller/BrandingController.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/dto/PickupRequest.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/controller/PickupController.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/service/LocationService.java
@@ -29,6 +33,7 @@
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/ParcelTrackerApplication.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/model/Pickup.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/model/Parcel.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/controller/AdminController.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/model/PickupStatus.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/service/PickupService.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/main/java/com/parceltracker/model/CourierAccount.java

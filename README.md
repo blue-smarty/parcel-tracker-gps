@@ -5,13 +5,6 @@ Real-time GPS parcel tracking: Spring Boot + MongoDB backend, a browser-based cu
 ## Run
 Requires JDK 17+, Maven and a MongoDB instance (default `mongodb://localhost:27017/parceltracker`, see `backend/src/main/resources/application.properties`).
 
-## Install with Docker
-On Linux or macOS, install Docker Engine/Desktop with the Docker Compose v2 plugin, then run `./install.sh` from the repository. The installer asks for the web port, whether to allow network access, admin credentials, optional initial courier credentials, and allowed browser origins; it then builds and starts the web application and MongoDB. Admin and courier passwords must contain at least 12 characters and use letters, digits, `.`, `_`, `!`, `@`, or `-`.
-
-The installer saves these settings in a permission-restricted `.env` file, which is ignored by Git. By default, the web app binds only to localhost; selecting network access binds it to all interfaces. Edit `.env` to change settings, then apply them with `docker compose up -d`. MongoDB data is kept in the `parcel-tracker-data` Docker volume and survives container restarts. Stop the application with `docker compose down`; to also delete its stored data, use `docker compose down -v`.
-
-The default allowed origins are for local use only. Set `PARCEL_ALLOWED_ORIGINS` in `.env` to your real browser origins and deploy behind HTTPS before making the application accessible over a network.
-
 Start the backend from the repository root:
 
 ```
