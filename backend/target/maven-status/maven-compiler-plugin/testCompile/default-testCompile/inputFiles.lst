@@ -4,5 +4,8 @@
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/test/java/com/parceltracker/controller/PickupControllerTest.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/test/java/com/parceltracker/service/DemoPricingServiceTest.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/test/java/com/parceltracker/service/CourierServiceTest.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/test/java/com/parceltracker/controller/ParcelAdminAuthorizationTest.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/test/java/com/parceltracker/service/LocationServiceTest.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/test/java/com/parceltracker/controller/AdminManagementTest.java
 /home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/test/java/com/parceltracker/controller/CourierControllerTest.java
+/home/runner/work/parcel-tracker-gps/parcel-tracker-gps/backend/src/test/java/com/parceltracker/controller/AdminControllerTest.java
