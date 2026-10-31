@@ -55,12 +55,13 @@ public class SecurityConfig {
         if (!adminPassword.isBlank() && adminPassword.length() < 12) {
             throw new IllegalStateException("Admin password must contain at least 12 characters");
         }
-        var admin = adminPassword.isBlank() ? null : User.withUsername(adminUsername)
-                .password(passwordEncoder.encode(adminPassword))
-                .roles("ADMIN")
-                .build();
+        // Spring Security erases credentials on the returned user after authentication,
+        // so build a fresh admin user for every lookup.
+        String adminHash = adminPassword.isBlank() ? null : passwordEncoder.encode(adminPassword);
         return username -> {
-            if (admin != null && admin.getUsername().equals(username)) return admin;
+            if (adminHash != null && adminUsername.equals(username)) {
+                return User.withUsername(adminUsername).password(adminHash).roles("ADMIN").build();
+            }
             return accounts.findById(username)
                     .map(account -> User.withUsername(account.getCourierId())
                             .password(account.getPasswordHash())
