@@ -3,22 +3,27 @@
 Real-time GPS parcel tracking: Spring Boot + PostgreSQL backend, a browser-based customer and dispatch portal, and JavaFX/mobile courier clients.
 
 ## Run
-Requires JDK 17+, Maven and PostgreSQL 16+. For a local database, start Docker and run these commands from the repository root in one terminal (macOS/Linux, bash or zsh; replace the example passwords with your own):
+Requires JDK 17+, Maven and PostgreSQL 16+. Install PostgreSQL directly on your computer (no Docker required), then start its service:
 
-```
-export DATABASE_PASSWORD='replace-with-a-long-db-password'
+- **macOS:** install PostgreSQL 16 with `brew install postgresql@16`, then start it with `brew services start postgresql@16`.
+- **Ubuntu/Debian:** install PostgreSQL with `sudo apt install postgresql`, then start it with `sudo systemctl enable --now postgresql`. Confirm the installed version is 16 or newer (`psql --version`).
+- **Windows:** install PostgreSQL 16 or newer using the official installer at [postgresql.org/download/windows](https://www.postgresql.org/download/windows/). Keep the PostgreSQL command-line tools selected in the installer.
+
+Create a dedicated database role and database. In a terminal, run `createuser -h localhost -U postgres --pwprompt --createdb parceltracker`, enter a strong database password when prompted, then run `createdb -h localhost -U postgres -O parceltracker parceltracker`. On Homebrew PostgreSQL, the administrator role is usually your macOS username instead of `postgres`; replace `postgres` in those commands with that role. On Linux, if local admin login requires the operating-system `postgres` account, prefix each command with `sudo -u postgres`.
+
+In the same terminal that will run the backend, set the following values (replace the examples; don't commit real passwords):
+
+```bash
+export DATABASE_PASSWORD='your-database-password'
 export PARCEL_ADMIN_USERNAME=admin
-export PARCEL_ADMIN_PASSWORD='replace-with-a-long-admin-password'
+export PARCEL_ADMIN_PASSWORD='your-admin-password'
 export PARCEL_BOOTSTRAP_COURIER_ID=courier-001
-export PARCEL_BOOTSTRAP_PASSWORD='replace-with-a-long-courier-password'
-docker compose up -d postgres
+export PARCEL_BOOTSTRAP_PASSWORD='your-courier-password'
 cd backend
 mvn spring-boot:run
 ```
 
-On Windows PowerShell, set each variable with `$env:NAME = 'value'` (for example `$env:DATABASE_PASSWORD = 'replace-with-a-long-db-password'`) instead of `export`.
-
-All passwords must be at least 12 characters. Keep the same terminal open while using the app; `docker compose` fails with "required variable DATABASE_PASSWORD is missing" if the variable is not set in that terminal. The local PostgreSQL database uses `DATABASE_PASSWORD`; for a managed database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead, and require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
+In Windows PowerShell, use `$env:NAME = 'value'` instead of `export` for each variable. All admin and courier passwords must be at least 12 characters. Keep the same terminal open so the backend inherits these variables. For a managed PostgreSQL database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead; require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
 
 Open [http://localhost:8080](http://localhost:8080) for the customer and dispatch portal. Keep the backend and PostgreSQL running while using the site.
 
