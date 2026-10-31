@@ -34,6 +34,14 @@ class AdminControllerTest {
     }
 
     @Test
+    void allowsRepeatedAdminLogins() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            mvc.perform(get("/api/admin/me").with(httpBasic("operations", "correct-horse-battery")))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
     void rejectsIncorrectAdminPassword() throws Exception {
         mvc.perform(get("/api/admin/me").with(httpBasic("operations", "incorrect-password")))
                 .andExpect(status().isUnauthorized());
