@@ -1,18 +1,24 @@
 # Parcel Tracker GPS
 
-Real-time GPS parcel tracking: Spring Boot + MongoDB backend, a browser-based customer and dispatch portal, and JavaFX/mobile courier clients.
+Real-time GPS parcel tracking: Spring Boot + PostgreSQL backend, a browser-based customer and dispatch portal, and JavaFX/mobile courier clients.
 
 ## Run
-Requires JDK 17+, Maven and a MongoDB instance (default `mongodb://localhost:27017/parceltracker`, see `backend/src/main/resources/application.properties`).
-
-Start the backend from the repository root:
+Requires JDK 17+, Maven and PostgreSQL 16+. For a local database, start Docker and run these commands from the repository root in one terminal:
 
 ```
+read -rsp 'PostgreSQL password: ' DATABASE_PASSWORD; echo; export DATABASE_PASSWORD
+docker compose up -d postgres
 cd backend
+export PARCEL_ADMIN_USERNAME=admin
+read -rsp 'Admin password: ' PARCEL_ADMIN_PASSWORD; echo; export PARCEL_ADMIN_PASSWORD
+export PARCEL_BOOTSTRAP_COURIER_ID=courier-001
+read -rsp 'Courier password: ' PARCEL_BOOTSTRAP_PASSWORD; echo; export PARCEL_BOOTSTRAP_PASSWORD
 mvn spring-boot:run
 ```
 
-Open [http://localhost:8080](http://localhost:8080) for the customer and dispatch portal. Keep the backend running while using the site. MongoDB must be running on `localhost:27017` before starting the backend.
+All passwords must be at least 12 characters. The password prompts hide what you type; keep the same terminal open while using the app. The local PostgreSQL database uses `DATABASE_PASSWORD`; for a managed database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead, and require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
+
+Open [http://localhost:8080](http://localhost:8080) for the customer and dispatch portal. Keep the backend and PostgreSQL running while using the site.
 
 The parcel tracker and courier dashboards remain available as optional desktop clients. From `frontend`, choose one:
 ```
@@ -44,7 +50,7 @@ Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override desktop cl
 | GET | `/api/pickups/{id}` | Pickup details |
 | GET | `/api/csrf` | Obtain a CSRF request token; send it in `X-XSRF-TOKEN` for POST/PUT/DELETE requests |
 
-Courier status transitions are `CREATED → ACCEPTED → PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED`; `FAILED` can be set from any active step. Existing `CREATED → PICKED_UP` assignments remain supported. A rejected request is unassigned and returns to the available `CREATED` pool. Completing delivery requires at least one signature, barcode or photo proof. Invalid transitions return 400 and a courier can only update parcels assigned to that courier ID. Courier endpoints require HTTP Basic authentication and only allow the authenticated courier to use their own courier ID. State-changing API requests also require the CSRF token from `GET /api/csrf`; the Java and mobile clients obtain and send it automatically. Courier passwords are BCrypt-hashed in MongoDB. The bootstrap courier account is created once from `PARCEL_BOOTSTRAP_COURIER_ID` and `PARCEL_BOOTSTRAP_PASSWORD` environment variables; use a password of at least 12 characters and provision subsequent accounts through a trusted operator. Admin credentials are configured with `PARCEL_ADMIN_USERNAME` and `PARCEL_ADMIN_PASSWORD`; both must be set, and the password must contain at least 12 characters. The browser Dispatch tab and desktop dispatcher require admin sign-in; credentials are held only in memory. Admin credentials are checked using BCrypt and admin API requests use HTTP Basic authentication. Parcel updates, deletes and courier assignments require the admin role; customer parcel booking, parcel reads and location updates retain their public access behavior. Deploy behind HTTPS: Basic credentials are sent with each request. MongoDB stores parcel assignments as `courier_id` and automatically indexes them.
+Courier status transitions are `CREATED → ACCEPTED → PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED`; `FAILED` can be set from any active step. Existing `CREATED → PICKED_UP` assignments remain supported. A rejected request is unassigned and returns to the available `CREATED` pool. Completing delivery requires at least one signature, barcode or photo proof. Invalid transitions return 400 and a courier can only update parcels assigned to that courier ID. Courier endpoints require HTTP Basic authentication and only allow the authenticated courier to use their own courier ID. State-changing API requests also require the CSRF token from `GET /api/csrf`; the Java and mobile clients obtain and send it automatically. Courier passwords are BCrypt-hashed in PostgreSQL. The bootstrap courier account is created once from `PARCEL_BOOTSTRAP_COURIER_ID` and `PARCEL_BOOTSTRAP_PASSWORD` environment variables; use a password of at least 12 characters and provision subsequent accounts through a trusted operator. Admin credentials are configured with `PARCEL_ADMIN_USERNAME` and `PARCEL_ADMIN_PASSWORD`; both must be set, and the password must contain at least 12 characters. The browser Dispatch tab and desktop dispatcher require admin sign-in; credentials are held only in memory. Admin credentials are checked using BCrypt and admin API requests use HTTP Basic authentication. Parcel updates, deletes and courier assignments require the admin role; customer parcel booking, parcel reads and location updates retain their public access behavior. Deploy behind HTTPS: Basic credentials are sent with each request. Parcel records and courier assignment data are stored in PostgreSQL.
 
 WebSocket `/ws/tracking/{parcelId}` pushes `{parcelId, trackingNumber, status, location}` on location updates and status changes (the location is `null` for a status-only event); use `all` as id to receive every parcel.
 

@@ -6,24 +6,23 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface ParcelRepository extends MongoRepository<Parcel, String> {
+public interface ParcelRepository extends JpaRepository<Parcel, String> {
     Optional<Parcel> findByTrackingNumber(String trackingNumber);
     List<Parcel> findByCourierIdAndStatusNotIn(String courierId, Collection<ParcelStatus> statuses);
     List<Parcel> findByCourierIdAndStatus(String courierId, ParcelStatus status);
 
-    @Query(value = "{ '_id': ?0 }", fields = "{ 'current_location': 1, 'tracking_number': 1 }")
-    Optional<Parcel> findLatestLocationById(String id);
-
-    @Query("{ 'status': ?0, 'courier_id': { $nin: [null, ''] }, 'escalated_at': null, "
-            + "$or: [ { 'updated_at': { $lte: ?1 } }, { 'updated_at': null, 'created_at': { $lte: ?1 } } ] }")
-    List<Parcel> findStaleAssigned(ParcelStatus status, Instant cutoff);
+    @Query("select p from Parcel p where p.status = :status "
+            + "and p.courierId is not null and p.courierId <> '' and p.escalatedAt is null "
+            + "and (p.updatedAt <= :cutoff or (p.updatedAt is null and p.createdAt <= :cutoff))")
+    List<Parcel> findStaleAssigned(@Param("status") ParcelStatus status, @Param("cutoff") Instant cutoff);
 
     List<Parcel> findByStatusIn(Collection<ParcelStatus> statuses);
 
-    @Query("{ 'status': ?0, 'finalized_at': null, "
-            + "$or: [ { 'updated_at': { $lte: ?1 } }, { 'updated_at': null, 'created_at': { $lte: ?1 } } ] }")
-    List<Parcel> findDeliveredBefore(ParcelStatus status, Instant cutoff);
+    @Query("select p from Parcel p where p.status = :status and p.finalizedAt is null "
+            + "and (p.updatedAt <= :cutoff or (p.updatedAt is null and p.createdAt <= :cutoff))")
+    List<Parcel> findDeliveredBefore(@Param("status") ParcelStatus status, @Param("cutoff") Instant cutoff);
 }
