@@ -14,6 +14,8 @@ flutter run --dart-define=API_URL=https://your-api.example.com
 
 Set `API_URL` to the backend's HTTPS origin. For a local Android emulator use `http://10.0.2.2:8080`; for an iOS simulator use `http://127.0.0.1:8080`. Physical devices need a reachable host address. Do not use plain HTTP outside local development.
 
+Android 9+ blocks plain HTTP by default. For local development with an `http://` `API_URL`, add `android:usesCleartextTraffic="true"` to the `<application>` tag in `android/app/src/main/AndroidManifest.xml`, and remove it for release builds. iOS also blocks plain HTTP unless an App Transport Security exception is added to `Info.plist`; prefer HTTPS where possible. If sign-in reports "Connection refused" or a timeout, check that the backend is running and the `API_URL` host is reachable from the device.
+
 ## Native permissions
 
 Add the following Android permissions to `android/app/src/main/AndroidManifest.xml` under the root `<manifest>`:

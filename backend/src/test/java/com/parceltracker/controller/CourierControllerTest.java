@@ -111,6 +111,19 @@ class CourierControllerTest {
     }
 
     @Test
+    void returnsOwnIdentityForSignIn() throws Exception {
+        mvc.perform(get("/api/couriers/courier-1/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.courierId").value("courier-1"));
+    }
+
+    @Test
+    void rejectsIdentityOfAnotherCourier() throws Exception {
+        mvc.perform(get("/api/couriers/courier-2/me"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void preventsAccessToAnotherCouriersDeliveries() throws Exception {
         mvc.perform(get("/api/couriers/courier-2/deliveries"))
                 .andExpect(status().isForbidden());

@@ -18,7 +18,7 @@ class CourierAccountBootstrapTest {
 
     @Test
     void bootstrapsHashedPasswordOnlyWhenAccountDoesNotExist() throws Exception {
-        when(accounts.existsById("courier-1")).thenReturn(false);
+        when(accounts.findById("courier-1")).thenReturn(java.util.Optional.empty());
 
         new CourierAccountBootstrap(accounts, encoder, "courier-1", "strong-password-123")
                 .run(new DefaultApplicationArguments());
@@ -30,12 +30,26 @@ class CourierAccountBootstrapTest {
     }
 
     @Test
-    void doesNotOverwriteExistingBootstrapAccount() throws Exception {
-        when(accounts.existsById("courier-1")).thenReturn(true);
+    void keepsExistingAccountWhenPasswordMatches() throws Exception {
+        when(accounts.findById("courier-1")).thenReturn(java.util.Optional.of(
+                new CourierAccount("courier-1", encoder.encode("strong-password-123"))));
 
         new CourierAccountBootstrap(accounts, encoder, "courier-1", "strong-password-123")
                 .run(new DefaultApplicationArguments());
 
         verify(accounts, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void resetsExistingAccountWhenConfiguredPasswordDiffers() throws Exception {
+        when(accounts.findById("courier-1")).thenReturn(java.util.Optional.of(
+                new CourierAccount("courier-1", encoder.encode("old-password-123"))));
+
+        new CourierAccountBootstrap(accounts, encoder, "courier-1", "strong-password-123")
+                .run(new DefaultApplicationArguments());
+
+        var account = org.mockito.ArgumentCaptor.forClass(CourierAccount.class);
+        verify(accounts).save(account.capture());
+        assertTrue(encoder.matches("strong-password-123", account.getValue().getPasswordHash()));
     }
 }
