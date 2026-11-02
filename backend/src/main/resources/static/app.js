@@ -500,6 +500,7 @@
       const map = L.map(container, { zoomControl: true }).setView([20, 0], 2);
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        referrerPolicy: 'origin',
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
       entry = { map, layer: L.layerGroup().addTo(map) };
