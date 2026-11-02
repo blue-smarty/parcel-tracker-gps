@@ -211,3 +211,5 @@ footer b { color: var(--teal); padding: 0 3px; }
   .assignment-controls .button { flex: 1; }
   footer { gap: 10px; flex-direction: column; }
 }
+
+.map-canvas.leaflet-container { z-index: 0; background: #edf5f2; }

@@ -485,7 +485,55 @@
     }));
   }
 
+  const leafletMaps = new WeakMap();
+
+  function validPoint(location) {
+    return location && Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude));
+  }
+
   function drawMap(container, parcels, selectedId, history) {
+    if (!window.L) return drawPlotMap(container, parcels, selectedId, history);
+    let entry = leafletMaps.get(container);
+    if (!entry) {
+      container.innerHTML = '';
+      container.classList.remove('map-empty');
+      const map = L.map(container, { zoomControl: true }).setView([20, 0], 2);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      entry = { map, layer: L.layerGroup().addTo(map) };
+      leafletMaps.set(container, entry);
+    }
+    const { map, layer } = entry;
+    layer.clearLayers();
+    const bounds = [];
+    if (selectedId && Array.isArray(history)) {
+      const route = history.filter(validPoint).map(p => [Number(p.latitude), Number(p.longitude)]);
+      if (route.length > 1) L.polyline(route, { color: '#e9904b', weight: 3, dashArray: '6 5' }).addTo(layer);
+      bounds.push(...route);
+    }
+    parcels.forEach(parcel => {
+      const location = parcel.currentLocation;
+      if (!validPoint(location)) return;
+      const latLng = [Number(location.latitude), Number(location.longitude)];
+      const selected = parcel.id === selectedId;
+      L.circleMarker(latLng, {
+        radius: selected ? 9 : 7, color: '#fff', weight: 2, fillOpacity: 1,
+        fillColor: selected ? '#e9904b' : '#0c8b87'
+      }).bindTooltip(String(parcel.trackingNumber || 'Parcel'), { permanent: true, direction: 'right', offset: [8, 0] })
+        .addTo(layer);
+      bounds.push(latLng);
+    });
+    // Containers may be hidden when drawn; recompute size before fitting.
+    setTimeout(() => {
+      map.invalidateSize();
+      if (bounds.length === 1) map.setView(bounds[0], 15);
+      else if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+    }, 0);
+  }
+
+  function drawPlotMap(container, parcels, selectedId, history) {
     container.innerHTML = '<div class="map-grid"></div>';
     const points = [];
     parcels.forEach(parcel => {
