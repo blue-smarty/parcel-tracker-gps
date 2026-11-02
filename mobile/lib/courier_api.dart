@@ -125,6 +125,7 @@ class CourierApi {
       ..body = body == null ? '' : jsonEncode(body);
     final response = await _client.send(request).then(http.Response.fromStream);
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (response.statusCode == 403) _csrfToken = null;
       throw HttpException('Request failed (${response.statusCode}): ${response.body}', uri: uri);
     }
     return response.body.isEmpty ? null : jsonDecode(response.body);
