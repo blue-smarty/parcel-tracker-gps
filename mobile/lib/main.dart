@@ -45,6 +45,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _deliveries = [];
   Map<String, dynamic> _earnings = {};
   StreamSubscription<Position>? _locationSubscription;
+  Position? _lastPosition;
   final ValueNotifier<Position?> _currentPosition = ValueNotifier<Position?>(null);
   bool _busy = false;
   String? _message;
@@ -124,6 +125,9 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
         _message = null;
       });
     }
+    // A parcel that just became active (e.g. picked up) needs a fix without waiting for movement.
+    final last = _lastPosition;
+    if (last != null) await _publishPosition(last);
   }
 
   Future<void> _startLocationUpdates() async {
@@ -141,21 +145,28 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
     _locationSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 100,
+        distanceFilter: 10,
       ),
-    ).listen((position) async {
-      if (mounted) {
-        _currentPosition.value = position;
-        setState(() {});
+    ).listen(_publishPosition);
+    try {
+      // The stream only emits after the device moves, so publish a first fix right away.
+      await _publishPosition(await Geolocator.getCurrentPosition());
+    } catch (_) {}
+  }
+
+  Future<void> _publishPosition(Position position) async {
+    _lastPosition = position;
+    if (mounted) {
+      _currentPosition.value = position;
+      setState(() {});
+    }
+    for (final parcel in _deliveries.where(_canShareLocation)) {
+      try {
+        await _api.updateLocation('${parcel['id']}', position.latitude, position.longitude);
+      } catch (error) {
+        if (mounted) setState(() => _message = 'Location update failed: $error');
       }
-      for (final parcel in _deliveries.where(_canShareLocation)) {
-        try {
-          await _api.updateLocation('${parcel['id']}', position.latitude, position.longitude);
-        } catch (_) {
-          if (mounted) setState(() => _message = 'Location update saved for retry.');
-        }
-      }
-    });
+    }
   }
 
   bool _canShareLocation(Map<String, dynamic> parcel) =>
@@ -230,6 +241,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
         _deliveries = [];
         _earnings = {};
         _currentPosition.value = null;
+        _lastPosition = null;
         _queued = 0;
         _message = null;
       });
