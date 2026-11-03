@@ -213,3 +213,16 @@ footer b { color: var(--teal); padding: 0 3px; }
 }
 
 .map-canvas.leaflet-container { z-index: 0; background: #edf5f2; }
+
+.account-chip { color: #81919d; font-size: 11px; }
+.account-chip strong { color: var(--ink, #102a43); }
+.auth-main { display: grid; place-items: start center; padding: 40px 16px; }
+.auth-panel { width: 100%; max-width: 440px; padding: 24px; }
+.auth-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+.auth-form { display: grid; gap: 14px; }
+.auth-form label { display: grid; gap: 6px; }
+.auth-form[hidden] { display: none; }
+.landing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; padding: 32px 0; }
+.landing-card { padding: 24px; display: grid; gap: 10px; align-content: start; }
+.landing-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+a.button { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }

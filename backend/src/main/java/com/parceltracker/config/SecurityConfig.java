@@ -1,6 +1,8 @@
 package com.parceltracker.config;
 
 import com.parceltracker.repository.CourierAccountRepository;
+import com.parceltracker.repository.CustomerAccountRepository;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/parcels/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/parcels/**").hasRole("ADMIN")
                         .requestMatchers("/api/couriers/**").hasRole("COURIER")
+                        .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
                         .anyRequest().permitAll())
                 .httpBasic(Customizer.withDefaults())
                 .build();
@@ -46,6 +49,7 @@ public class SecurityConfig {
     @Bean
     UserDetailsService userDetailsService(
             CourierAccountRepository accounts,
+            ObjectProvider<CustomerAccountRepository> customerAccounts,
             PasswordEncoder passwordEncoder,
             @Value("${parcel.auth.admin-username:}") String adminUsername,
             @Value("${parcel.auth.admin-password:}") String adminPassword) {
@@ -67,7 +71,16 @@ public class SecurityConfig {
                             .password(account.getPasswordHash())
                             .roles("COURIER")
                             .build())
-                    .orElseThrow(() -> new UsernameNotFoundException("Courier account not found"));
+                    .or(() -> {
+                        CustomerAccountRepository customers = customerAccounts.getIfAvailable();
+                        return customers == null ? java.util.Optional.empty()
+                                : customers.findById(username.toLowerCase(java.util.Locale.ROOT))
+                                        .map(account -> User.withUsername(account.getEmail())
+                                                .password(account.getPasswordHash())
+                                                .roles("CUSTOMER")
+                                                .build());
+                    })
+                    .orElseThrow(() -> new UsernameNotFoundException("Account not found"));
         };
     }
 
