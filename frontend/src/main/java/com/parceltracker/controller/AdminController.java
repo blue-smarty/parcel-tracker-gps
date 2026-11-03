@@ -454,6 +454,7 @@ public class AdminController extends BorderPane {
                     parcel.setStatus("IN_TRANSIT");
                 }
                 parcelTable.refresh();
+                if (mapController != null) mapController.showParcels(parcels.stream().filter(AdminController::isActive).toList());
                 updateMetrics();
                 return;
             }
