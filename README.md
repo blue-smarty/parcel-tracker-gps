@@ -25,7 +25,7 @@ mvn spring-boot:run
 
 In Windows PowerShell, use `$env:NAME = 'value'` instead of `export` for each variable. All admin and courier passwords must be at least 12 characters. Keep the same terminal open so the backend inherits these variables. For a managed PostgreSQL database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead; require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
 
-Open [http://localhost:8080](http://localhost:8080) for the customer and dispatch portal. Keep the backend and PostgreSQL running while using the site.
+Open [http://localhost:8080](http://localhost:8080) and use **Create account** for the customer portal, or sign in with the admin account for the admin portal. Keep the backend and PostgreSQL running while using the site.
 
 The parcel tracker and courier dashboards remain available as optional desktop clients. From `frontend`, choose one:
 ```
@@ -55,6 +55,8 @@ Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override desktop cl
 | GET | `/api/couriers/{courierId}/earnings` | Summarize completed deliveries, recorded tips and payouts |
 | POST | `/api/pickups` | Request a pickup (201 with the created pickup, status `REQUESTED`; 400 with `{error, errors: {field: message}}` on validation failure) |
 | GET | `/api/pickups/{id}` | Pickup details |
+| POST | `/api/auth/register` | Create a customer account `{name, email, password}` (201; 409 if the email is taken) |
+| GET | `/api/auth/me` | Verify Basic credentials; returns `{username, name, role}` |
 | GET | `/api/csrf` | Obtain a CSRF request token; send it in `X-XSRF-TOKEN` for POST/PUT/DELETE requests |
 
 Courier status transitions are `CREATED → ACCEPTED → PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED`; `FAILED` can be set from any active step. Existing `CREATED → PICKED_UP` assignments remain supported. A rejected request is unassigned and returns to the available `CREATED` pool. Completing delivery requires at least one signature, barcode or photo proof. Invalid transitions return 400 and a courier can only update parcels assigned to that courier ID. Courier endpoints require HTTP Basic authentication and only allow the authenticated courier to use their own courier ID. State-changing API requests also require the CSRF token from `GET /api/csrf`; the Java and mobile clients obtain and send it automatically. Courier passwords are BCrypt-hashed in PostgreSQL. The bootstrap courier account is created from `PARCEL_BOOTSTRAP_COURIER_ID` and `PARCEL_BOOTSTRAP_PASSWORD` environment variables at startup, and its password is reset to the configured value if it differs (restart the backend after changing it); use a password of at least 12 characters and provision subsequent accounts through a trusted operator. Admin credentials are configured with `PARCEL_ADMIN_USERNAME` and `PARCEL_ADMIN_PASSWORD`; both must be set, and the password must contain at least 12 characters. The browser Dispatch tab and desktop dispatcher require admin sign-in; credentials are held only in memory. Admin credentials are checked using BCrypt and admin API requests use HTTP Basic authentication. Parcel updates, deletes and courier assignments require the admin role; customer parcel booking, parcel reads and location updates retain their public access behavior. Deploy behind HTTPS: Basic credentials are sent with each request. Parcel records and courier assignment data are stored in PostgreSQL.
@@ -64,10 +66,19 @@ WebSocket `/ws/tracking/{parcelId}` pushes `{parcelId, trackingNumber, status, l
 ## Frontend
 The tracker desktop client provides a parcel table with search, a location plot with route history, details, and live updates with automatic reconnect.
 
-### Browser customer and dispatch portal
-The Spring Boot backend serves the website at `/` from `backend/src/main/resources/static/`; no separate frontend build or server is required. The Customer tab creates deliveries, shows a demo price estimate, tracks orders created in that browser, displays GPS/status updates, and provides a demo receipt and local support request. The Dispatch tab lists parcels, plots live GPS positions, shows active/unassigned/escalated metrics, supports manual assignment and least-active-load auto-dispatch, and resolves local support requests. Open the Dispatch tab from the same browser to see customer support requests saved there.
+### Browser customer and admin portals
+The Spring Boot backend serves the website from `backend/src/main/resources/static/`; no separate frontend build or server is required. The site is split into separate pages that share `common.js`:
 
-Customer tracking IDs, the demo profile, courier ID suggestions, and demo support requests use browser local storage. Customer tracking is therefore limited to orders created in that browser; there is no customer account or cross-device recovery. Dispatch assignment endpoints require admin authentication; parcel reads and customer APIs remain public, and the customer, pricing, receipt, and support features are demos. Do not expose this portal or backend to the public internet without production payment/support integrations.
+| Page | Audience | Purpose |
+|------|----------|---------|
+| `/` | Everyone | Landing page with links to sign in or register |
+| `/login.html` | Everyone | Sign in (customers and admins) or create a customer account; signed-in users are routed to their portal |
+| `/customer.html` | Customers | Book deliveries, demo price estimate, track orders on a live map, demo receipt and support request |
+| `/admin.html` | Admins | Parcel queue, live fleet map, active/unassigned/escalated metrics, manual assignment, least-active-load auto-dispatch, local support requests |
+
+Customers register with name, email and a password of 12-72 characters (`POST /api/auth/register`); accounts are stored in the `customer_accounts` table with BCrypt hashes and authenticate with HTTP Basic like couriers and admins. `GET /api/auth/me` verifies credentials and returns `{username, name, role}`, where role is `CUSTOMER`, `ADMIN` or `COURIER`. Admins are still configured with `PARCEL_ADMIN_USERNAME`/`PARCEL_ADMIN_PASSWORD`; courier accounts sign in with the mobile app, not the website. The browser keeps the credential in `sessionStorage` (cleared when the tab closes). Each portal page verifies the role and redirects to the right page otherwise.
+
+Customer tracking IDs are saved per account in browser local storage, so order history is limited to the browser where the order was booked. Demo support requests and courier ID suggestions also use local storage. Dispatch assignment endpoints require admin authentication; parcel reads remain public, and the pricing, receipt, and support features are demos. Do not expose this portal or backend to the public internet without production payment/support integrations.
 
 ### Courier Dashboard
 Open **Courier Dashboard** and enter the courier ID and password to load active deliveries. New requests can be accepted or rejected. Select a delivery to advance it through the available statuses, publish latitude/longitude, or record a drawn recipient signature, barcode, drop-off note and optional photo before completing delivery. Photo uploads are limited to 4 MB. When the backend is unavailable, decisions, status changes, GPS fixes and proof submissions are queued in `~/.parcel-tracker/courier-updates.json` and retried in order the next time deliveries load. The earnings panel sums completed jobs and the tip/payout amounts entered with proof; these are demo records, not verified or paid amounts. If delivery coordinates and a current GPS fix are available, **Optimize & navigate** orders stops with a nearest-neighbor distance heuristic and opens Google Maps for turn-by-turn navigation. The map app, not this desktop client, supplies live directions. Delivery assignment is available through `PUT /api/parcels/{id}/courier`.
