@@ -57,6 +57,8 @@ Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override desktop cl
 | POST | `/api/pickups` | Request a pickup (201 with the created pickup, status `REQUESTED`; 400 with `{error, errors: {field: message}}` on validation failure) |
 | GET | `/api/pickups/{id}` | Pickup details (owner or admin authentication required) |
 | POST | `/api/auth/register` | Create a customer account `{name, email, password}` (201; 409 if the email is taken) |
+| POST | `/api/auth/password-reset` | Request a customer password reset `{email}` (always returns the same accepted message when enabled) |
+| POST | `/api/auth/password-reset/confirm` | Set a new password `{token, password}` using an unexpired reset link |
 | GET | `/api/auth/me` | Verify Basic credentials; returns `{username, name, role}` |
 | GET | `/api/csrf` | Obtain a CSRF request token; send it in `X-XSRF-TOKEN` for POST/PUT/DELETE requests |
 
@@ -78,6 +80,22 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 | `/admin.html` | Admins | Parcel queue, live fleet map, active/unassigned/escalated metrics, manual assignment, least-active-load auto-dispatch, local support requests |
 
 Customers register with name, email and a password of 12-72 characters (`POST /api/auth/register`); accounts are stored in the `customer_accounts` table with BCrypt hashes and authenticate with HTTP Basic like couriers and admins. `GET /api/auth/me` verifies credentials and returns `{username, name, role}`, where role is `CUSTOMER`, `ADMIN` or `COURIER`. Admins are still configured with `PARCEL_ADMIN_USERNAME`/`PARCEL_ADMIN_PASSWORD`; courier accounts sign in with the mobile app, not the website. The browser keeps the credential in `sessionStorage` (cleared when the tab closes). Each portal page verifies the role and redirects to the right page otherwise.
+
+Customer password recovery is disabled by default. To enable it, configure an SMTP server and a public HTTPS URL for the reset page before setting `PARCEL_PASSWORD_RESET_ENABLED=true`:
+
+```bash
+export SPRING_MAIL_HOST=smtp.example.com
+export SPRING_MAIL_PORT=587
+export SPRING_MAIL_USERNAME='your-smtp-username'
+export SPRING_MAIL_PASSWORD='your-smtp-password'
+export SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+export SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+export PARCEL_PASSWORD_RESET_FROM='ParcelPilot <no-reply@example.com>'
+export PARCEL_PASSWORD_RESET_URL='https://your-domain.example/forgot-password.html'
+export PARCEL_PASSWORD_RESET_ENABLED=true
+```
+
+The request endpoint responds identically for existing and unknown accounts. Reset tokens are random, expire after 30 minutes, are stored only as hashes, and can be used once; a one-minute per-account resend cooldown applies. The reset page uses CSRF-protected requests, and reset links must point to the deployed HTTPS origin. Use SMTP credentials from a dedicated mail provider and store them as deployment secrets, not in source control.
 
 Customer orders are linked to the signed-in customer in the backend and load across browsers; demo support requests and courier ID suggestions still use local storage. Dispatch assignment and parcel-wide listing require admin authentication. Pricing, receipt, and support features are demos. Do not expose this portal or backend to the public internet without production payment/support integrations.
 

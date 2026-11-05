@@ -1,9 +1,12 @@
 package com.parceltracker.controller;
 
+import com.parceltracker.dto.PasswordResetCompletion;
+import com.parceltracker.dto.PasswordResetRequest;
 import com.parceltracker.dto.RegistrationRequest;
 import com.parceltracker.model.CustomerAccount;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.CustomerAccountRepository;
+import com.parceltracker.service.PasswordResetService;
 import jakarta.validation.Valid;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -28,15 +31,45 @@ public class AuthController {
     private final CustomerAccountRepository customers;
     private final CourierAccountRepository couriers;
     private final PasswordEncoder encoder;
+    private final PasswordResetService passwordResets;
     private final String adminUsername;
+    private final boolean passwordResetEnabled;
 
     public AuthController(CustomerAccountRepository customers, CourierAccountRepository couriers,
-                          PasswordEncoder encoder,
-                          @Value("${parcel.auth.admin-username:}") String adminUsername) {
+                          PasswordEncoder encoder, PasswordResetService passwordResets,
+                          @Value("${parcel.auth.admin-username:}") String adminUsername,
+                          @Value("${parcel.auth.password-reset.enabled:false}") boolean passwordResetEnabled) {
         this.customers = customers;
         this.couriers = couriers;
         this.encoder = encoder;
+        this.passwordResets = passwordResets;
         this.adminUsername = adminUsername;
+        this.passwordResetEnabled = passwordResetEnabled;
+    }
+
+    @PostMapping("/password-reset")
+    public ResponseEntity<Map<String, String>> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request) {
+        if (!passwordResetEnabled) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", "Password reset is not configured. Contact support."));
+        }
+        passwordResets.requestReset(request.email());
+        return ResponseEntity.accepted().body(Map.of("message",
+                "If an account exists for that email, password reset instructions will be sent."));
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<Map<String, String>> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetCompletion request) {
+        if (!passwordResetEnabled) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", "Password reset is not configured. Contact support."));
+        }
+        if (!passwordResets.resetPassword(request.token(), request.password())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "This reset link is invalid or has expired."));
+        }
+        return ResponseEntity.ok(Map.of("message", "Password updated. Sign in with your new password."));
     }
 
     @PostMapping("/register")

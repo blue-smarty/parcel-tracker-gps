@@ -38,11 +38,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/couriers/**").hasRole("COURIER")
-                        .requestMatchers("/", "/index.html", "/login.html", "/customer.html", "/admin.html",
-                                "/styles.css", "/common.js", "/auth.js", "/customer.js", "/admin.js")
+                        .requestMatchers("/", "/index.html", "/login.html", "/forgot-password.html",
+                                "/customer.html", "/admin.html", "/styles.css", "/common.js", "/auth.js",
+                                "/password-reset.js", "/customer.js", "/admin.js")
                                 .permitAll()
                         .requestMatchers("/api/branding", "/api/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/password-reset",
+                                "/api/auth/password-reset/confirm").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
                         .requestMatchers("/ws/tracking/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/parcels").hasRole("ADMIN")

@@ -14,6 +14,7 @@ import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.model.CustomerAccount;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.CustomerAccountRepository;
+import com.parceltracker.service.PasswordResetService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,15 +23,18 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AuthController.class)
 @Import(SecurityConfig.class)
+@TestPropertySource(properties = "parcel.auth.password-reset.enabled=true")
 class AuthControllerTest {
     @Autowired private MockMvc mvc;
     @Autowired private PasswordEncoder encoder;
     @MockBean private CourierAccountRepository couriers;
     @MockBean private CustomerAccountRepository customers;
+    @MockBean private PasswordResetService passwordResets;
 
     private static final String BODY = "{\"name\":\"Ada\",\"email\":\"Ada@Example.com\",\"password\":\"correct horse battery\"}";
 
@@ -56,6 +60,37 @@ class AuthControllerTest {
         mvc.perform(post("/api/auth/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Ada\",\"email\":\"a@b.co\",\"password\":\"short\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void passwordResetRequestUsesGenericResponse() throws Exception {
+        mvc.perform(post("/api/auth/password-reset").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"Ada@Example.com\"}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.message").value(
+                        "If an account exists for that email, password reset instructions will be sent."));
+        verify(passwordResets).requestReset("Ada@Example.com");
+    }
+
+    @Test
+    void confirmsPasswordReset() throws Exception {
+        when(passwordResets.resetPassword("valid-token", "a sufficiently long password")).thenReturn(true);
+        mvc.perform(post("/api/auth/password-reset/confirm").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"valid-token\",\"password\":\"a sufficiently long password\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Password updated. Sign in with your new password."));
+    }
+
+    @Test
+    void rejectsPasswordResetWithInvalidToken() throws Exception {
+        when(passwordResets.resetPassword("invalid-token", "a sufficiently long password")).thenReturn(false);
+        mvc.perform(post("/api/auth/password-reset/confirm").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"invalid-token\",\"password\":\"a sufficiently long password\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("This reset link is invalid or has expired."));
     }
 
     @Test
