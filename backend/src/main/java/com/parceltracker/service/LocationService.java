@@ -51,4 +51,8 @@ public class LocationService {
     public List<Location> getHistory(String parcelId) {
         return parcelService.get(parcelId).getLocationHistory();
     }
+
+    public Parcel getParcel(String parcelId) {
+        return parcelService.get(parcelId);
+    }
 }

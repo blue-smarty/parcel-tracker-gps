@@ -4,6 +4,7 @@ import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -20,26 +21,25 @@ public class ParcelService {
         this.pricing = pricing;
     }
 
-    public Parcel create(Parcel parcel) {
+    public Parcel create(Parcel parcel, String customerEmail) {
         Instant now = Instant.now();
         parcel.setId(null);
-        if (parcel.getTrackingNumber() == null || parcel.getTrackingNumber().isBlank()) {
-            parcel.setTrackingNumber("TRK-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
-        }
-        if (parcel.getStatus() == null) {
-            parcel.setStatus(ParcelStatus.CREATED);
-        }
+        parcel.setTrackingNumber("TRK-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
+        parcel.setCustomerEmail(customerEmail);
+        parcel.setCourierId(null);
+        parcel.setStatus(ParcelStatus.CREATED);
+        parcel.setCurrentLocation(null);
+        parcel.setLocationHistory(new ArrayList<>());
+        parcel.setEscalatedAt(null);
+        parcel.setLocationInactive(false);
+        parcel.setFinalizedAt(null);
+        parcel.setProofOfDelivery(null);
         if (parcel.getDistanceKm() != null && parcel.getWeightKg() != null
                 && parcel.getDeliverySpeed() != null) {
             parcel.setEstimatedPrice(pricing.estimate(parcel.getDistanceKm(), parcel.getWeightKg(),
                     parcel.getDeliverySpeed()));
-        }
-        parcel.getLocationHistory().clear();
-        if (parcel.getCurrentLocation() != null) {
-            if (parcel.getCurrentLocation().getTimestamp() == null) {
-                parcel.getCurrentLocation().setTimestamp(now);
-            }
-            parcel.getLocationHistory().add(parcel.getCurrentLocation());
+        } else {
+            parcel.setEstimatedPrice(null);
         }
         parcel.setCreatedAt(now);
         parcel.setUpdatedAt(now);
@@ -48,6 +48,10 @@ public class ParcelService {
 
     public List<Parcel> findAll() {
         return repository.findAll();
+    }
+
+    public List<Parcel> findByCustomerEmail(String customerEmail) {
+        return repository.findByCustomerEmailOrderByCreatedAtDesc(customerEmail);
     }
 
     public Parcel get(String id) {

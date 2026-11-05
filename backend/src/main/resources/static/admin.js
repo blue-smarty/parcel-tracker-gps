@@ -1,7 +1,7 @@
 (() => {
   const { keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
-    api, setMessage, detail, drawMap, connectSocket } = PP;
-  const state = { parcels: [], selectedDispatchId: null, refreshTimer: null };
+    api, setMessage, detail, drawMap } = PP;
+  const state = { parcels: [], selectedDispatchId: null };
 
   function isActive(parcel) {
     return !terminalStatuses.has(String(parcel.status || '').toUpperCase());
@@ -161,19 +161,6 @@
     }));
   }
 
-  async function refreshAfterLiveUpdate(update) {
-    const parcel = state.parcels.find(item => item.id === update.parcelId);
-    if (parcel) {
-      parcel.status = update.status;
-      if (update.location) parcel.currentLocation = update.location;
-      renderDispatch();
-    }
-    if (!update.location || !parcel) {
-      clearTimeout(state.refreshTimer);
-      state.refreshTimer = setTimeout(refreshDispatch, 450);
-    }
-  }
-
   async function initialize() {
     const user = await PP.requireRole('ADMIN');
     if (!user) return;
@@ -187,7 +174,7 @@
     if (savedCourierIds) byId('courierIdsInput').value = savedCourierIds;
     await refreshDispatch();
     renderSupportTickets();
-    connectSocket(refreshAfterLiveUpdate);
+    byId('connectionText').textContent = 'Updates every 30 seconds';
     window.setInterval(refreshDispatch, 30000);
   }
 

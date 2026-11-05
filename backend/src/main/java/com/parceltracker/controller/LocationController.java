@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,7 +27,9 @@ public class LocationController {
     }
 
     @GetMapping("/history")
-    public List<Location> history(@PathVariable String id) {
+    public List<Location> history(@PathVariable String id, Authentication authentication) {
+        Parcel parcel = service.getParcel(id);
+        ParcelController.requireOwnerOrAdmin(parcel, authentication);
         return service.getHistory(id);
     }
 

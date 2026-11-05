@@ -50,13 +50,19 @@ public class PickupController {
     @FXML private Label statusLabel;
 
     private ApiService api;
+    private boolean adminRequest;
     private Runnable onClose = () -> { };
     private boolean touched;
     private boolean submitting;
 
     public void init(ApiService api, Runnable onClose) {
+        init(api, onClose, false);
+    }
+
+    public void init(ApiService api, Runnable onClose, boolean adminRequest) {
         this.api = api;
         this.onClose = onClose;
+        this.adminRequest = adminRequest;
     }
 
     @FXML
@@ -136,7 +142,7 @@ public class PickupController {
         Task<Pickup> task = new Task<>() {
             @Override
             protected Pickup call() throws Exception {
-                return api.createPickup(r);
+                return api.createPickup(r, adminRequest);
             }
         };
         task.setOnSucceeded(e -> {

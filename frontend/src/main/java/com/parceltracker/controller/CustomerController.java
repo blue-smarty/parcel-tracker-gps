@@ -6,12 +6,10 @@ import com.parceltracker.service.SupportTicketStore;
 import com.parceltracker.ui.MapPanel;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.prefs.Preferences;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -25,15 +23,16 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.HBox;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
 
 public class CustomerController {
-    private static final Preferences PROFILE = Preferences.userNodeForPackage(CustomerController.class);
     private static final NumberFormat CURRENCY = NumberFormat.getCurrencyInstance(Locale.US);
 
     @FXML private TextField customerNameField;
     @FXML private TextField customerContactField;
-    @FXML private Button saveProfileButton;
-    @FXML private Button socialSignInButton;
+    @FXML private Button accountSignInButton;
     @FXML private Label profileStatusLabel;
     @FXML private TextField recipientField;
     @FXML private TextField pickupAddressField;
@@ -66,11 +65,13 @@ public class CustomerController {
     private final SupportTicketStore supportTickets = new SupportTicketStore();
     private ApiService api;
     private Parcel selected;
+    private boolean accountSignInInProgress;
+    private Timeline refreshTimer;
 
     public void init(ApiService api) {
         this.api = api;
-        customerNameField.setText(PROFILE.get("name", ""));
-        customerContactField.setText(PROFILE.get("contact", ""));
+        customerNameField.clear();
+        customerContactField.clear();
         packageSizeField.getItems().setAll("Small", "Medium", "Large");
         deliverySpeedField.getItems().setAll("Scheduled", "Same-day");
         scheduledWindowField.getItems().setAll("08:00-10:00", "10:00-12:00", "12:00-14:00",
@@ -81,8 +82,7 @@ public class CustomerController {
         addColumn("Status", 125, Parcel::getStatus);
         ordersTable.getSelectionModel().selectedItemProperty().addListener(
                 (observable, previous, parcel) -> selectOrder(parcel));
-        saveProfileButton.setOnAction(event -> saveProfile());
-        socialSignInButton.setOnAction(event -> useDemoSocialProfile());
+        accountSignInButton.setOnAction(event -> signIn());
         estimateButton.setOnAction(event -> updateEstimate());
         bookButton.setOnAction(event -> bookOrder());
         refreshOrdersButton.setOnAction(event -> refreshOrders());
@@ -97,7 +97,9 @@ public class CustomerController {
         distanceField.textProperty().addListener((observable, previous, value) -> updateEstimate());
         weightField.textProperty().addListener((observable, previous, value) -> updateEstimate());
         deliverySpeedField.valueProperty().addListener((observable, previous, value) -> updateEstimate());
-        refreshOrders();
+        bookButton.setDisable(true);
+        refreshOrdersButton.setDisable(true);
+        profileStatusLabel.setText("Sign in with your customer account to book or view deliveries.");
     }
 
     private void addColumn(String title, double width, java.util.function.Function<Parcel, String> value) {
@@ -108,24 +110,46 @@ public class CustomerController {
         ordersTable.getColumns().add(column);
     }
 
-    private void saveProfile() {
-        String name = trim(customerNameField.getText());
-        String contact = trim(customerContactField.getText());
-        if (name.isEmpty() || contact.isEmpty()) {
-            profileStatusLabel.setText("Enter your name and an email address or phone number.");
-            return;
-        }
-        PROFILE.put("name", name);
-        PROFILE.put("contact", contact);
-        profileStatusLabel.setText("Demo profile saved on this device; this is not a verified account.");
-        refreshOrders();
-    }
-
-    private void useDemoSocialProfile() {
-        customerNameField.setText("Demo Customer");
-        customerContactField.setText("demo-customer@local.test");
-        saveProfile();
-        profileStatusLabel.setText("Demo social sign-in simulated. No social provider was contacted.");
+    private void signIn() {
+        if (accountSignInInProgress) return;
+        CustomerLoginDialog.showAndWait(accountSignInButton.getScene().getWindow()).ifPresent(credentials -> {
+            accountSignInInProgress = true;
+            accountSignInButton.setDisable(true);
+            profileStatusLabel.setText("Verifying customer account...");
+            Task<java.util.Map<String, String>> task = new Task<>() {
+                @Override
+                protected java.util.Map<String, String> call() throws Exception {
+                    return api.authenticateCustomer(credentials.email(), credentials.password());
+                }
+            };
+            task.setOnSucceeded(event -> {
+                accountSignInInProgress = false;
+                accountSignInButton.setDisable(false);
+                var identity = task.getValue();
+                customerNameField.setText(identity.getOrDefault("name", ""));
+                customerContactField.setText(identity.getOrDefault("username", ""));
+                customerNameField.setDisable(true);
+                customerContactField.setDisable(true);
+                accountSignInButton.setText("Signed in");
+                accountSignInButton.setDisable(true);
+                bookButton.setDisable(false);
+                refreshOrdersButton.setDisable(false);
+                profileStatusLabel.setText("Signed in as " + identity.getOrDefault("username", ""));
+                refreshOrders();
+                refreshTimer = new Timeline(new KeyFrame(Duration.seconds(30), tick -> refreshOrders()));
+                refreshTimer.setCycleCount(Timeline.INDEFINITE);
+                refreshTimer.play();
+            });
+            task.setOnFailed(event -> {
+                accountSignInInProgress = false;
+                accountSignInButton.setDisable(false);
+                profileStatusLabel.setText("Customer sign-in failed: "
+                        + PickupController.describe(task.getException()));
+            });
+            Thread thread = new Thread(task, "customer-sign-in");
+            thread.setDaemon(true);
+            thread.start();
+        });
     }
 
     private void updateEstimate() {
@@ -167,7 +191,7 @@ public class CustomerController {
             return;
         }
         if (name.isEmpty() || contact.isEmpty()) {
-            bookingStatusLabel.setText("Save a demo profile before placing an order.");
+            bookingStatusLabel.setText("Sign in with a customer account before placing an order.");
             return;
         }
         if (recipient.isEmpty() || pickup.isEmpty() || delivery.isEmpty() || size == null
@@ -219,7 +243,7 @@ public class CustomerController {
         parcel.setScheduledWindow("Scheduled".equals(speed) ? scheduledWindowField.getValue() : null);
         bookButton.setDisable(true);
         bookingStatusLabel.setText("Creating demo order...");
-        run("customer-order", () -> api.createParcel(parcel), created -> {
+        run("customer-order", () -> api.createCustomerParcel(parcel), created -> {
             bookButton.setDisable(false);
             bookingStatusLabel.setText("Order " + created.getTrackingNumber() + " created. "
                     + "Payment is simulated (" + payment + "); no charge was made.");
@@ -237,35 +261,30 @@ public class CustomerController {
 
     private void refreshOrders() {
         if (api == null) return;
-        run("customer-orders", api::getParcels, this::onTrackingRefresh, error ->
+        run("customer-orders", api::getCustomerParcels, this::onTrackingRefresh, error ->
                 trackingStatusLabel.setText("Cannot load demo orders: " + PickupController.describe(error)));
     }
 
     public void onTrackingRefresh(List<Parcel> parcels) {
-        String contact = trim(customerContactField.getText());
-        List<Parcel> own = new ArrayList<>();
         for (Parcel parcel : parcels) {
-            if (contact.isEmpty() || !contact.equalsIgnoreCase(trim(parcel.getCustomerContact()))) continue;
-            own.add(parcel);
             String old = previousStatuses.put(parcel.getId(), parcel.getStatus());
             if (old != null && !old.equals(parcel.getStatus())) {
                 notificationLabel.setText("Demo notification: " + parcel.getTrackingNumber()
                         + " changed from " + old + " to " + parcel.getStatus() + ".");
             }
         }
-        ordersTable.setItems(FXCollections.observableArrayList(own));
-        map.setParcels(own);
+        ordersTable.setItems(FXCollections.observableArrayList(parcels));
+        map.setParcels(parcels);
         if (selected != null) {
-            Parcel updated = own.stream().filter(parcel -> selected.getId().equals(parcel.getId())).findFirst().orElse(null);
+            Parcel updated = parcels.stream().filter(parcel -> selected.getId().equals(parcel.getId())).findFirst().orElse(null);
             if (updated == null) selectOrder(null);
             else selectOrder(updated);
         }
-        trackingStatusLabel.setText("Showing " + own.size()
-                + " order(s) for this local demo profile. Live events require the tracking feed to be connected.");
+        trackingStatusLabel.setText("Showing " + parcels.size() + " order(s) linked to your customer account.");
     }
 
-    public void onLiveLocation(String parcelId, com.parceltracker.model.Location location) {
-        map.updateLocation(parcelId, location);
+    public void shutdown() {
+        if (refreshTimer != null) refreshTimer.stop();
     }
 
     private void selectOrder(Parcel parcel) {

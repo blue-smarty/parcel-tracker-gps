@@ -5,6 +5,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -64,6 +67,48 @@ class ParcelAdminAuthorizationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"courierId\":\"courier-1\"}"))
                 .andExpect(status().isForbidden());
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void rejectsAnonymousParcelListing() throws Exception {
+        mvc.perform(get("/api/parcels"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void customerCanOnlyReadOwnedParcel() throws Exception {
+        Parcel parcel = new Parcel();
+        parcel.setCustomerEmail("other@example.com");
+        when(service.get("parcel-1")).thenReturn(parcel);
+
+        mvc.perform(get("/api/parcels/parcel-1")
+                        .with(user("customer@example.com").roles("CUSTOMER")))
+                .andExpect(status().isNotFound());
+
+        verify(service).get("parcel-1");
+    }
+
+    @Test
+    void customerParcelListIsScopedToAuthenticatedAccount() throws Exception {
+        when(service.findByCustomerEmail("customer@example.com")).thenReturn(java.util.List.of());
+
+        mvc.perform(get("/api/parcels/mine")
+                        .with(user("customer@example.com").roles("CUSTOMER")))
+                .andExpect(status().isOk());
+
+        verify(service).findByCustomerEmail("customer@example.com");
+    }
+
+    @Test
+    void parcelCreationRequiresCustomerOrAdmin() throws Exception {
+        mvc.perform(post("/api/parcels").with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sender\":\"A\",\"recipient\":\"B\"}"))
+                .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(service);
     }

@@ -35,6 +35,7 @@ public class ApiService {
     private final String baseUrl;
     private String courierAuthorization;
     private String adminAuthorization;
+    private String customerAuthorization;
     private String csrfToken;
 
     public ApiService(String baseUrl) {
@@ -60,6 +61,35 @@ public class ApiService {
 
     public void clearAdminCredentials() {
         adminAuthorization = null;
+    }
+
+    public java.util.Map<String, String> authenticateCustomer(String email, String password)
+            throws IOException, InterruptedException {
+        String authorization = basicAuthorization(email, password);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/api/auth/me"))
+                .header("Authorization", authorization)
+                .GET()
+                .build();
+        String response = send(request);
+        var identity = MAPPER.readValue(response,
+                new TypeReference<java.util.Map<String, String>>() { });
+        if (!"CUSTOMER".equals(identity.get("role"))) {
+            throw new IOException("The server did not confirm the customer identity");
+        }
+        customerAuthorization = authorization;
+        return identity;
+    }
+
+    public void clearCustomerCredentials() {
+        customerAuthorization = null;
+    }
+
+    public String getCustomerAuthorization() {
+        return customerAuthorization;
+    }
+
+    public String getAdminAuthorization() {
+        return adminAuthorization;
     }
 
     public Branding getBranding() throws IOException, InterruptedException {
@@ -92,6 +122,10 @@ public class ApiService {
         return MAPPER.readValue(send(get("/api/parcels")), new TypeReference<List<Parcel>>() { });
     }
 
+    public List<Parcel> getCustomerParcels() throws IOException, InterruptedException {
+        return MAPPER.readValue(send(get("/api/parcels/mine")), new TypeReference<List<Parcel>>() { });
+    }
+
     public Parcel getParcel(String id) throws IOException, InterruptedException {
         return MAPPER.readValue(send(get("/api/parcels/" + id)), Parcel.class);
     }
@@ -100,12 +134,19 @@ public class ApiService {
         return MAPPER.readValue(send(get("/api/parcels/" + id + "/history")), new TypeReference<List<Location>>() { });
     }
 
-    public Parcel createParcel(Parcel parcel) throws IOException, InterruptedException {
-        return MAPPER.readValue(send(post("/api/parcels", parcel)), Parcel.class);
+    public Parcel createCustomerParcel(Parcel parcel) throws IOException, InterruptedException {
+        if (customerAuthorization == null) throw new IOException("Customer sign-in is required to book a parcel");
+        return MAPPER.readValue(send(postWithAuthorization("/api/parcels", parcel, customerAuthorization)),
+                Parcel.class);
     }
 
-    public Pickup createPickup(PickupRequest request) throws IOException, InterruptedException {
-        return MAPPER.readValue(send(post("/api/pickups", request)), Pickup.class);
+    public Pickup createPickup(PickupRequest request, boolean adminRequest) throws IOException, InterruptedException {
+        String authorization = adminRequest ? adminAuthorization : customerAuthorization;
+        if (authorization == null) {
+            throw new IOException(adminRequest ? "Admin sign-in is required to request a pickup"
+                    : "Customer sign-in is required to request a pickup");
+        }
+        return MAPPER.readValue(send(postWithAuthorization("/api/pickups", request, authorization)), Pickup.class);
     }
 
     public Parcel updateLocation(String id, Location location) throws IOException, InterruptedException {
@@ -163,6 +204,14 @@ public class ApiService {
                 .build();
     }
 
+    private HttpRequest postWithAuthorization(String path, Object body, String authorization) throws IOException {
+        return HttpRequest.newBuilder(URI.create(baseUrl + path))
+                .header("Authorization", authorization)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
+                .build();
+    }
+
     private HttpRequest put(String path, Object body) throws IOException {
         return withAuthorization(HttpRequest.newBuilder(URI.create(baseUrl + path)), path, "PUT")
                 .header("Content-Type", "application/json")
@@ -171,9 +220,20 @@ public class ApiService {
     }
 
     private HttpRequest.Builder withAuthorization(HttpRequest.Builder builder, String path, String method) {
+        boolean parcelEndpoint = path.equals("/api/parcels") || path.startsWith("/api/parcels/");
         boolean adminEndpoint = path.startsWith("/api/admin/")
-                || (path.startsWith("/api/parcels/") && ("PUT".equals(method) || "DELETE".equals(method)));
-        String authorization = adminEndpoint ? adminAuthorization : courierAuthorization;
+                || (parcelEndpoint && !"/api/parcels/mine".equals(path)
+                        && ("GET".equals(method) || "PUT".equals(method) || "DELETE".equals(method)
+                                || path.endsWith("/location")));
+        boolean customerEndpoint = "/api/parcels/mine".equals(path)
+                || path.startsWith("/api/pickups/");
+        boolean createEndpoint = "POST".equals(method)
+                && ("/api/parcels".equals(path) || "/api/pickups".equals(path));
+        String authorization = adminEndpoint
+                ? (adminAuthorization != null ? adminAuthorization : customerAuthorization)
+                : customerEndpoint ? (customerAuthorization != null ? customerAuthorization : adminAuthorization)
+                : createEndpoint ? (customerAuthorization != null ? customerAuthorization : adminAuthorization)
+                : courierAuthorization;
         if (authorization != null) builder.header("Authorization", authorization);
         return builder;
     }

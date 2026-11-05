@@ -40,7 +40,7 @@ class LocationServiceTest {
         Parcel p = new Parcel();
         p.setSender("a");
         p.setRecipient("b");
-        Parcel saved = parcels.create(p);
+        Parcel saved = parcels.create(p, "customer@example.com");
         assertTrue(saved.getTrackingNumber().startsWith("TRK-"));
         assertNotNull(saved.getCreatedAt());
     }
@@ -55,8 +55,33 @@ class LocationServiceTest {
         parcel.setWeightKg(2.0);
         parcel.setDeliverySpeed("SAME_DAY");
 
-        Parcel saved = parcels.create(parcel);
+        Parcel saved = parcels.create(parcel, "customer@example.com");
 
         assertEquals(31.5, saved.getEstimatedPrice());
+    }
+
+    @Test
+    void createDiscardsClientSuppliedTrackingAndOperationalState() {
+        when(repo.save(any(Parcel.class))).thenAnswer(i -> i.getArgument(0));
+        Parcel parcel = new Parcel();
+        parcel.setSender("a");
+        parcel.setRecipient("b");
+        parcel.setTrackingNumber("FORGED");
+        parcel.setCourierId("courier-1");
+        parcel.setStatus(ParcelStatus.DELIVERED);
+        parcel.setCurrentLocation(new Location(10.0, 20.0, null));
+        parcel.setFinalizedAt(java.time.Instant.now());
+        parcel.setLocationInactive(true);
+
+        Parcel saved = parcels.create(parcel, "customer@example.com");
+
+        assertNotEquals("FORGED", saved.getTrackingNumber());
+        assertEquals("customer@example.com", saved.getCustomerEmail());
+        assertNull(saved.getCourierId());
+        assertEquals(ParcelStatus.CREATED, saved.getStatus());
+        assertNull(saved.getCurrentLocation());
+        assertTrue(saved.getLocationHistory().isEmpty());
+        assertNull(saved.getFinalizedAt());
+        assertFalse(saved.isLocationInactive());
     }
 }

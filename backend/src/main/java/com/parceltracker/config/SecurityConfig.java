@@ -37,11 +37,25 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/couriers/**").hasRole("COURIER")
+                        .requestMatchers("/", "/index.html", "/login.html", "/customer.html", "/admin.html",
+                                "/styles.css", "/common.js", "/auth.js", "/customer.js", "/admin.js")
+                                .permitAll()
+                        .requestMatchers("/api/branding", "/api/csrf").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
+                        .requestMatchers("/ws/tracking/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/parcels").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/parcels/mine").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/parcels/*/history").hasAnyRole("ADMIN", "CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/parcels/*").hasAnyRole("ADMIN", "CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/api/parcels").hasAnyRole("ADMIN", "CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/api/parcels/*/location").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/parcels/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/parcels/**").hasRole("ADMIN")
-                        .requestMatchers("/api/couriers/**").hasRole("COURIER")
-                        .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
-                        .anyRequest().permitAll())
+                        .requestMatchers(HttpMethod.POST, "/api/pickups").hasAnyRole("ADMIN", "CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/pickups/*").hasAnyRole("ADMIN", "CUSTOMER")
+                        .anyRequest().denyAll())
                 .httpBasic(Customizer.withDefaults())
                 .build();
     }

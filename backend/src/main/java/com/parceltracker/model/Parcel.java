@@ -111,6 +111,9 @@ public class Parcel {
     @Column(name = "customer_contact")
     private String customerContact;
 
+    @Column(name = "customer_email")
+    private String customerEmail;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ParcelStatus status = ParcelStatus.CREATED;
@@ -183,6 +186,9 @@ public class Parcel {
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
     public String getCustomerContact() { return customerContact; }
     public void setCustomerContact(String customerContact) { this.customerContact = customerContact; }
+    @JsonIgnore
+    public String getCustomerEmail() { return customerEmail; }
+    public void setCustomerEmail(String customerEmail) { this.customerEmail = customerEmail; }
     public ParcelStatus getStatus() { return status; }
     public void setStatus(ParcelStatus status) { this.status = status; }
     public List<Location> getLocationHistory() { return locationHistory; }

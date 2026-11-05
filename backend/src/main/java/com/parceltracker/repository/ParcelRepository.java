@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ParcelRepository extends JpaRepository<Parcel, String> {
     Optional<Parcel> findByTrackingNumber(String trackingNumber);
+    List<Parcel> findByCustomerEmailOrderByCreatedAtDesc(String customerEmail);
     List<Parcel> findByCourierIdAndStatusNotIn(String courierId, Collection<ParcelStatus> statuses);
     List<Parcel> findByCourierIdAndStatus(String courierId, ParcelStatus status);
 

@@ -16,7 +16,7 @@ public class PickupService {
         this.repository = repository;
     }
 
-    public Pickup create(PickupRequest request) {
+    public Pickup create(PickupRequest request, String customerEmail) {
         Pickup p = new Pickup();
         p.setContactName(request.getContactName().trim());
         p.setContactPhone(request.getContactPhone().trim());
@@ -31,6 +31,7 @@ public class PickupService {
         p.setNotes(request.getNotes());
         p.setStatus(PickupStatus.REQUESTED);
         p.setCreatedAt(Instant.now());
+        p.setCustomerEmail(customerEmail);
         return repository.save(p);
     }
 

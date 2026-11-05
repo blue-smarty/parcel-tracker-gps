@@ -19,7 +19,7 @@ public class MapController {
     public MapController(ApiService api, String wsBaseUrl, BiConsumer<String, Location> onLiveUpdate,
                          Consumer<Boolean> onConnectionChange) {
         this.api = api;
-        this.ws = new WebSocketService(wsBaseUrl, "all",
+        this.ws = new WebSocketService(wsBaseUrl, "all", api::getAdminAuthorization,
                 (id, loc) -> Platform.runLater(() -> {
                     if (loc != null) map.updateLocation(id, loc);
                     onLiveUpdate.accept(id, loc);

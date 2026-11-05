@@ -1,12 +1,11 @@
 window.PP = (() => {
   const keys = {
-    tracked: 'parcelpilot.trackedOrders',
     tickets: 'parcelpilot.supportTickets',
     couriers: 'parcelpilot.courierIds',
     session: 'parcelpilot.session'
   };
   const terminalStatuses = new Set(['DELIVERED', 'FAILED', 'RETURNED', 'CANCELLED']);
-  const state = { csrfToken: null, socket: null };
+  const state = { csrfToken: null };
   const byId = id => document.getElementById(id);
   const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value) || 0);
   const text = value => value == null || value === '' ? '—' : String(value);
@@ -243,32 +242,8 @@ window.PP = (() => {
     }
   }
 
-  function connectSocket(onUpdate) {
-    const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socket = new WebSocket(`${scheme}//${location.host}/ws/tracking/all`);
-    state.socket = socket;
-    const indicator = byId('connectionDot')?.parentElement;
-    socket.addEventListener('open', () => {
-      byId('connectionText').textContent = 'Live tracking connected';
-      indicator?.classList.add('connected');
-    });
-    socket.addEventListener('message', event => {
-      try {
-        onUpdate(JSON.parse(event.data));
-      } catch (error) {
-        console.warn('Ignoring an invalid live tracking update.', error);
-      }
-    });
-    socket.addEventListener('close', () => {
-      byId('connectionText').textContent = 'Disconnected · retrying';
-      indicator?.classList.remove('connected');
-      setTimeout(() => connectSocket(onUpdate), 2500);
-    });
-    socket.addEventListener('error', () => socket.close());
-  }
-
   return {
     keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
-    session, basicAuthorization, signOut, requireRole, api, setMessage, detail, drawMap, connectSocket
+    session, basicAuthorization, signOut, requireRole, api, setMessage, detail, drawMap
   };
 })();

@@ -19,13 +19,12 @@
         <VBox spacing="8">
             <padding><Insets top="12" right="12" bottom="8" left="12"/></padding>
             <Label text="Customer App — NON-PRODUCTION DEMO" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-            <Label text="Demo registration is stored locally. Payments, notifications, ratings and support are simulations; no real payment or identity provider is connected."
+            <Label text="Sign in with an existing customer account to book and track deliveries. Payments, notifications, ratings and support are simulations."
                    wrapText="true" style="-fx-text-fill: #9a3412;"/>
             <HBox spacing="8" alignment="CENTER_LEFT">
                 <TextField fx:id="customerNameField" promptText="Your name" prefWidth="190"/>
                 <TextField fx:id="customerContactField" promptText="Email or phone" prefWidth="220"/>
-                <Button fx:id="saveProfileButton" text="Save demo profile"/>
-                <Button fx:id="socialSignInButton" text="Demo social sign-in"/>
+                <Button fx:id="accountSignInButton" text="Customer sign in"/>
                 <Label fx:id="profileStatusLabel" wrapText="true"/>
             </HBox>
         </VBox>
@@ -76,9 +75,9 @@
                     <content>
                         <VBox spacing="8">
                             <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
-                            <Label fx:id="notificationLabel" wrapText="true" text="Live status notifications appear here while the tracking feed is connected."/>
+                            <Label fx:id="notificationLabel" wrapText="true" text="Status notifications update when your deliveries refresh."/>
                             <TableView fx:id="ordersTable" prefHeight="220"/>
-                            <Label fx:id="trackingDetailsLabel" wrapText="true" text="Select one of your demo customer orders."/>
+                            <Label fx:id="trackingDetailsLabel" wrapText="true" text="Sign in and select one of your customer orders."/>
                             <HBox fx:id="customerMapContainer" minHeight="220" prefHeight="260"/>
                             <HBox spacing="8">
                                 <Button fx:id="receiptButton" text="View digital receipt" disable="true"/>

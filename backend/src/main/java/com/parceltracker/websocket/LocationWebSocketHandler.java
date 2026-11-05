@@ -5,14 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.service.LocationService;
+import com.parceltracker.service.ParcelService;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -21,7 +24,7 @@ import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorato
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 /**
- * Clients connect to /ws/tracking/{parcelId}. Use the id "all" to receive updates for every parcel.
+ * Clients can subscribe to owned or assigned parcels; only admins can subscribe to every parcel.
  */
 @Component
 public class LocationWebSocketHandler extends TextWebSocketHandler {
@@ -31,10 +34,12 @@ public class LocationWebSocketHandler extends TextWebSocketHandler {
     private final Map<String, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
     private final ObjectMapper mapper;
     private final LocationService locationService;
+    private final ParcelService parcelService;
 
-    public LocationWebSocketHandler(ObjectMapper mapper, LocationService locationService) {
+    public LocationWebSocketHandler(ObjectMapper mapper, LocationService locationService, ParcelService parcelService) {
         this.mapper = mapper;
         this.locationService = locationService;
+        this.parcelService = parcelService;
     }
 
     @PostConstruct
@@ -50,10 +55,38 @@ public class LocationWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
+    public void afterConnectionEstablished(WebSocketSession session) throws IOException {
+        if (!isAuthorized(session)) {
+            session.close(CloseStatus.POLICY_VIOLATION);
+            return;
+        }
         WebSocketSession safe = new ConcurrentWebSocketSessionDecorator(session, 5000, 65536);
         session.getAttributes().put("safe", safe);
         sessions.computeIfAbsent(parcelIdOf(session), k -> ConcurrentHashMap.newKeySet()).add(session);
+    }
+
+    private boolean isAuthorized(WebSocketSession session) {
+        if (!(session.getPrincipal() instanceof Authentication authentication) || !authentication.isAuthenticated()) {
+            return false;
+        }
+        boolean admin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        String parcelId = parcelIdOf(session);
+        if (ALL.equals(parcelId)) return admin;
+        if (admin) return true;
+        try {
+            Parcel parcel = parcelService.get(parcelId);
+            boolean customer = authentication.getAuthorities().stream()
+                    .anyMatch(authority -> "ROLE_CUSTOMER".equals(authority.getAuthority()));
+            if (customer) {
+                return authentication.getName().equalsIgnoreCase(String.valueOf(parcel.getCustomerEmail()));
+            }
+            boolean courier = authentication.getAuthorities().stream()
+                    .anyMatch(authority -> "ROLE_COURIER".equals(authority.getAuthority()));
+            return courier && authentication.getName().equals(parcel.getCourierId());
+        } catch (NoSuchElementException e) {
+            return false;
+        }
     }
 
     @Override

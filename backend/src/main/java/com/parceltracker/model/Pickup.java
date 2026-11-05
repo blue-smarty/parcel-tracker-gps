@@ -1,5 +1,6 @@
 package com.parceltracker.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.Instant;
 import java.time.LocalDate;
 import jakarta.persistence.Column;
@@ -41,6 +42,8 @@ public class Pickup {
     private PickupStatus status = PickupStatus.REQUESTED;
     @Column(name = "created_at")
     private Instant createdAt;
+    @Column(name = "customer_email")
+    private String customerEmail;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -70,4 +73,7 @@ public class Pickup {
     public void setStatus(PickupStatus status) { this.status = status; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    @JsonIgnore
+    public String getCustomerEmail() { return customerEmail; }
+    public void setCustomerEmail(String customerEmail) { this.customerEmail = customerEmail; }
 }

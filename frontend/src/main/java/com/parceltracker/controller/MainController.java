@@ -35,6 +35,7 @@ public class MainController {
     private Stage customerStage;
     private Stage adminStage;
     private boolean adminLoginInProgress;
+    private boolean pickupLoginInProgress;
     private CustomerController customerController;
     private AdminController adminController;
 
@@ -64,14 +65,15 @@ public class MainController {
         courierButton.setOnAction(e -> openCourierDashboard());
         customerButton.setOnAction(e -> openCustomerApp());
         adminButton.setOnAction(e -> openAdminPanel(wsBaseUrl));
-        reload();
-        mapController.start();
+        detailsLabel.setText("Sign in as an admin to load parcel data.");
     }
 
     public void shutdown() {
         if (mapController != null) mapController.stop();
         if (adminController != null) adminController.shutdown();
+        if (customerController != null) customerController.shutdown();
         api.clearAdminCredentials();
+        api.clearCustomerCredentials();
     }
 
     private void openAdminPanel(String wsBaseUrl) {
@@ -89,6 +91,8 @@ public class MainController {
                     Platform.runLater(() -> {
                         adminLoginInProgress = false;
                         adminButton.setDisable(false);
+                        reload();
+                        mapController.start();
                         showAdminPanel(wsBaseUrl);
                     });
                 } catch (Exception e) {
@@ -112,7 +116,12 @@ public class MainController {
             adminController.shutdown();
             adminController = null;
             adminStage = null;
+            mapController.stop();
             api.clearAdminCredentials();
+            parcels.clear();
+            listPanel.setParcels(List.of());
+            mapController.showParcels(List.of());
+            detailsLabel.setText("Sign in as an admin to load parcel data.");
         });
         BrandingTheme.apply(adminStage, branding);
         adminStage.show();
@@ -131,7 +140,10 @@ public class MainController {
             customerStage = new Stage();
             customerStage.setTitle("Customer App — Demo");
             customerStage.setScene(new Scene(root, 900, 760));
-            customerStage.setOnHidden(e -> customerController = null);
+            customerStage.setOnHidden(e -> {
+                customerController.shutdown();
+                customerController = null;
+            });
             BrandingTheme.apply(customerStage, branding);
             customerStage.show();
         } catch (java.io.IOException e) {
@@ -144,12 +156,44 @@ public class MainController {
             pickupStage.toFront();
             return;
         }
+        if (api.getAdminAuthorization() != null || api.getCustomerAuthorization() != null) {
+            showPickupForm();
+            return;
+        }
+        if (pickupLoginInProgress) return;
+        CustomerLoginDialog.showAndWait(pickupButton.getScene().getWindow()).ifPresent(credentials -> {
+            pickupLoginInProgress = true;
+            pickupButton.setDisable(true);
+            runAsync(() -> {
+                try {
+                    api.authenticateCustomer(credentials.email(), credentials.password());
+                    Platform.runLater(() -> {
+                        pickupLoginInProgress = false;
+                        pickupButton.setDisable(false);
+                        showPickupForm();
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> {
+                        pickupLoginInProgress = false;
+                        pickupButton.setDisable(false);
+                        detailsLabel.setText("Customer sign-in failed: " + e.getMessage());
+                    });
+                }
+            });
+        });
+    }
+
+    private void showPickupForm() {
+        if (pickupStage != null && pickupStage.isShowing()) {
+            pickupStage.toFront();
+            return;
+        }
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/pickup.fxml"));
             Parent root = loader.load();
             pickupStage = new Stage();
             PickupController controller = loader.getController();
-            controller.init(api, pickupStage::close);
+            controller.init(api, pickupStage::close, api.getAdminAuthorization() != null);
             pickupStage.setTitle("Schedule Pickup");
             pickupStage.setScene(new Scene(root));
             BrandingTheme.apply(pickupStage, branding);
@@ -189,7 +233,6 @@ public class MainController {
                     listPanel.setParcels(list);
                     mapController.showParcels(list);
                     detailsLabel.setText("Loaded " + list.size() + " parcels");
-                    if (customerController != null) customerController.onTrackingRefresh(list);
                 });
             } catch (Exception e) {
                 Platform.runLater(() -> detailsLabel.setText("Cannot load parcels: " + e.getMessage()));
@@ -216,7 +259,6 @@ public class MainController {
             reload();
             return;
         }
-        if (customerController != null) customerController.onLiveLocation(parcelId, location);
         for (Parcel p : parcels) {
             if (p.getId().equals(parcelId)) {
                 p.setCurrentLocation(location);

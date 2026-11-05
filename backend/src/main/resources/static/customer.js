@@ -1,8 +1,7 @@
 (() => {
   const { keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
-    api, setMessage, detail, drawMap, connectSocket } = PP;
+    api, setMessage, detail, drawMap } = PP;
   const state = { customerOrders: [], selectedCustomerId: null, lastStatuses: new Map(), user: null };
-  const trackedKey = () => `${keys.tracked}:${state.user.username}`;
 
   function updateEstimate() {
     const distance = Number(byId('distanceKm').value);
@@ -61,9 +60,6 @@
     try {
       const payload = bookingPayload();
       const parcel = await api('/api/parcels', { method: 'POST', body: JSON.stringify(payload) });
-      const ids = readArray(trackedKey()).filter(id => id !== parcel.id);
-      ids.unshift(parcel.id);
-      saveArray(trackedKey(), ids);
       byId('recipient').value = '';
       setMessage('bookingMessage', `Delivery ${parcel.trackingNumber} booked. ${money(parcel.estimatedPrice)} is a demo estimate; no payment was collected.`, 'success');
       await refreshCustomerOrders();
@@ -76,25 +72,8 @@
   }
 
   async function refreshCustomerOrders() {
-    const ids = readArray(trackedKey()).filter(id => typeof id === 'string' && id);
-    if (!ids.length) {
-      state.customerOrders = [];
-      state.selectedCustomerId = null;
-      renderCustomerOrders();
-      return;
-    }
     try {
-      const results = await Promise.all(ids.map(async id => {
-        try {
-          return await api(`/api/parcels/${encodeURIComponent(id)}`);
-        } catch (error) {
-          if (error.status === 404) return null;
-          throw error;
-        }
-      }));
-      state.customerOrders = results.filter(Boolean);
-      const presentIds = new Set(state.customerOrders.map(parcel => parcel.id));
-      saveArray(trackedKey(), ids.filter(id => presentIds.has(id)));
+      state.customerOrders = await api('/api/parcels/mine');
       for (const parcel of state.customerOrders) {
         const old = state.lastStatuses.get(parcel.id);
         if (old && old !== parcel.status) {
@@ -106,7 +85,7 @@
         state.selectedCustomerId = state.customerOrders[0]?.id || null;
       }
       renderCustomerOrders();
-      setMessage('ordersMessage', `Showing ${state.customerOrders.length} order(s) saved to your account on this browser.`);
+      setMessage('ordersMessage', `Showing ${state.customerOrders.length} order(s) linked to your account.`);
     } catch (error) {
       setMessage('ordersMessage', `Could not refresh orders: ${error.message}`, 'error');
     }
@@ -184,21 +163,11 @@
   }
 
 
-  async function refreshAfterLiveUpdate(update) {
-    if (!readArray(trackedKey()).includes(update.parcelId)) return;
-    try {
-      const parcel = await api(`/api/parcels/${encodeURIComponent(update.parcelId)}`);
-      state.customerOrders = state.customerOrders.map(item => item.id === parcel.id ? parcel : item);
-      renderCustomerOrders();
-    } catch (error) {
-      console.warn('Could not refresh a customer order after a live update.', error);
-    }
-  }
-
   async function initialize() {
     state.user = await PP.requireRole('CUSTOMER');
     if (!state.user) return;
     byId('accountName').textContent = state.user.name;
+    byId('connectionText').textContent = 'Updates every 30 seconds';
     byId('customerName').value = state.user.name;
     byId('customerContact').value = state.user.username;
     byId('signOutButton').addEventListener('click', PP.signOut);
@@ -212,7 +181,6 @@
     toggleSchedule();
     updateEstimate();
     refreshCustomerOrders();
-    connectSocket(refreshAfterLiveUpdate);
     window.setInterval(refreshCustomerOrders, 30000);
   }
 

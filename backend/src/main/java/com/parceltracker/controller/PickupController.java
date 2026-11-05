@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,13 +24,23 @@ public class PickupController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Pickup create(@Valid @RequestBody PickupRequest request) {
-        return service.create(request);
+    public Pickup create(@Valid @RequestBody PickupRequest request, Authentication authentication) {
+        String customerEmail = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_CUSTOMER".equals(authority.getAuthority()))
+                ? authentication.getName() : null;
+        return service.create(request, customerEmail);
     }
 
     @GetMapping("/{id}")
-    public Pickup get(@PathVariable String id) {
-        return service.get(id);
+    public Pickup get(@PathVariable String id, Authentication authentication) {
+        Pickup pickup = service.get(id);
+        boolean admin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        if (!admin && (pickup.getCustomerEmail() == null
+                || !pickup.getCustomerEmail().equalsIgnoreCase(authentication.getName()))) {
+            throw new NoSuchElementException("Pickup not found");
+        }
+        return pickup;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

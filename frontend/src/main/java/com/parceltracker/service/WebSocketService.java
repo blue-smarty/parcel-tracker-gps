@@ -8,6 +8,7 @@ import java.net.http.WebSocket;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /** Connects to /ws/tracking/{parcelId} ("all" for every parcel) and reconnects when the connection drops. */
 public class WebSocketService implements WebSocket.Listener {
@@ -15,6 +16,7 @@ public class WebSocketService implements WebSocket.Listener {
 
     private final String wsBaseUrl;
     private final String parcelId;
+    private final Supplier<String> authorization;
     private final BiConsumer<String, Location> onUpdate;
     private final Consumer<Boolean> onConnectionChange;
     private final HttpClient client = HttpClient.newHttpClient();
@@ -22,18 +24,22 @@ public class WebSocketService implements WebSocket.Listener {
     private volatile boolean running;
     private volatile WebSocket socket;
 
-    public WebSocketService(String wsBaseUrl, String parcelId, BiConsumer<String, Location> onUpdate,
+    public WebSocketService(String wsBaseUrl, String parcelId, Supplier<String> authorization,
+                            BiConsumer<String, Location> onUpdate,
                             Consumer<Boolean> onConnectionChange) {
         this.wsBaseUrl = wsBaseUrl.endsWith("/") ? wsBaseUrl.substring(0, wsBaseUrl.length() - 1) : wsBaseUrl;
         this.parcelId = parcelId;
+        this.authorization = authorization;
         this.onUpdate = onUpdate;
         this.onConnectionChange = onConnectionChange;
     }
 
     public void connect() {
         running = true;
-        client.newWebSocketBuilder()
-                .buildAsync(URI.create(wsBaseUrl + "/ws/tracking/" + parcelId), this)
+        WebSocket.Builder builder = client.newWebSocketBuilder();
+        String credentials = authorization.get();
+        if (credentials != null) builder.header("Authorization", credentials);
+        builder.buildAsync(URI.create(wsBaseUrl + "/ws/tracking/" + parcelId), this)
                 .exceptionally(e -> {
                     scheduleReconnect();
                     return null;
