@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -34,12 +35,12 @@ public class PasswordResetService {
     private final CustomerAccountRepository customers;
     private final PasswordResetTokenRepository tokens;
     private final PasswordEncoder passwordEncoder;
-    private final JavaMailSender mailSender;
+    private final ObjectProvider<JavaMailSender> mailSender;
     private final String fromAddress;
     private final String resetUrl;
 
     public PasswordResetService(CustomerAccountRepository customers, PasswordResetTokenRepository tokens,
-                                PasswordEncoder passwordEncoder, JavaMailSender mailSender,
+                                PasswordEncoder passwordEncoder, ObjectProvider<JavaMailSender> mailSender,
                                 @Value("${parcel.auth.password-reset.from:}") String fromAddress,
                                 @Value("${parcel.auth.password-reset.url:http://localhost:8080/forgot-password.html}")
                                         String resetUrl) {
@@ -56,6 +57,12 @@ public class PasswordResetService {
         String email = submittedEmail.trim().toLowerCase(Locale.ROOT);
         Optional<CustomerAccount> account = customers.findById(email);
         if (account.isEmpty()) return;
+
+        JavaMailSender sender = mailSender.getIfAvailable();
+        if (sender == null) {
+            log.error("Password reset requested but no mail server is configured (spring.mail.host)");
+            return;
+        }
 
         Instant now = Instant.now();
         Optional<PasswordResetToken> previous = tokens.findFirstByCustomerEmailOrderByCreatedAtDesc(email);
@@ -75,7 +82,7 @@ public class PasswordResetService {
                 + resetUrl + "?token=" + token
                 + "\n\nIf you did not request a password reset, you can ignore this email.");
         try {
-            mailSender.send(message);
+            sender.send(message);
         } catch (RuntimeException e) {
             tokens.deleteByCustomerEmail(email);
             log.error("Could not send customer password reset email", e);

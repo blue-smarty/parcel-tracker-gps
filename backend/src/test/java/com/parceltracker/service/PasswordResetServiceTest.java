@@ -39,9 +39,16 @@ class PasswordResetServiceTest {
     private final PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @SuppressWarnings("unchecked")
+    private final org.springframework.beans.factory.ObjectProvider<JavaMailSender> mailProvider =
+            mock(org.springframework.beans.factory.ObjectProvider.class);
     private final PasswordResetService service = new PasswordResetService(
-            customers, tokens, passwordEncoder, mailSender, "support@example.com",
+            customers, tokens, passwordEncoder, mailProvider, "support@example.com",
             "https://parcel.example/forgot-password.html");
+
+    {
+        when(mailProvider.getIfAvailable()).thenReturn(mailSender);
+    }
 
     @Test
     void emailsOnlyAHashedShortLivedToken() throws Exception {
