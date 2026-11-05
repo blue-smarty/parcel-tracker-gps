@@ -15,6 +15,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'courier_api.dart';
 import 'offline_queue.dart';
 
+String _apiBaseUrl() {
+  const configuredUrl = String.fromEnvironment('API_URL');
+  if (configuredUrl.isNotEmpty) return configuredUrl;
+  return Platform.isAndroid ? 'http://10.0.2.2:8080' : 'http://127.0.0.1:8080';
+}
+
 void main() => runApp(const CourierApp());
 
 class CourierApp extends StatelessWidget {
@@ -38,10 +44,7 @@ class CourierHome extends StatefulWidget {
 class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   final _courierField = TextEditingController();
   final _passwordField = TextEditingController();
-  final _api = CourierApi(const String.fromEnvironment(
-    'API_URL',
-    defaultValue: 'http://10.0.2.2:8080',
-  ), OfflineQueue());
+  final _api = CourierApi(_apiBaseUrl(), OfflineQueue());
   List<Map<String, dynamic>> _deliveries = [];
   Map<String, dynamic> _earnings = {};
   StreamSubscription<Position>? _locationSubscription;

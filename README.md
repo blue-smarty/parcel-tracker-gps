@@ -25,6 +25,16 @@ mvn spring-boot:run
 
 In Windows PowerShell, use `$env:NAME = 'value'` instead of `export` for each variable. All admin and courier passwords must be at least 12 characters. Keep the same terminal open so the backend inherits these variables. For a managed PostgreSQL database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead; require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
 
+**Installer (optional):** with JDK 17+, Maven and PostgreSQL running, the installer creates the database role and database, generates random database/admin/courier passwords, builds the backend and writes a start script to `~/.parcel-tracker` (credentials are kept there in an owner-only file). Re-running keeps existing credentials and only rebuilds the jar.
+
+```bash
+installer/install.sh              # Linux/macOS; optional argument: install directory
+installer\install.ps1             # Windows PowerShell; prompts for the PostgreSQL admin password
+~/.parcel-tracker/start.sh        # start the backend (Windows: start.ps1)
+```
+
+Linux/macOS overrides: `PARCEL_PG_ADMIN`, `PARCEL_PG_HOST`, `PARCEL_DB_NAME`, `PARCEL_DB_USER`.
+
 Open [http://localhost:8080](http://localhost:8080) and use **Create account** for the customer portal, or sign in with the admin account for the admin portal. Keep the backend and PostgreSQL running while using the site.
 
 The parcel tracker and courier dashboards remain available as optional desktop clients. From `frontend`, choose one:
