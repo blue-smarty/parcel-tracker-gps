@@ -32,6 +32,7 @@ import com.parceltracker.repository.CourierAccountRepository;
 class CourierControllerTest {
     @Autowired private MockMvc mvc;
     @MockBean private CourierService service;
+    @MockBean private com.parceltracker.service.DriverActionService actions;
     @MockBean private CourierAccountRepository accounts;
 
     @Test

@@ -7,7 +7,10 @@ import com.parceltracker.dto.CourierIdentity;
 import com.parceltracker.model.DeliveryProof;
 import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
+import com.parceltracker.dto.DriverActionResult;
+import com.parceltracker.dto.GateCodeRequest;
 import com.parceltracker.service.CourierService;
+import com.parceltracker.service.DriverActionService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
@@ -22,9 +25,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/couriers/{courierId}")
 public class CourierController {
     private final CourierService service;
+    private final DriverActionService actions;
 
-    public CourierController(CourierService service) {
+    public CourierController(CourierService service, DriverActionService actions) {
         this.service = service;
+        this.actions = actions;
     }
 
     @GetMapping("/me")
@@ -71,6 +76,25 @@ public class CourierController {
     public Parcel updateLocation(@PathVariable String courierId, @PathVariable String parcelId,
                                  @Valid @RequestBody Location location) {
         return service.updateLocation(courierId, parcelId, location);
+    }
+
+    @PostMapping("/deliveries/{parcelId}/actions/call")
+    @PreAuthorize("#courierId == authentication.name")
+    public DriverActionResult maskedCall(@PathVariable String courierId, @PathVariable String parcelId) {
+        return actions.maskedCall(courierId, parcelId);
+    }
+
+    @PostMapping("/deliveries/{parcelId}/actions/proximity-text")
+    @PreAuthorize("#courierId == authentication.name")
+    public DriverActionResult proximityText(@PathVariable String courierId, @PathVariable String parcelId) {
+        return actions.proximityText(courierId, parcelId);
+    }
+
+    @PostMapping("/deliveries/{parcelId}/actions/gate-code")
+    @PreAuthorize("#courierId == authentication.name")
+    public DriverActionResult gateCode(@PathVariable String courierId, @PathVariable String parcelId,
+                                       @Valid @RequestBody(required = false) GateCodeRequest request) {
+        return actions.logGateCode(courierId, parcelId, request == null ? null : request.getCode());
     }
 
     @ExceptionHandler(NoSuchElementException.class)
