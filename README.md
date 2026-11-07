@@ -25,11 +25,11 @@ mvn spring-boot:run
 
 In Windows PowerShell, use `$env:NAME = 'value'` instead of `export` for each variable. All admin and courier passwords must be at least 12 characters. Keep the same terminal open so the backend inherits these variables. For a managed PostgreSQL database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead; require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
 
-**Installer (optional):** with JDK 17+, Maven and PostgreSQL running, the installer creates the database role and database, generates random database/admin/courier passwords, builds the backend and writes a start script to `~/.parcel-tracker` (credentials are kept there in an owner-only file). Re-running keeps existing credentials and only rebuilds the jar.
+**Installer (optional):** with JDK 17+, Maven and PostgreSQL running, the installer prompts for an admin username and password and a courier username (courier ID) and password, creates the database role and database with a generated database password, builds the backend and writes a start script to `~/.parcel-tracker`. Usernames must differ and contain 1-255 letters, digits, dots, underscores or hyphens; passwords must contain 12-72 printable ASCII characters, including at least one non-space character. Password input is hidden, and credentials are kept in an owner-only file. Re-running keeps existing credentials and only rebuilds the jar.
 
 ```bash
 installer/install.sh              # Linux/macOS; optional argument: install directory
-installer\install.ps1             # Windows PowerShell; prompts for the PostgreSQL admin password
+installer\install.ps1             # Windows PowerShell; also prompts for the PostgreSQL admin password
 ~/.parcel-tracker/start.sh        # start the backend (Windows: start.ps1)
 ```
 
