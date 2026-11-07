@@ -29,7 +29,10 @@
       <section id="dispatchView" class="view active-view">
         <div class="section-heading">
           <div><p class="eyebrow">DISPATCH WORKSPACE</p><h2>Keep every delivery on course.</h2></div>
-          <button class="button button-quiet" id="refreshDispatchButton">↻ <span>Refresh operations</span></button>
+          <div class="dispatch-actions">
+            <a class="button button-primary" href="/admin-adhoc.html">New ad hoc delivery</a>
+            <button class="button button-quiet" id="refreshDispatchButton">↻ <span>Refresh operations</span></button>
+          </div>
         </div>
         <div id="dispatchWorkspace">
                 <div class="metric-grid">
@@ -37,22 +40,6 @@
           <div class="metric-card"><span>NEEDS ASSIGNMENT</span><strong id="unassignedMetric">—</strong><i>Ready for a courier</i></div>
           <div class="metric-card"><span>DELIVERED VALUE</span><strong id="valueMetric">—</strong><i>Estimated demo value</i></div>
           <div class="metric-card"><span>ESCALATIONS</span><strong id="escalatedMetric">—</strong><i>Stale assignments</i></div>
-        </div>
-        <div class="panel adhoc-panel">
-          <div class="panel-heading"><div><p class="eyebrow">AD HOC PICKUP</p><h3>Create and assign a parcel</h3></div></div>
-          <p class="field-note">Create a pickup for a provisioned courier. This parcel is not linked to a customer account.</p>
-          <form id="adhocForm">
-            <div class="field-grid two">
-              <label>Sender name<input id="adhocSender" maxlength="255" required></label>
-              <label>Sender contact (phone or email)<input id="adhocContact" maxlength="255" required></label>
-              <label class="span-two">Pickup address<input id="adhocPickup" maxlength="255" required></label>
-              <label>Recipient name<input id="adhocRecipient" maxlength="255" required></label>
-              <label>Courier<select id="adhocCourier" required><option value="">Loading couriers…</option></select></label>
-              <label class="span-two">Delivery address<input id="adhocDestination" maxlength="255" required></label>
-            </div>
-            <button id="adhocButton" class="button button-primary" type="submit">Create and assign pickup</button>
-            <p id="adhocMessage" class="form-message" role="status" aria-live="polite"></p>
-          </form>
         </div>
         <div class="dispatch-grid">
           <div class="panel dispatch-list-panel">
