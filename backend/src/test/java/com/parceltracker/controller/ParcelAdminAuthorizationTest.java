@@ -44,6 +44,12 @@ class ParcelAdminAuthorizationTest {
             """;
 
     @Test
+    void adhocPageAndScriptAreAvailableForClientSideRoleCheck() throws Exception {
+        mvc.perform(get("/admin-adhoc.html")).andExpect(status().isOk());
+        mvc.perform(get("/admin-adhoc.js")).andExpect(status().isOk());
+    }
+
+    @Test
     void adminCreatesAssignedParcelWithPickupDetails() throws Exception {
         when(accounts.existsById("courier-1")).thenReturn(true);
         when(service.createAssigned(any(Parcel.class), eq("courier-1"))).thenAnswer(call -> call.getArgument(0));

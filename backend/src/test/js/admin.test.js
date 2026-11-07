@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-async function setup({ failCreate = false } = {}) {
+async function setup({ failCreate = false, failCouriers = false, user = { name: 'Admin' } } = {}) {
   const elements = new Map();
   function byId(id) {
     if (!elements.has(id)) elements.set(id, {
@@ -28,10 +28,13 @@ async function setup({ failCreate = false } = {}) {
     terminalStatuses: new Set(['DELIVERED']), byId, money: String, text: String,
     statusText: String, escapeHtml: String, readArray: () => [], saveArray() {}, drawMap() {},
     detail: () => '', setMessage(id, message) { messages[id] = message; },
-    requireRole: async () => ({ name: 'Admin' }), signOut() {},
+    requireRole: async role => { assert.equal(role, 'ADMIN'); return user; }, signOut() {},
     async api(route, options) {
       requests.push({ route, options });
-      if (route === '/api/admin/couriers') return [{ courierId: 'courier-1' }];
+      if (route === '/api/admin/couriers') {
+        if (failCouriers) throw new Error('Unavailable');
+        return [{ courierId: 'courier-1' }];
+      }
       if (route === '/api/parcels/adhoc') {
         if (failCreate) throw new Error('Connection interrupted');
         return { id: 'p1', trackingNumber: 'TRK-1' };
@@ -44,7 +47,7 @@ async function setup({ failCreate = false } = {}) {
     PP, window: { setInterval() {} }, localStorage: { getItem() { return null; } },
     Option: function (label, value) { this.label = label; this.value = value; }
   };
-  const source = fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin-adhoc.js'), 'utf8');
   vm.runInNewContext(source, context);
   await new Promise(resolve => setImmediate(resolve));
   return { byId, requests, messages };
@@ -73,6 +76,22 @@ test('creates an assigned parcel with pickup details and resets on success', asy
   assert.match(messages.adhocMessage, /TRK-1.*courier-1/);
   assert.equal(byId('adhocSender').value, '');
   assert.equal(byId('adhocButton').disabled, false);
+  assert.equal(byId('viewDeliveryLink').href, '/admin.html?parcel=p1');
+  assert.equal(byId('viewDeliveryLink').hidden, false);
+});
+
+test('requires a verified admin before loading couriers or enabling the form', async () => {
+  const { byId, requests } = await setup({ user: null });
+  assert.equal(requests.length, 0);
+  assert.equal(byId('adhocForm').listeners.submit, undefined);
+});
+
+test('shows courier loading failures and allows retry', async () => {
+  const { byId, messages, requests } = await setup({ failCouriers: true });
+  assert.match(messages.courierMessage, /Could not load couriers/);
+  assert.equal(byId('refreshCouriersButton').disabled, false);
+  await byId('refreshCouriersButton').listeners.click();
+  assert.equal(requests.filter(item => item.route === '/api/admin/couriers').length, 2);
 });
 
 test('retains form values and warns against duplicate retries after errors', async () => {

@@ -39,8 +39,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/couriers/**").hasRole("COURIER")
                         .requestMatchers("/", "/index.html", "/login.html", "/forgot-password.html",
-                                "/customer.html", "/admin.html", "/styles.css", "/common.js", "/auth.js",
-                                "/password-reset.js", "/customer.js", "/admin.js")
+                                "/customer.html", "/admin.html", "/admin-adhoc.html", "/styles.css", "/common.js", "/auth.js",
+                                "/password-reset.js", "/customer.js", "/admin.js", "/admin-adhoc.js")
                                 .permitAll()
                         .requestMatchers("/api/branding", "/api/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
