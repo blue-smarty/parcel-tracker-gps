@@ -23,13 +23,44 @@ function New-Secret {
     ([Convert]::ToBase64String($bytes)) -replace '[/+=]', ''
 }
 
+function Read-Username([string]$Prompt) {
+    do {
+        $value = Read-Host $Prompt
+        if ($value -cmatch '^[a-zA-Z0-9._-]{1,255}$') { return $value }
+        Write-Host 'Use 1-255 letters, digits, dots, underscores or hyphens.'
+    } while ($true)
+}
+
+function Read-Password([string]$Prompt) {
+    do {
+        $secureValue = Read-Host -AsSecureString $Prompt
+        $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
+        try {
+            $value = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+        } finally {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+        }
+        if ($value -cmatch '^[\x20-\x7E]{12,72}$' -and $value -cmatch '[\x21-\x7E]') { return $value }
+        Write-Host 'Use 12-72 printable ASCII characters, including at least one non-space character.'
+    } while ($true)
+}
+
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 $envFile = Join-Path $InstallDir 'parcel-tracker.env.ps1'
 
 if (Test-Path $envFile) {
     Write-Host "Existing install found in $InstallDir; keeping its configuration and rebuilding the jar."
 } else {
-    $dbPassword = New-Secret; $adminPassword = New-Secret; $courierPassword = New-Secret
+    $adminUsername = Read-Username 'Admin username'
+    $adminPassword = Read-Password 'Admin password'
+    do {
+        $courierUsername = Read-Username 'Courier username (courier ID)'
+        if ($courierUsername -ceq $adminUsername) {
+            Write-Host 'Courier username must differ from the admin username.'
+        }
+    } while ($courierUsername -ceq $adminUsername)
+    $courierPassword = Read-Password 'Courier password'
+    $dbPassword = New-Secret
     $secure = Read-Host -AsSecureString "Password for PostgreSQL user '$PgAdmin'"
     $env:PGPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
         [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
@@ -49,13 +80,13 @@ if (Test-Path $envFile) {
 `$env:DATABASE_URL = 'jdbc:postgresql://${PgHost}:5432/$DbName'
 `$env:DATABASE_USERNAME = '$DbUser'
 `$env:DATABASE_PASSWORD = '$dbPassword'
-`$env:PARCEL_ADMIN_USERNAME = 'admin'
-`$env:PARCEL_ADMIN_PASSWORD = '$adminPassword'
-`$env:PARCEL_BOOTSTRAP_COURIER_ID = 'courier-001'
-`$env:PARCEL_BOOTSTRAP_PASSWORD = '$courierPassword'
+`$env:PARCEL_ADMIN_USERNAME = '$($adminUsername.Replace("'", "''"))'
+`$env:PARCEL_ADMIN_PASSWORD = '$($adminPassword.Replace("'", "''"))'
+`$env:PARCEL_BOOTSTRAP_COURIER_ID = '$($courierUsername.Replace("'", "''"))'
+`$env:PARCEL_BOOTSTRAP_PASSWORD = '$($courierPassword.Replace("'", "''"))'
 "@ | Set-Content -Path $envFile -Encoding ASCII
     & icacls $envFile /inheritance:r /grant:r "$($env:USERNAME):(R,W)" | Out-Null
-    Write-Host "Generated credentials saved to $envFile (current user only)."
+    Write-Host "Credentials saved to $envFile (current user only)."
 }
 
 Write-Host 'Building backend...'

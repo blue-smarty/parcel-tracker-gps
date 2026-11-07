@@ -14,6 +14,31 @@ PG_HOST="${PARCEL_PG_HOST:-localhost}"
 need() { command -v "$1" >/dev/null 2>&1 || { echo "Missing required tool: $1" >&2; exit 1; }; }
 need java; need mvn; need psql; need openssl
 
+read_username() {
+  local prompt="$1" value LC_ALL=C
+  while true; do
+    read -r -p "$prompt: " value || { echo "Unable to read username." >&2; exit 1; }
+    if [[ "$value" =~ ^[a-zA-Z0-9._-]{1,255}$ ]]; then
+      REPLY="$value"
+      return
+    fi
+    echo "Use 1-255 letters, digits, dots, underscores or hyphens." >&2
+  done
+}
+
+read_password() {
+  local prompt="$1" value LC_ALL=C
+  while true; do
+    read -r -s -p "$prompt: " value || { echo "Unable to read password." >&2; exit 1; }
+    echo
+    if [[ "$value" =~ ^[[:print:]]{12,72}$ && "$value" =~ [^[:space:]] ]]; then
+      REPLY="$value"
+      return
+    fi
+    echo "Use 12-72 printable ASCII characters, including at least one non-space character." >&2
+  done
+}
+
 JAVA_MAJOR="$(java -version 2>&1 | sed -n 's/.*version "\([0-9]*\).*/\1/p' | head -1)"
 if [ "${JAVA_MAJOR:-0}" -lt 17 ]; then echo "JDK 17 or newer is required (found ${JAVA_MAJOR:-unknown})." >&2; exit 1; fi
 
@@ -23,9 +48,15 @@ chmod 700 "$INSTALL_DIR"
 if [ -e "$INSTALL_DIR/parcel-tracker.env" ]; then
   echo "Existing install found in $INSTALL_DIR; keeping its configuration and rebuilding the jar."
 else
+  read_username "Admin username"; ADMIN_USERNAME="$REPLY"
+  read_password "Admin password"; ADMIN_PASSWORD="$REPLY"
+  while true; do
+    read_username "Courier username (courier ID)"; COURIER_USERNAME="$REPLY"
+    if [ "$COURIER_USERNAME" != "$ADMIN_USERNAME" ]; then break; fi
+    echo "Courier username must differ from the admin username." >&2
+  done
+  read_password "Courier password"; COURIER_PASSWORD="$REPLY"
   DB_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=')"
-  ADMIN_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=')"
-  COURIER_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=')"
 
   # Fall back to the postgres OS account when local admin login requires it (typical on Linux).
   PSQL=(psql -h "$PG_HOST" -U "$PG_ADMIN" -v ON_ERROR_STOP=1 -d postgres)
@@ -43,17 +74,15 @@ else
   "${PSQL[@]}" -c "create role \"$DB_USER\" login password '$DB_PASSWORD'"
   "${PSQL[@]}" -c "create database \"$DB_NAME\" owner \"$DB_USER\""
 
-  (umask 077; cat > "$INSTALL_DIR/parcel-tracker.env" <<EOF
-DATABASE_URL=jdbc:postgresql://$PG_HOST:5432/$DB_NAME
-DATABASE_USERNAME=$DB_USER
-DATABASE_PASSWORD=$DB_PASSWORD
-PARCEL_ADMIN_USERNAME=admin
-PARCEL_ADMIN_PASSWORD=$ADMIN_PASSWORD
-PARCEL_BOOTSTRAP_COURIER_ID=courier-001
-PARCEL_BOOTSTRAP_PASSWORD=$COURIER_PASSWORD
-EOF
-)
-  echo "Generated credentials saved to $INSTALL_DIR/parcel-tracker.env (owner-readable only)."
+  (umask 077
+   {
+     printf 'DATABASE_URL=%q\nDATABASE_USERNAME=%q\nDATABASE_PASSWORD=%q\n' \
+       "jdbc:postgresql://$PG_HOST:5432/$DB_NAME" "$DB_USER" "$DB_PASSWORD"
+     printf 'PARCEL_ADMIN_USERNAME=%q\nPARCEL_ADMIN_PASSWORD=%q\n' "$ADMIN_USERNAME" "$ADMIN_PASSWORD"
+     printf 'PARCEL_BOOTSTRAP_COURIER_ID=%q\nPARCEL_BOOTSTRAP_PASSWORD=%q\n' "$COURIER_USERNAME" "$COURIER_PASSWORD"
+   } > "$INSTALL_DIR/parcel-tracker.env"
+  )
+  echo "Credentials saved to $INSTALL_DIR/parcel-tracker.env (owner-readable only)."
 fi
 
 echo "Building backend..."
