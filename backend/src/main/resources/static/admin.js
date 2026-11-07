@@ -3,6 +3,47 @@
     api, setMessage, detail, drawMap } = PP;
   const state = { parcels: [], selectedDispatchId: null };
 
+  async function loadCouriers() {
+    const select = byId('adhocCourier');
+    try {
+      const couriers = await api('/api/admin/couriers');
+      select.replaceChildren(new Option(couriers.length ? 'Choose a courier' : 'No couriers provisioned', ''));
+      couriers.forEach(courier => select.add(new Option(courier.courierId, courier.courierId)));
+    } catch (error) {
+      select.replaceChildren(new Option('Could not load couriers', ''));
+      setMessage('adhocMessage', `Could not load couriers: ${error.message}`, 'error');
+    }
+  }
+
+  async function createAdhoc(event) {
+    event.preventDefault();
+    const fields = {
+      sender: byId('adhocSender').value.trim(),
+      customerContact: byId('adhocContact').value.trim(),
+      pickupAddress: byId('adhocPickup').value.trim(),
+      recipient: byId('adhocRecipient').value.trim(),
+      destination: byId('adhocDestination').value.trim(),
+      courierId: byId('adhocCourier').value
+    };
+    if (Object.values(fields).some(value => !value)) {
+      setMessage('adhocMessage', 'Complete all fields and choose a courier.', 'error');
+      return;
+    }
+    byId('adhocButton').disabled = true;
+    setMessage('adhocMessage', 'Creating and assigning pickup…');
+    try {
+      const parcel = await api('/api/parcels/adhoc', { method: 'POST', body: JSON.stringify(fields) });
+      byId('adhocForm').reset();
+      state.selectedDispatchId = parcel.id;
+      setMessage('adhocMessage', `Created ${parcel.trackingNumber} and assigned it to ${fields.courierId}.`, 'success');
+      await refreshDispatch();
+    } catch (error) {
+      setMessage('adhocMessage', `Could not create pickup: ${error.message} Check the parcel queue before retrying if the connection was interrupted.`, 'error');
+    } finally {
+      byId('adhocButton').disabled = false;
+    }
+  }
+
   function isActive(parcel) {
     return !terminalStatuses.has(String(parcel.status || '').toUpperCase());
   }
@@ -77,6 +118,8 @@
       ${detail('STATUS', statusText(parcel.status))}
       ${detail('RECIPIENT', parcel.recipient)}
       ${detail('COURIER', parcel.courierId)}
+      ${detail('PICKUP', parcel.pickupAddress)}
+      ${detail('SENDER CONTACT', parcel.customerContact)}
       ${detail('CURRENT LOCATION', location ? `${location.latitude}, ${location.longitude}` : 'Awaiting GPS')}
       ${detail('DESTINATION', parcel.destination)}
     </div>`;
@@ -166,13 +209,17 @@
     if (!user) return;
     byId('accountName').textContent = user.name;
     byId('signOutButton').addEventListener('click', PP.signOut);
-    byId('refreshDispatchButton').addEventListener('click', refreshDispatch);
+    byId('refreshDispatchButton').addEventListener('click', () => {
+      refreshDispatch();
+      loadCouriers();
+    });
     byId('dispatchFilter').addEventListener('change', renderDispatch);
     byId('assignButton').addEventListener('click', assignSelected);
     byId('autoDispatchButton').addEventListener('click', autoDispatch);
+    byId('adhocForm').addEventListener('submit', createAdhoc);
     const savedCourierIds = localStorage.getItem(keys.couriers);
     if (savedCourierIds) byId('courierIdsInput').value = savedCourierIds;
-    await refreshDispatch();
+    await Promise.all([refreshDispatch(), loadCouriers()]);
     renderSupportTickets();
     byId('connectionText').textContent = 'Updates every 30 seconds';
     window.setInterval(refreshDispatch, 30000);
