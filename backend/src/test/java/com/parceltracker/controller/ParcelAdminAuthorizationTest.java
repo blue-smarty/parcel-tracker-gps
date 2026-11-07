@@ -3,9 +3,6 @@ package com.parceltracker.controller;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -19,7 +16,6 @@ import com.parceltracker.model.Parcel;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.service.ParcelService;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -38,51 +34,6 @@ class ParcelAdminAuthorizationTest {
     @Autowired private MockMvc mvc;
     @MockBean private ParcelService service;
     @MockBean private CourierAccountRepository accounts;
-    private static final String ADHOC = """
-            {"sender":" Alice ","customerContact":" 1234567 ","pickupAddress":" 1 Main St ",
-             "recipient":" Bob ","destination":" 2 Oak St ","courierId":" courier-1 "}
-            """;
-
-    @Test
-    void adminCreatesAssignedParcelWithPickupDetails() throws Exception {
-        when(accounts.existsById("courier-1")).thenReturn(true);
-        when(service.createAssigned(any(Parcel.class), eq("courier-1"))).thenAnswer(call -> call.getArgument(0));
-        mvc.perform(post("/api/parcels/adhoc").with(user("admin").roles("ADMIN")).with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON).content(ADHOC))
-                .andExpect(status().isCreated());
-        ArgumentCaptor<Parcel> parcel = ArgumentCaptor.forClass(Parcel.class);
-        verify(service).createAssigned(parcel.capture(), eq("courier-1"));
-        assertEquals("Alice", parcel.getValue().getSender());
-        assertEquals("1234567", parcel.getValue().getCustomerContact());
-        assertEquals("1 Main St", parcel.getValue().getPickupAddress());
-        assertEquals("Bob", parcel.getValue().getRecipient());
-        assertEquals("2 Oak St", parcel.getValue().getDestination());
-    }
-
-    @Test
-    void adhocRejectsUnknownCourierAndInvalidFields() throws Exception {
-        mvc.perform(post("/api/parcels/adhoc").with(user("admin").roles("ADMIN")).with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON).content(ADHOC))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/parcels/adhoc").with(user("admin").roles("ADMIN")).with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON).content(ADHOC.replace(" Alice ", "   ")))
-                .andExpect(status().isBadRequest());
-        verifyNoInteractions(service);
-    }
-
-    @Test
-    void adhocRequiresAdminAndCsrf() throws Exception {
-        mvc.perform(post("/api/parcels/adhoc").with(user("customer").roles("CUSTOMER")).with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON).content(ADHOC))
-                .andExpect(status().isForbidden());
-        mvc.perform(post("/api/parcels/adhoc").with(user("admin").roles("ADMIN"))
-                        .contentType(MediaType.APPLICATION_JSON).content(ADHOC))
-                .andExpect(status().isForbidden());
-        mvc.perform(post("/api/parcels/adhoc").with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON).content(ADHOC))
-                .andExpect(status().isUnauthorized());
-        verifyNoInteractions(service);
-    }
 
     @Test
     void allowsAdminToAssignCourierWithCsrf() throws Exception {

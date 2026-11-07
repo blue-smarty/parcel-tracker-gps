@@ -22,17 +22,6 @@ public class ParcelService {
     }
 
     public Parcel create(Parcel parcel, String customerEmail) {
-        prepareNewParcel(parcel, customerEmail);
-        return repository.save(parcel);
-    }
-
-    public Parcel createAssigned(Parcel parcel, String courierId) {
-        prepareNewParcel(parcel, null);
-        parcel.setCourierId(courierId);
-        return repository.save(parcel);
-    }
-
-    private void prepareNewParcel(Parcel parcel, String customerEmail) {
         Instant now = Instant.now();
         parcel.setId(null);
         parcel.setTrackingNumber("TRK-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
@@ -54,6 +43,7 @@ public class ParcelService {
         }
         parcel.setCreatedAt(now);
         parcel.setUpdatedAt(now);
+        return repository.save(parcel);
     }
 
     public List<Parcel> findAll() {

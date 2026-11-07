@@ -138,8 +138,6 @@ public class CourierController {
         }
         detailsLabel.setText("Tracking: " + parcel.getTrackingNumber()
                 + "\nRecipient: " + parcel.getRecipient()
-                + "\nPickup: " + parcel.getPickupAddress()
-                + "\nSender contact: " + parcel.getCustomerContact()
                 + "\nDestination: " + parcel.getDestination()
                 + "\nStatus: " + parcel.getStatus());
         List<String> next = switch (parcel.getStatus() == null ? "" : parcel.getStatus()) {

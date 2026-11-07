@@ -37,8 +37,6 @@ Linux/macOS overrides: `PARCEL_PG_ADMIN`, `PARCEL_PG_HOST`, `PARCEL_DB_NAME`, `P
 
 Open [http://localhost:8080](http://localhost:8080) and use **Create account** for the customer portal, or sign in with the admin account for the admin portal. Keep the backend and PostgreSQL running while using the site.
 
-On the admin page, use **Ad hoc pickup** to enter sender contact, pickup and delivery details and select a provisioned courier. The parcel is created and assigned in one request, appears in the dispatch queue and is offered to the courier for acceptance. Admin-created parcels are not linked to a customer account. This creates a parcel, not a separate scheduled pickup request.
-
 The parcel tracker and courier dashboards remain available as optional desktop clients. From `frontend`, choose one:
 ```
 mvn javafx:run
@@ -51,7 +49,6 @@ Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override desktop cl
 | Method | Path | Description |
 |---|---|---|
 | POST | `/api/parcels` | Create parcel (customer or admin authentication required) |
-| POST | `/api/parcels/adhoc` | Create a parcel and assign a provisioned courier (admin only) |
 | GET | `/api/parcels` | List parcels (admin authentication required) |
 | GET | `/api/parcels/mine` | List the authenticated customer's parcels |
 | GET | `/api/parcels/{id}` | Parcel details (owner or admin authentication required) |
