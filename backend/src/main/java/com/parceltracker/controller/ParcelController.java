@@ -2,6 +2,8 @@ package com.parceltracker.controller;
 
 import com.parceltracker.model.Parcel;
 import com.parceltracker.dto.CourierAssignmentRequest;
+import com.parceltracker.dto.AdhocParcelRequest;
+import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.service.ParcelService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -16,9 +18,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/parcels")
 public class ParcelController {
     private final ParcelService service;
+    private final CourierAccountRepository couriers;
 
-    public ParcelController(ParcelService service) {
+    public ParcelController(ParcelService service, CourierAccountRepository couriers) {
         this.service = service;
+        this.couriers = couriers;
     }
 
     @PostMapping
@@ -26,6 +30,22 @@ public class ParcelController {
     public Parcel create(@Valid @RequestBody Parcel parcel, Authentication authentication) {
         String customerEmail = isCustomer(authentication) ? authentication.getName() : null;
         return service.create(parcel, customerEmail);
+    }
+
+    @PostMapping("/adhoc")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Parcel createAdhoc(@Valid @RequestBody AdhocParcelRequest request) {
+        String courierId = request.courierId().trim();
+        if (!couriers.existsById(courierId)) {
+            throw new IllegalArgumentException("Courier not found");
+        }
+        Parcel parcel = new Parcel();
+        parcel.setSender(request.sender().trim());
+        parcel.setCustomerContact(request.customerContact().trim());
+        parcel.setPickupAddress(request.pickupAddress().trim());
+        parcel.setRecipient(request.recipient().trim());
+        parcel.setDestination(request.destination().trim());
+        return service.createAssigned(parcel, courierId);
     }
 
     @GetMapping
@@ -81,5 +101,10 @@ public class ParcelController {
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, String>> notFound(NoSuchElementException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> badRequest(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
     }
 }
