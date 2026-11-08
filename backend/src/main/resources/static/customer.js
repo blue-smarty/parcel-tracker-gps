@@ -2,6 +2,7 @@
   const { keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
     api, setMessage, detail, drawMap } = PP;
   const state = { customerOrders: [], selectedCustomerId: null, lastStatuses: new Map(), user: null };
+  let pricing = { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75 };
 
   function updateEstimate() {
     const distance = Number(byId('distanceKm').value);
@@ -10,8 +11,10 @@
       byId('priceEstimate').textContent = '$—';
       return;
     }
-    const multiplier = byId('deliverySpeed').value === 'SAME_DAY' ? 1.75 : 1;
-    byId('priceEstimate').textContent = money(Math.round((5 + distance * 1.2 + weight * 0.5) * multiplier * 100) / 100);
+    const multiplier = byId('deliverySpeed').value === 'SAME_DAY' ? pricing.sameDayMultiplier : 1;
+    byId('priceEstimate').textContent = money(Math.round(
+      (pricing.baseFee + distance * pricing.perKmRate + weight * pricing.perKgRate) * multiplier * 100
+    ) / 100);
   }
 
   function toggleSchedule() {
@@ -180,6 +183,11 @@
     byId('supportButton').addEventListener('click', createSupportRequest);
     PP.setupAddressAutocomplete?.('pickupAddress');
     PP.setupAddressAutocomplete?.('destination');
+    try {
+      pricing = await api('/api/pricing');
+    } catch (error) {
+      setMessage('bookingMessage', `Could not load current pricing: ${error.message}`, 'error');
+    }
     toggleSchedule();
     updateEstimate();
     refreshCustomerOrders();

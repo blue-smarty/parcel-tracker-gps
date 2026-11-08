@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.repository.ParcelRepository;
+import com.parceltracker.repository.PricingSettingsRepository;
 import org.junit.jupiter.api.Test;
 
 class ParcelServiceTest {
@@ -14,7 +15,8 @@ class ParcelServiceTest {
     void createsAndAssignsInOneSaveAndResetsClientState() {
         ParcelRepository repository = mock(ParcelRepository.class);
         when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
-        ParcelService service = new ParcelService(repository, new DemoPricingService());
+        ParcelService service = new ParcelService(repository,
+                new DemoPricingService(mock(PricingSettingsRepository.class)));
         Parcel parcel = new Parcel();
         parcel.setId("client-id");
         parcel.setTrackingNumber("client-tracking");

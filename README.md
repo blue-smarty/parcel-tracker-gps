@@ -91,8 +91,11 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 | `/login.html` | Everyone | Sign in (customers and admins) or create a customer account; signed-in users are routed to their portal |
 | `/customer.html` | Customers | Book deliveries with address autocomplete, demo price estimate, track orders on a live map, demo receipt and support request |
 | `/admin.html` | Admins | Parcel queue, live fleet map, active/unassigned/escalated metrics, manual assignment, least-active-load auto-dispatch, local support requests; ad hoc delivery address fields include autocomplete |
+| `/admin-settings.html` | Admins | Configure the base fee, per-kilometer and per-kilogram rates, and same-day price multiplier |
 
 Address suggestions are requested from the same-origin `/api/address-suggestions` endpoint and looked up through Photon using OpenStreetMap data. Suggestions are optional; addresses can always be entered manually.
+
+Administrators can update delivery estimate rates from **Admin settings** in the dispatch and ad hoc delivery pages. The saved rates are used for customer previews and newly created parcels; previously saved parcel estimates do not change. Defaults remain a $5 base fee, $1.20 per kilometer, $0.50 per kilogram and a 1.75 same-day multiplier.
 
 Customers register with name, email and a password of 12-72 characters (`POST /api/auth/register`); accounts are stored in the `customer_accounts` table with BCrypt hashes and authenticate with HTTP Basic like couriers and admins. `GET /api/auth/me` verifies credentials and returns `{username, name, role}`, where role is `CUSTOMER`, `ADMIN` or `COURIER`. Admins are still configured with `PARCEL_ADMIN_USERNAME`/`PARCEL_ADMIN_PASSWORD`; courier accounts sign in with the mobile app, not the website. The browser keeps the credential in `sessionStorage` (cleared when the tab closes). Each portal page verifies the role and redirects to the right page otherwise.
 
