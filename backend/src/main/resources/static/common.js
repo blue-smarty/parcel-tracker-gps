@@ -5,7 +5,7 @@ window.PP = (() => {
     session: 'parcelpilot.session'
   };
   const terminalStatuses = new Set(['DELIVERED', 'FAILED', 'RETURNED', 'CANCELLED']);
-  const state = { csrfToken: null };
+  const state = { csrfToken: null, csrfRequest: null };
   const byId = id => document.getElementById(id);
   const money = value => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value) || 0);
   const text = value => value == null || value === '' ? '—' : String(value);
@@ -72,12 +72,17 @@ window.PP = (() => {
 
   async function getCsrfToken() {
     if (state.csrfToken) return state.csrfToken;
-    const response = await fetch('/api/csrf', { credentials: 'same-origin' });
-    if (!response.ok) throw new Error(`Could not obtain a CSRF token (HTTP ${response.status}).`);
-    const body = await response.json();
-    if (!body.token) throw new Error('The server did not provide a CSRF token.');
-    state.csrfToken = body.token;
-    return state.csrfToken;
+    if (!state.csrfRequest) {
+      state.csrfRequest = (async () => {
+        const response = await fetch('/api/csrf', { credentials: 'same-origin', cache: 'no-store' });
+        if (!response.ok) throw new Error(`Could not obtain a CSRF token (HTTP ${response.status}).`);
+        const body = await response.json();
+        if (!body.token) throw new Error('The server did not provide a CSRF token.');
+        state.csrfToken = body.token;
+        return state.csrfToken;
+      })().finally(() => { state.csrfRequest = null; });
+    }
+    return state.csrfRequest;
   }
 
 
@@ -90,10 +95,22 @@ window.PP = (() => {
     }
     headers.set('X-Requested-With', 'XMLHttpRequest');
     if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-    if (method !== 'GET' && method !== 'HEAD') headers.set('X-XSRF-TOKEN', await getCsrfToken());
-    const response = await fetch(path, {
-      ...options, method, headers, credentials: 'same-origin'
-    });
+    const needsCsrf = method !== 'GET' && method !== 'HEAD';
+    if (needsCsrf) headers.set('X-XSRF-TOKEN', await getCsrfToken());
+    let response = await fetch(path, { ...options, method, headers, credentials: 'same-origin' });
+    if (needsCsrf && response.status === 403) {
+      let body;
+      try {
+        body = await response.clone().json();
+      } catch (_) {
+        // The normal error handler below will report the HTTP status.
+      }
+      if (body?.code === 'CSRF_INVALID') {
+        if (state.csrfToken === headers.get('X-XSRF-TOKEN')) state.csrfToken = null;
+        headers.set('X-XSRF-TOKEN', await getCsrfToken());
+        response = await fetch(path, { ...options, method, headers, credentials: 'same-origin' });
+      }
+    }
     if (!response.ok) {
       let message = `Request failed (HTTP ${response.status}).`;
       try {
@@ -104,6 +121,7 @@ window.PP = (() => {
         // Keep the HTTP status when the server does not return JSON.
       }
       const error = new Error(message);
+      if (response.status === 401) error.message = 'Session not authorized. Sign out and sign in again.';
       error.status = response.status;
       throw error;
     }

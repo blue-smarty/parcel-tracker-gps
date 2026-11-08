@@ -3,6 +3,7 @@ package com.parceltracker.config;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.CustomerAccountRepository;
 import com.parceltracker.repository.DispatcherAccountRepository;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -14,6 +15,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.CsrfException;
+import org.springframework.security.web.access.AccessDeniedHandlerImpl;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -30,6 +33,15 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
+                .exceptionHandling(exceptions -> exceptions.accessDeniedHandler((request, response, error) -> {
+                    if (error instanceof CsrfException) {
+                        response.setStatus(403);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"code\":\"CSRF_INVALID\",\"error\":\"Security token expired. Please retry.\"}");
+                    } else {
+                        new AccessDeniedHandlerImpl().handle(request, response, error);
+                    }
+                }))
                 .headers(headers -> headers
                         .contentTypeOptions(Customizer.withDefaults())
                         .frameOptions(frame -> frame.deny())
@@ -37,6 +49,7 @@ public class SecurityConfig {
                         .referrerPolicy(r -> r.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/dispatch/couriers").hasAnyRole("ADMIN", "DISPATCHER")
                         .requestMatchers("/api/couriers/**").hasRole("COURIER")
