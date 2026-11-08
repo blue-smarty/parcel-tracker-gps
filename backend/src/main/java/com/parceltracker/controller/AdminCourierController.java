@@ -2,9 +2,12 @@ package com.parceltracker.controller;
 
 import com.parceltracker.model.CourierAccount;
 import com.parceltracker.repository.CourierAccountRepository;
+import com.parceltracker.repository.DispatcherAccountRepository;
+import java.util.Locale;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,10 +31,13 @@ public class AdminCourierController {
 
     private final CourierAccountRepository accounts;
     private final PasswordEncoder passwordEncoder;
+    private final ObjectProvider<DispatcherAccountRepository> dispatchers;
 
-    public AdminCourierController(CourierAccountRepository accounts, PasswordEncoder passwordEncoder) {
+    public AdminCourierController(CourierAccountRepository accounts, PasswordEncoder passwordEncoder,
+            ObjectProvider<DispatcherAccountRepository> dispatchers) {
         this.accounts = accounts;
         this.passwordEncoder = passwordEncoder;
+        this.dispatchers = dispatchers;
     }
 
     @GetMapping
@@ -48,7 +54,9 @@ public class AdminCourierController {
                     "Courier ID must be 3-40 letters, digits, dots, dashes or underscores");
         }
         checkPassword(request.password());
-        if (accounts.existsById(id)) {
+        DispatcherAccountRepository dispatcherAccounts = dispatchers.getIfAvailable();
+        if (accounts.existsById(id) || (dispatcherAccounts != null
+                && dispatcherAccounts.existsById(id.toLowerCase(Locale.ROOT)))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Courier already exists");
         }
         accounts.save(new CourierAccount(id, passwordEncoder.encode(request.password())));

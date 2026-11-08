@@ -28,10 +28,10 @@ async function setup({ failCreate = false, failCouriers = false, user = { name: 
     terminalStatuses: new Set(['DELIVERED']), byId, money: String, text: String,
     statusText: String, escapeHtml: String, readArray: () => [], saveArray() {}, drawMap() {},
     detail: () => '', setMessage(id, message) { messages[id] = message; },
-    requireRole: async role => { assert.equal(role, 'ADMIN'); return user; }, signOut() {},
+    requireRole: async role => { assert.deepEqual(Array.from(role), ['ADMIN', 'DISPATCHER']); return user; }, signOut() {},
     async api(route, options) {
       requests.push({ route, options });
-      if (route === '/api/admin/couriers') {
+      if (route === '/api/dispatch/couriers') {
         if (failCouriers) throw new Error('Unavailable');
         return [{ courierId: 'courier-1' }];
       }
@@ -76,7 +76,7 @@ test('creates an assigned parcel with pickup details and resets on success', asy
   assert.match(messages.adhocMessage, /TRK-1.*courier-1/);
   assert.equal(byId('adhocSender').value, '');
   assert.equal(byId('adhocButton').disabled, false);
-  assert.equal(byId('viewDeliveryLink').href, '/admin.html?parcel=p1');
+  assert.equal(byId('viewDeliveryLink').href, '/dispatch.html?parcel=p1');
   assert.equal(byId('viewDeliveryLink').hidden, false);
 });
 
@@ -91,7 +91,7 @@ test('shows courier loading failures and allows retry', async () => {
   assert.match(messages.courierMessage, /Could not load couriers/);
   assert.equal(byId('refreshCouriersButton').disabled, false);
   await byId('refreshCouriersButton').listeners.click();
-  assert.equal(requests.filter(item => item.route === '/api/admin/couriers').length, 2);
+  assert.equal(requests.filter(item => item.route === '/api/dispatch/couriers').length, 2);
 });
 
 test('retains form values and warns against duplicate retries after errors', async () => {

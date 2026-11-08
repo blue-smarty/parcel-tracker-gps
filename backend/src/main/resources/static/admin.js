@@ -164,8 +164,11 @@
   }
 
   async function initialize() {
-    const user = await PP.requireRole('ADMIN');
+    const user = await PP.requireRole(['ADMIN', 'DISPATCHER']);
     if (!user) return;
+    byId('adminSettingsLink').hidden = user.role !== 'ADMIN';
+    byId('dispatchView').hidden = false;
+    byId('dispatchView').classList.add('active-view');
     byId('accountName').textContent = user.name;
     byId('signOutButton').addEventListener('click', PP.signOut);
     byId('refreshDispatchButton').addEventListener('click', refreshDispatch);

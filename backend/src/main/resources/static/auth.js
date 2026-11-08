@@ -1,6 +1,6 @@
 (() => {
   const { byId, api, session, basicAuthorization, setMessage } = PP;
-  const destinations = { ADMIN: '/admin.html', CUSTOMER: '/customer.html' };
+  const destinations = { ADMIN: '/admin.html', DISPATCHER: '/dispatch.html', CUSTOMER: '/customer.html' };
 
   function setMode(mode) {
     const registering = mode === 'register';

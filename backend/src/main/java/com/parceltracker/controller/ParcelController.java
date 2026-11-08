@@ -72,7 +72,9 @@ public class ParcelController {
 
     @PutMapping("/{id}/courier")
     public Parcel assignCourier(@PathVariable String id, @Valid @RequestBody CourierAssignmentRequest request) {
-        return service.assignCourier(id, request.getCourierId().trim());
+        String courierId = request.getCourierId().trim();
+        if (!couriers.existsById(courierId)) throw new IllegalArgumentException("Courier not found");
+        return service.assignCourier(id, courierId);
     }
 
     @DeleteMapping("/{id}")
@@ -82,7 +84,7 @@ public class ParcelController {
     }
 
     static void requireOwnerOrAdmin(Parcel parcel, Authentication authentication) {
-        if (!isAdmin(authentication) && (parcel.getCustomerEmail() == null
+        if (!isStaff(authentication) && (parcel.getCustomerEmail() == null
                 || !parcel.getCustomerEmail().equalsIgnoreCase(authentication.getName()))) {
             throw new NoSuchElementException("Parcel not found");
         }
@@ -93,9 +95,10 @@ public class ParcelController {
                 .anyMatch(authority -> "ROLE_CUSTOMER".equals(authority.getAuthority()));
     }
 
-    private static boolean isAdmin(Authentication authentication) {
+    private static boolean isStaff(Authentication authentication) {
         return authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority())
+                        || "ROLE_DISPATCHER".equals(authority.getAuthority()));
     }
 
     @ExceptionHandler(NoSuchElementException.class)

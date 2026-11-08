@@ -9,8 +9,9 @@ test('dispatch selects the delivery linked from the ad hoc page', async () => {
   const byId = id => {
     if (!elements.has(id)) elements.set(id, {
       value: '', textContent: '', innerHTML: '',
-      addEventListener() {}, querySelectorAll() { return []; }
+      addEventListener() {}, querySelectorAll() { return []; }, classList: { add() {} }
     });
+
     return elements.get(id);
   };
   const parcels = [
@@ -32,4 +33,31 @@ test('dispatch selects the delivery linked from the ad hoc page', async () => {
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(selected, 'second');
   assert.match(byId('dispatchRows').innerHTML, /data-parcel-id="second" class="selected-row"/);
+});
+
+test('dispatchers see the dispatch workspace without the admin link', async () => {
+  const elements = new Map();
+  const byId = id => {
+    if (!elements.has(id)) elements.set(id, {
+      value: '', textContent: '', innerHTML: '', hidden: true,
+      classList: { add() {} }, addEventListener() {}, querySelectorAll() { return []; }
+    });
+    return elements.get(id);
+  };
+  const PP = {
+    keys: { couriers: 'couriers', tickets: 'tickets' }, terminalStatuses: new Set(),
+    byId, money: String, text: String, statusText: String, escapeHtml: String,
+    readArray: () => [], saveArray() {}, setMessage() {}, detail: () => '', drawMap() {},
+    api: async () => [], requireRole: async roles => {
+      assert.deepEqual(Array.from(roles), ['ADMIN', 'DISPATCHER']);
+      return { name: 'Dispatcher', role: 'DISPATCHER' };
+    }, signOut() {}
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin.js'), 'utf8'), {
+    PP, URLSearchParams, window: { location: { search: '' }, setInterval() {} },
+    localStorage: { getItem() { return null; } }
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(byId('dispatchView').hidden, false);
+  assert.equal(byId('adminSettingsLink').hidden, true);
 });

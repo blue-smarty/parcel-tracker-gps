@@ -6,7 +6,7 @@
     const current = select.value;
     byId('refreshCouriersButton').disabled = true;
     try {
-      const couriers = await api('/api/admin/couriers');
+      const couriers = await api('/api/dispatch/couriers');
       select.replaceChildren(new Option(couriers.length ? 'Choose a courier' : 'No couriers provisioned', ''));
       couriers.forEach(courier => select.add(new Option(courier.courierId, courier.courierId)));
       if (couriers.some(courier => courier.courierId === current)) select.value = current;
@@ -42,7 +42,7 @@
       const parcel = await api('/api/parcels/adhoc', { method: 'POST', body: JSON.stringify(fields) });
       byId('adhocForm').reset();
       const link = byId('viewDeliveryLink');
-      link.href = `/admin.html?parcel=${encodeURIComponent(parcel.id)}`;
+      link.href = `/dispatch.html?parcel=${encodeURIComponent(parcel.id)}`;
       link.hidden = false;
       setMessage('adhocMessage', `Created ${parcel.trackingNumber} and assigned it to ${fields.courierId}.`, 'success');
     } catch (error) {
@@ -53,8 +53,9 @@
   }
 
   async function initialize() {
-    const user = await PP.requireRole('ADMIN');
+    const user = await PP.requireRole(['ADMIN', 'DISPATCHER']);
     if (!user) return;
+    byId('adhocAdminLink').hidden = user.role !== 'ADMIN';
     byId('accountName').textContent = user.name;
     byId('signOutButton').addEventListener('click', PP.signOut);
     byId('adhocForm').addEventListener('submit', createAdhoc);

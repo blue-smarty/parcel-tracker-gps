@@ -70,7 +70,8 @@ public class LocationWebSocketHandler extends TextWebSocketHandler {
             return false;
         }
         boolean admin = authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority())
+                        || "ROLE_DISPATCHER".equals(authority.getAuthority()));
         String parcelId = parcelIdOf(session);
         if (ALL.equals(parcelId)) return admin;
         if (admin) return true;

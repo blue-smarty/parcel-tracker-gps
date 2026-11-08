@@ -62,8 +62,8 @@ window.PP = (() => {
       window.location.replace('/login.html');
       return null;
     }
-    if (identity.role !== role) {
-      const home = { ADMIN: '/admin.html', CUSTOMER: '/customer.html' }[identity.role];
+    if (!(Array.isArray(role) ? role : [role]).includes(identity.role)) {
+      const home = { ADMIN: '/admin.html', DISPATCHER: '/dispatch.html', CUSTOMER: '/customer.html' }[identity.role];
       window.location.replace(home || '/login.html');
       return null;
     }

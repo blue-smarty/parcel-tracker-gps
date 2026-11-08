@@ -10,6 +10,7 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
     if (!elements.has(id)) elements.set(id, {
       value: '', textContent: '', disabled: false, hidden: true, listeners: {},
       addEventListener(event, callback) { this.listeners[event] = callback; },
+      replaceChildren() {},
       classList: { add() {} }
     });
     return elements.get(id);
@@ -31,6 +32,7 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
         if (failSave) throw new Error('Rejected');
         return JSON.parse(options.body);
       }
+      if (route === '/api/admin/dispatchers') return [];
       throw new Error(`Unexpected request ${route}`);
     }
   };
@@ -74,4 +76,15 @@ test('requires a verified admin before loading settings', async () => {
   const { byId, requests } = await setup({ user: null });
   assert.equal(requests.length, 0);
   assert.equal(byId('settingsView').hidden, true);
+});
+
+test('creates a dispatcher through the admin-only endpoint', async () => {
+  const { byId, requests, messages } = await setup();
+  byId('dispatcherUsername').value = 'dispatch1';
+  byId('dispatcherPassword').value = 'strong-password';
+  await byId('dispatcherForm').listeners.submit({ preventDefault() {} });
+  const request = requests.find(item => item.route === '/api/admin/dispatchers' && item.options?.method === 'POST');
+  assert.deepEqual(JSON.parse(request.options.body), { username: 'dispatch1', password: 'strong-password' });
+  assert.equal(byId('dispatcherPassword').value, '');
+  assert.match(messages.dispatcherMessage.message, /created/);
 });

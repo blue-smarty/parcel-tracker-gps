@@ -17,7 +17,7 @@
         <span>parcel<span class="brand-light">pilot</span></span>
       </a>
       <div class="topbar-right">
-        <span class="demo-tag">ADMIN & DISPATCH</span>
+        <span class="demo-tag">DISPATCH</span>
         <span class="account-chip">Signed in as <strong id="accountName">…</strong></span>
         <button id="signOutButton" class="button button-quiet" type="button">Sign out</button>
       </div>
@@ -25,10 +25,10 @@
     <main>
       <section class="view active-view" id="adhocView" hidden>
         <div class="section-heading">
-          <div><p class="eyebrow">ADMIN & DISPATCH</p><h2>New ad hoc delivery</h2></div>
+          <div><p class="eyebrow">DISPATCH</p><h2>New ad hoc delivery</h2></div>
           <div class="dispatch-actions">
-            <a class="button button-secondary" href="/admin-settings.html">Admin settings</a>
-            <a class="button button-quiet" href="/admin.html">Back to dispatch</a>
+            <a id="adhocAdminLink" class="button button-secondary" href="/admin.html" hidden>Admin area</a>
+            <a class="button button-quiet" href="/dispatch.html">Back to dispatch</a>
           </div>
         </div>
         <div class="panel adhoc-panel">
@@ -53,7 +53,7 @@
             <p id="courierMessage" class="form-message" role="status" aria-live="polite"></p>
             <div class="adhoc-actions">
               <button id="adhocButton" class="button button-primary" type="submit">Create and assign delivery</button>
-              <a id="viewDeliveryLink" class="button button-secondary" href="/admin.html" hidden>View in dispatch</a>
+              <a id="viewDeliveryLink" class="button button-secondary" href="/dispatch.html" hidden>View in dispatch</a>
             </div>
             <p id="adhocMessage" class="form-message" role="status" aria-live="polite"></p>
           </form>

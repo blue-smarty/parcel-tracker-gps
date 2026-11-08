@@ -92,6 +92,7 @@ class ParcelAdminAuthorizationTest {
 
     @Test
     void allowsAdminToAssignCourierWithCsrf() throws Exception {
+        when(accounts.existsById("courier-1")).thenReturn(true);
         when(service.assignCourier("parcel-1", "courier-1")).thenReturn(new Parcel());
 
         mvc.perform(put("/api/parcels/parcel-1/courier")

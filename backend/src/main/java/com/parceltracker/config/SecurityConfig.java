@@ -2,6 +2,7 @@ package com.parceltracker.config;
 
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.CustomerAccountRepository;
+import com.parceltracker.repository.DispatcherAccountRepository;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -37,28 +38,29 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/dispatch/couriers").hasAnyRole("ADMIN", "DISPATCHER")
                         .requestMatchers("/api/couriers/**").hasRole("COURIER")
                         .requestMatchers("/", "/index.html", "/login.html", "/forgot-password.html",
-                                "/customer.html", "/admin.html", "/admin-adhoc.html", "/admin-settings.html",
+                                "/customer.html", "/admin.html", "/dispatch.html", "/admin-adhoc.html", "/admin-settings.html",
                                 "/styles.css", "/common.js", "/auth.js", "/password-reset.js",
                                 "/customer.js", "/admin.js", "/admin-adhoc.js", "/admin-settings.js")
                                 .permitAll()
                         .requestMatchers("/api/branding", "/api/csrf").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pricing").hasAnyRole("ADMIN", "CUSTOMER")
-                        .requestMatchers(HttpMethod.GET, "/api/address-suggestions").hasAnyRole("ADMIN", "CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/address-suggestions").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/password-reset",
                                 "/api/auth/password-reset/confirm").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
                         .requestMatchers("/ws/tracking/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/parcels").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/parcels").hasAnyRole("ADMIN", "DISPATCHER")
                         .requestMatchers(HttpMethod.GET, "/api/parcels/mine").hasRole("CUSTOMER")
-                        .requestMatchers(HttpMethod.GET, "/api/parcels/*/history").hasAnyRole("ADMIN", "CUSTOMER")
-                        .requestMatchers(HttpMethod.GET, "/api/parcels/*").hasAnyRole("ADMIN", "CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/parcels/*/history").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
+                        .requestMatchers(HttpMethod.GET, "/api/parcels/*").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
                         .requestMatchers(HttpMethod.POST, "/api/parcels").hasAnyRole("ADMIN", "CUSTOMER")
-                        .requestMatchers(HttpMethod.POST, "/api/parcels/adhoc").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/parcels/adhoc").hasAnyRole("ADMIN", "DISPATCHER")
                         .requestMatchers(HttpMethod.POST, "/api/parcels/*/location").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/parcels/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/parcels/**").hasAnyRole("ADMIN", "DISPATCHER")
                         .requestMatchers(HttpMethod.DELETE, "/api/parcels/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/pickups").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/pickups/*").hasAnyRole("ADMIN", "CUSTOMER")
@@ -71,6 +73,7 @@ public class SecurityConfig {
     UserDetailsService userDetailsService(
             CourierAccountRepository accounts,
             ObjectProvider<CustomerAccountRepository> customerAccounts,
+            ObjectProvider<DispatcherAccountRepository> dispatcherAccounts,
             PasswordEncoder passwordEncoder,
             @Value("${parcel.auth.admin-username:}") String adminUsername,
             @Value("${parcel.auth.admin-password:}") String adminPassword) {
@@ -86,6 +89,14 @@ public class SecurityConfig {
         return username -> {
             if (adminHash != null && adminUsername.equals(username)) {
                 return User.withUsername(adminUsername).password(adminHash).roles("ADMIN").build();
+            }
+            DispatcherAccountRepository dispatchers = dispatcherAccounts.getIfAvailable();
+            if (dispatchers != null) {
+                var dispatcher = dispatchers.findById(username);
+                if (dispatcher.isPresent()) {
+                    return User.withUsername(dispatcher.get().getUsername())
+                            .password(dispatcher.get().getPasswordHash()).roles("DISPATCHER").build();
+                }
             }
             return accounts.findById(username)
                     .map(account -> User.withUsername(account.getCourierId())

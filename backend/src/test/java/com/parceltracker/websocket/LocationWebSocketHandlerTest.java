@@ -64,6 +64,16 @@ class LocationWebSocketHandlerTest {
         verify(session, never()).close(CloseStatus.POLICY_VIOLATION);
     }
 
+    @Test
+    void permitsDispatcherAllParcelSubscription() throws Exception {
+        WebSocketSession session = session("/ws/tracking/all",
+                new TestingAuthenticationToken("dispatcher", "password", "ROLE_DISPATCHER"));
+
+        handler.afterConnectionEstablished(session);
+
+        verify(session, never()).close(CloseStatus.POLICY_VIOLATION);
+    }
+
     private static WebSocketSession session(String path, java.security.Principal principal) {
         WebSocketSession session = mock(WebSocketSession.class);
         when(session.getUri()).thenReturn(URI.create("ws://localhost" + path));
