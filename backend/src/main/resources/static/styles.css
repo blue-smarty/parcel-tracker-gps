@@ -77,6 +77,16 @@ h4 { margin: 0 0 12px; font-size: 12px; }
 .span-two { grid-column: span 2; }
 input, select { display: block; width: 100%; height: 39px; margin-top: 6px; border: 1px solid #e1e8ed; border-radius: 5px; background: #fff; padding: 0 10px; color: var(--ink); outline: none; font-size: 12px; }
 input:focus, select:focus { border-color: #52a9a7; box-shadow: 0 0 0 3px #13888916; }
+.address-autocomplete { position: relative; margin-top: 6px; }
+.address-autocomplete input { margin-top: 0; }
+.address-suggestions, .address-suggestion-message { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; max-height: 220px; overflow-y: auto; border: 1px solid #dfe7eb; border-radius: 5px; background: #fff; box-shadow: 0 8px 20px #18354820; }
+.address-suggestions[hidden] { display: none; }
+.address-suggestion-message[hidden] { display: none; }
+.address-suggestion, .address-suggestion-message { display: block; width: 100%; padding: 10px 12px; border: 0; background: #fff; color: var(--ink); text-align: left; font-size: 12px; line-height: 1.4; }
+.address-suggestion { cursor: pointer; }
+.address-suggestion + .address-suggestion { border-top: 1px solid #edf1f3; }
+.address-suggestion:hover, .address-suggestion.active { background: #f0f7f6; }
+.address-suggestion-message { color: #788a97; }
 input::placeholder { color: #adb8c0; }
 .field-note { margin: 8px 0 0; color: #8c9aa5; font-size: 10px; line-height: 1.5; }
 .schedule-fields { padding: 0 0 12px; }

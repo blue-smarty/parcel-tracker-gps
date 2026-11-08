@@ -59,6 +59,8 @@
     byId('signOutButton').addEventListener('click', PP.signOut);
     byId('adhocForm').addEventListener('submit', createAdhoc);
     byId('refreshCouriersButton').addEventListener('click', loadCouriers);
+    PP.setupAddressAutocomplete?.('adhocPickup');
+    PP.setupAddressAutocomplete?.('adhocDestination');
     byId('adhocView').hidden = false;
     await loadCouriers();
   }

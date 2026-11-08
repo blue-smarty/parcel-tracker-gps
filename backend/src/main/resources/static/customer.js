@@ -178,6 +178,8 @@
     byId('refreshOrdersButton').addEventListener('click', refreshCustomerOrders);
     byId('receiptButton').addEventListener('click', showReceipt);
     byId('supportButton').addEventListener('click', createSupportRequest);
+    PP.setupAddressAutocomplete?.('pickupAddress');
+    PP.setupAddressAutocomplete?.('destination');
     toggleSchedule();
     updateEstimate();
     refreshCustomerOrders();

@@ -123,6 +123,159 @@ window.PP = (() => {
     return `<div class="detail-pair"><span>${escapeHtml(label)}</span><strong>${escapeHtml(text(value))}</strong></div>`;
   }
 
+  function setupAddressAutocomplete(input, options = {}) {
+    if (typeof document === 'undefined' || typeof fetch !== 'function') return () => {};
+    const field = typeof input === 'string' ? byId(input) : input;
+    if (!field || typeof field.addEventListener !== 'function') return () => {};
+    const minimumLength = Number.isInteger(options.minimumLength) ? options.minimumLength : 3;
+    const debounceMs = Number.isInteger(options.debounceMs) ? Math.max(options.debounceMs, 0) : 400;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'address-autocomplete';
+    field.parentNode.insertBefore(wrapper, field);
+    wrapper.appendChild(field);
+    const status = document.createElement('div');
+    status.className = 'address-suggestion-message';
+    status.setAttribute('role', 'status');
+    status.hidden = true;
+    wrapper.appendChild(status);
+    const list = document.createElement('div');
+    list.className = 'address-suggestions';
+    list.id = `${field.id || `address-${Date.now()}`}-suggestions`;
+    list.setAttribute('role', 'listbox');
+    list.hidden = true;
+    wrapper.appendChild(list);
+    field.setAttribute('autocomplete', 'off');
+    field.setAttribute('aria-autocomplete', 'list');
+    field.setAttribute('aria-controls', list.id);
+    field.setAttribute('aria-expanded', 'false');
+
+    let timer = null;
+    let abortController = null;
+    let requestNumber = 0;
+    let activeIndex = -1;
+
+    function renderMessage(message) {
+      list.replaceChildren();
+      activeIndex = -1;
+      field.removeAttribute('aria-activedescendant');
+      status.textContent = message;
+      status.hidden = !message;
+      list.hidden = true;
+      field.setAttribute('aria-expanded', 'false');
+    }
+
+    async function querySuggestions(value, requestId) {
+      const query = value.trim();
+      if (query.length < minimumLength) {
+        renderMessage('');
+        return;
+      }
+      renderMessage('Searching addresses…');
+      abortController = new AbortController();
+      const requestController = abortController;
+      try {
+        const results = await api(`/api/address-suggestions?q=${encodeURIComponent(query)}`, {
+          signal: requestController.signal,
+          headers: { Accept: 'application/json' }
+        });
+        if (requestId !== requestNumber) return;
+        if (!Array.isArray(results) || results.length === 0) {
+          renderMessage('No matching addresses. You can enter the address manually.');
+          return;
+        }
+        list.replaceChildren(...results.filter(result => typeof result === 'string' && result.trim()).map((result, index) => {
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.className = 'address-suggestion';
+          option.id = `${list.id}-option-${index}`;
+          option.setAttribute('role', 'option');
+          option.setAttribute('aria-selected', 'false');
+          option.textContent = result;
+          option.addEventListener('pointerdown', event => event.preventDefault());
+          option.addEventListener('click', () => selectSuggestion(result));
+          return option;
+        }));
+        status.hidden = true;
+        activeIndex = -1;
+        list.hidden = list.childElementCount === 0;
+        field.setAttribute('aria-expanded', String(!list.hidden));
+        if (list.hidden) renderMessage('No matching addresses. You can enter the address manually.');
+      } catch (error) {
+        if (error.name === 'AbortError' || requestId !== requestNumber) return;
+        console.warn('Address suggestions request failed.', error);
+        renderMessage('Address lookup is unavailable. You can enter the address manually.');
+      }
+    }
+
+    function selectSuggestion(value) {
+      field.value = value;
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+      renderMessage('');
+    }
+
+    function setActive(index) {
+      const optionsList = [...list.querySelectorAll('[role="option"]')];
+      if (!optionsList.length) return;
+      activeIndex = (index + optionsList.length) % optionsList.length;
+      optionsList.forEach((option, optionIndex) => {
+        const active = optionIndex === activeIndex;
+        option.setAttribute('aria-selected', String(active));
+        option.classList.toggle('active', active);
+      });
+      field.setAttribute('aria-activedescendant', optionsList[activeIndex].id);
+      optionsList[activeIndex].scrollIntoView?.({ block: 'nearest' });
+    }
+
+    function onInput(event) {
+      if (timer) clearTimeout(timer);
+      if (abortController) abortController.abort();
+      const value = event?.target?.value ?? field.value ?? '';
+      requestNumber += 1;
+      const current = requestNumber;
+      if (value.trim().length < minimumLength) {
+        renderMessage('');
+        return;
+      }
+      renderMessage('Searching addresses…');
+      timer = setTimeout(() => {
+        querySuggestions(value, current);
+      }, debounceMs);
+    }
+
+    function onKeydown(event) {
+      if (event.key === 'ArrowDown' && !list.hidden) {
+        event.preventDefault();
+        setActive(activeIndex + 1);
+      } else if (event.key === 'ArrowUp' && !list.hidden) {
+        event.preventDefault();
+        setActive(activeIndex - 1);
+      } else if (event.key === 'Enter' && activeIndex >= 0 && !list.hidden) {
+        event.preventDefault();
+        const option = list.querySelectorAll('[role="option"]')[activeIndex];
+        if (option) selectSuggestion(option.textContent);
+      } else if (event.key === 'Escape') {
+        renderMessage('');
+      }
+    }
+
+    function onBlur() {
+      window.setTimeout(() => renderMessage(''), 150);
+    }
+
+    field.addEventListener('input', onInput);
+    field.addEventListener('keydown', onKeydown);
+    field.addEventListener('blur', onBlur);
+
+    return () => {
+      field.removeEventListener('input', onInput);
+      field.removeEventListener('keydown', onKeydown);
+      field.removeEventListener('blur', onBlur);
+      if (timer) clearTimeout(timer);
+      if (abortController) abortController.abort();
+      wrapper.parentNode?.insertBefore(field, wrapper);
+      wrapper.remove();
+    };
+  }
 
   const leafletMaps = new WeakMap();
 
@@ -244,6 +397,6 @@ window.PP = (() => {
 
   return {
     keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
-    session, basicAuthorization, signOut, requireRole, api, setMessage, detail, drawMap
+    session, basicAuthorization, signOut, requireRole, api, setMessage, detail, setupAddressAutocomplete, drawMap
   };
 })();

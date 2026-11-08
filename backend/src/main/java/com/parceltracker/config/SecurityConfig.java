@@ -43,6 +43,7 @@ public class SecurityConfig {
                                 "/password-reset.js", "/customer.js", "/admin.js", "/admin-adhoc.js")
                                 .permitAll()
                         .requestMatchers("/api/branding", "/api/csrf").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/address-suggestions").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/password-reset",
                                 "/api/auth/password-reset/confirm").permitAll()
