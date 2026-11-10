@@ -250,4 +250,81 @@ footer b { color: var(--teal); padding: 0 3px; }
 .landing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; padding: 32px 0; }
 .landing-card { padding: 24px; display: grid; gap: 10px; align-content: start; }
 .landing-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.builder-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+.builder-steps { display: grid; gap: 16px; }
+.builder-step { padding: 20px 22px; }
+.step-title { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+.step-title .field-note { margin-top: 3px; }
+.step-number { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--navy); color: #fff; font-size: 12px; font-weight: 700; }
+.item-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.item-tile { position: relative; border: 1px solid var(--line); border-radius: 10px; background: #fff; transition: .15s ease; }
+.item-tile:hover { border-color: #55aaa4; }
+.item-tile.selected { border-color: var(--teal); background: var(--mint); }
+.item-pick { display: grid; gap: 4px; width: 100%; min-height: 128px; padding: 14px; border: 0; border-radius: 10px; background: transparent; text-align: left; color: var(--ink); align-content: start; }
+.item-icon { font-size: 26px; line-height: 1.1; }
+.item-pick strong { font-size: 12px; }
+.item-pick small { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.item-count { position: absolute; top: 8px; right: 8px; padding: 3px 8px; border-radius: 20px; background: var(--teal); color: #fff; font-size: 10px; font-weight: 700; }
+.item-remove { position: absolute; bottom: 8px; right: 8px; width: 24px; height: 24px; border: 1px solid #c9dad7; border-radius: 50%; background: #fff; color: var(--teal-dark); font-weight: 700; line-height: 1; }
+.manifest-rows { display: grid; gap: 10px; }
+.manifest-row { padding: 12px 14px; border: 1px dashed #cfdcdf; border-radius: 8px; background: #fbfdfd; }
+.manifest-row > strong { display: block; margin-bottom: 8px; font-size: 12px; }
+.manifest-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.manifest-fields label { color: #536779; font-size: 10px; font-weight: 600; }
+.route-grid { display: grid; grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr); gap: 14px; }
+.route-stop .field-grid { gap: 11px; }
+.route-stop label { color: #536779; font-size: 11px; font-weight: 600; }
+.route-line { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; }
+.route-line i { width: 5px; height: 5px; border-radius: 50%; background: var(--orange); }
+.inline-link { margin-left: 4px; color: var(--teal); font-weight: 600; }
+.choice-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.choice { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.choice:has(input:checked) { border-color: var(--teal); background: var(--mint); }
+.choice input { width: auto; height: auto; margin: 0; }
+.choice strong, .choice small { display: block; }
+.choice strong { font-size: 12px; }
+.choice small { margin-top: 2px; color: var(--muted); font-size: 10px; }
+.payment-field { display: block; margin-top: 14px; max-width: 260px; color: #536779; font-size: 11px; font-weight: 600; }
+.booking-ticket { position: sticky; top: 16px; padding: 20px; border-radius: 12px; background: var(--navy); color: #fff; }
+.booking-ticket[hidden] { display: none; }
+.booking-ticket .eyebrow { color: #8ac8c7; margin-bottom: 4px; }
+.booking-ticket h3 { color: #fff; }
+.ticket-items { margin: 14px 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 12px; color: #dce7ee; }
+.ticket-empty { color: #8fa6b6; }
+.ticket-stats { margin: 0; padding: 12px 0; border-top: 1px dashed #416176; border-bottom: 1px dashed #416176; display: grid; gap: 8px; }
+.ticket-stats div { display: flex; justify-content: space-between; font-size: 11px; }
+.ticket-stats dt { color: #9db4c4; }
+.ticket-stats dd { margin: 0; font-weight: 700; }
+.ticket-total { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 4px; font-size: 12px; }
+.ticket-total strong { font: 800 24px Arial, sans-serif; color: #83d2ca; }
+.booking-ticket .field-note { color: #9db4c4; }
+.booking-ticket .form-message { color: #c1d0db; }
+.booking-ticket .form-message.error { color: #ffb4ab; }
+.booking-ticket .form-message.success { color: #83d2ca; }
+.booking-done { max-width: 520px; padding: 26px; }
+.calculator-panel { max-width: 760px; padding: 22px 24px; }
+.calculator-intro { margin: -7px 0 18px; font-size: 12px; }
+.calculator-points { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.calculator-point { display: grid; align-content: start; gap: 12px; min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 7px; }
+.calculator-point legend { padding: 0 5px; color: var(--navy); font-size: 12px; font-weight: 700; }
+.calculator-point label { color: #536779; font-size: 11px; font-weight: 600; }
+.calculator-point .button { justify-self: start; }
+.calculator-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.distance-result { margin-top: 18px; padding: 17px; border: 1px solid #d5e7e5; border-radius: 7px; background: #f5faf9; }
+.distance-result .eyebrow { margin-bottom: 5px; }
+.distance-result p:not(.eyebrow) { margin: 0 0 13px; color: #607280; font-size: 13px; }
+.distance-result strong { color: var(--navy); font: 800 24px Arial, sans-serif; }
+.result-divider { margin: 0 10px; color: #9aa8b0; }
+.calculator-disclaimer { margin-top: 14px; }
+@media (max-width: 980px) {
+  .builder-layout { grid-template-columns: 1fr; }
+  .booking-ticket { position: static; order: -1; }
+}
+@media (max-width: 650px) {
+  .route-grid, .choice-row { grid-template-columns: 1fr; }
+  .route-line { flex-direction: row; }
+  .manifest-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .calculator-panel { padding: 15px; }
+  .calculator-points { grid-template-columns: 1fr; }
+}
 a.button { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
