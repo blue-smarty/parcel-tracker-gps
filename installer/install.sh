@@ -39,6 +39,14 @@ read_password() {
   done
 }
 
+read_tomtom_api_key() {
+  local value
+  read -r -s -p "TomTom API key (optional; press Enter to skip or keep the current key): " value \
+    || { echo "Unable to read TomTom API key." >&2; exit 1; }
+  echo
+  REPLY="$value"
+}
+
 JAVA_MAJOR="$(java -version 2>&1 | sed -n 's/.*version "\([0-9]*\).*/\1/p' | head -1)"
 if [ "${JAVA_MAJOR:-0}" -lt 17 ]; then echo "JDK 17 or newer is required (found ${JAVA_MAJOR:-unknown})." >&2; exit 1; fi
 
@@ -47,6 +55,11 @@ chmod 700 "$INSTALL_DIR"
 
 if [ -e "$INSTALL_DIR/parcel-tracker.env" ]; then
   echo "Existing install found in $INSTALL_DIR; keeping its configuration and rebuilding the jar."
+  read_tomtom_api_key
+  if [ -n "$REPLY" ]; then
+    (umask 077; printf '\nTOMTOM_API_KEY=%q\n' "$REPLY" >> "$INSTALL_DIR/parcel-tracker.env")
+    echo "TomTom API key saved to $INSTALL_DIR/parcel-tracker.env."
+  fi
 else
   read_username "Admin username"; ADMIN_USERNAME="$REPLY"
   read_password "Admin password"; ADMIN_PASSWORD="$REPLY"
@@ -56,6 +69,7 @@ else
     echo "Courier username must differ from the admin username." >&2
   done
   read_password "Courier password"; COURIER_PASSWORD="$REPLY"
+  read_tomtom_api_key; TOMTOM_API_KEY="$REPLY"
   DB_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=')"
 
   # Fall back to the postgres OS account when local admin login requires it (typical on Linux).
@@ -80,6 +94,7 @@ else
        "jdbc:postgresql://$PG_HOST:5432/$DB_NAME" "$DB_USER" "$DB_PASSWORD"
      printf 'PARCEL_ADMIN_USERNAME=%q\nPARCEL_ADMIN_PASSWORD=%q\n' "$ADMIN_USERNAME" "$ADMIN_PASSWORD"
      printf 'PARCEL_BOOTSTRAP_COURIER_ID=%q\nPARCEL_BOOTSTRAP_PASSWORD=%q\n' "$COURIER_USERNAME" "$COURIER_PASSWORD"
+     if [ -n "$TOMTOM_API_KEY" ]; then printf 'TOMTOM_API_KEY=%q\n' "$TOMTOM_API_KEY"; fi
    } > "$INSTALL_DIR/parcel-tracker.env"
   )
   echo "Credentials saved to $INSTALL_DIR/parcel-tracker.env (owner-readable only)."

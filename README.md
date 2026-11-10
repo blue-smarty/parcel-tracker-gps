@@ -19,13 +19,14 @@ export PARCEL_ADMIN_USERNAME=admin
 export PARCEL_ADMIN_PASSWORD='your-admin-password'
 export PARCEL_BOOTSTRAP_COURIER_ID=courier-001
 export PARCEL_BOOTSTRAP_PASSWORD='your-courier-password'
+export TOMTOM_API_KEY='your-tomtom-api-key'
 cd backend
 mvn spring-boot:run
 ```
 
-In Windows PowerShell, use `$env:NAME = 'value'` instead of `export` for each variable. All admin and courier passwords must be at least 12 characters. Keep the same terminal open so the backend inherits these variables. For a managed PostgreSQL database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead; require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
+In Windows PowerShell, use `$env:NAME = 'value'` instead of `export` for each variable. All admin and courier passwords must be at least 12 characters. Keep the same terminal open so the backend inherits these variables. `TOMTOM_API_KEY` is required for address autocomplete; keep it private and configure it on the backend, not in browser code. Addresses can still be entered manually when suggestions are unavailable. For a managed PostgreSQL database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead; require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
 
-**Installer (optional):** with JDK 17+, Maven and PostgreSQL running, the installer prompts for an admin username and password and a courier username (courier ID) and password, creates the database role and database with a generated database password, builds the backend and writes a start script to `~/.parcel-tracker`. Usernames must differ and contain 1-255 letters, digits, dots, underscores or hyphens; passwords must contain 12-72 printable ASCII characters, including at least one non-space character. Password input is hidden, and credentials are kept in an owner-only file. Re-running keeps existing credentials and only rebuilds the jar.
+**Installer (optional):** with JDK 17+, Maven and PostgreSQL running, the installer prompts for an admin username and password, a courier username (courier ID) and password, and an optional TomTom API key for address suggestions. It creates the database role and database with a generated database password, builds the backend and writes a start script to `~/.parcel-tracker`. Usernames must differ and contain 1-255 letters, digits, dots, underscores or hyphens; passwords must contain 12-72 printable ASCII characters, including at least one non-space character. Password input is hidden, and credentials and the API key are kept in an owner-only file. On reruns, you can enter a new API key to add or replace the configured one, or press Enter to keep the current setting.
 
 ```bash
 installer/install.sh              # Linux/macOS; optional argument: install directory
@@ -96,7 +97,7 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 | `/dispatch.html` | Admins and dispatchers | Parcel queue, fleet map, assignments, ad hoc deliveries and local support requests |
 | `/admin-settings.html` | Admins | Redirects to the admin area |
 
-Address suggestions are requested from the same-origin `/api/address-suggestions` endpoint and looked up through Photon using OpenStreetMap data. Suggestions are optional; addresses can always be entered manually.
+Address suggestions are requested from the same-origin `/api/address-suggestions` endpoint and looked up through the TomTom Search API. Configure `TOMTOM_API_KEY` in the backend environment; the API key is never sent to the browser. Suggestions are optional; addresses can always be entered manually.
 
 Administrators can update delivery estimate rates from **Admin settings** in the dispatch and ad hoc delivery pages. The saved rates are used for customer previews and newly created parcels; previously saved parcel estimates do not change. Defaults remain a $5 base fee, $1.20 per kilometer, $0.50 per kilogram and a 1.75 same-day multiplier.
 

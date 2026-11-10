@@ -1,7 +1,11 @@
 package com.parceltracker.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -14,18 +18,22 @@ import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.repository.CourierAccountRepository;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 @WebMvcTest(AddressSuggestionController.class)
 @Import(SecurityConfig.class)
+@TestPropertySource(properties = "parcel.address-lookup.tomtom-api-key=test-tomtom-key")
 @WithMockUser(roles = "CUSTOMER")
 class AddressSuggestionControllerTest {
     @Autowired private MockMvc mvc;
@@ -36,9 +44,9 @@ class AddressSuggestionControllerTest {
     @Test
     void returnsFormattedSuggestionsToAuthenticatedUsers() throws Exception {
         JsonNode response = objectMapper.readTree("""
-                {"features":[
-                  {"properties":{"housenumber":"10","street":"Downing Street","city":"London","postcode":"SW1A 2AA","country":"United Kingdom"}},
-                  {"properties":{"name":"Downing Street","city":"London","country":"United Kingdom"}}
+                {"results":[
+                  {"address":{"freeformAddress":"10 Downing Street, London, SW1A 2AA, United Kingdom"}},
+                  {"address":{"freeformAddress":"Downing Street, London, United Kingdom"}}
                 ]}
                 """);
         when(addressLookupRestTemplate.getForObject(any(URI.class), eq(JsonNode.class))).thenReturn(response);
@@ -47,6 +55,12 @@ class AddressSuggestionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0]").value("10 Downing Street, London, SW1A 2AA, United Kingdom"))
                 .andExpect(jsonPath("$[1]").value("Downing Street, London, United Kingdom"));
+
+        ArgumentCaptor<URI> requestUri = ArgumentCaptor.forClass(URI.class);
+        verify(addressLookupRestTemplate).getForObject(requestUri.capture(), eq(JsonNode.class));
+        assertTrue(requestUri.getValue().toString().contains("/search/2/search/10%20Downing%20Street.json"));
+        assertTrue(requestUri.getValue().getQuery().contains("key=test-tomtom-key"));
+        assertTrue(requestUri.getValue().getQuery().contains("limit=5"));
     }
 
     @Test
@@ -79,5 +93,16 @@ class AddressSuggestionControllerTest {
 
         mvc.perform(get("/api/address-suggestions").param("q", "10 Downing Street"))
                 .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void reportsMissingTomTomApiKeyAsServiceUnavailable() {
+        AddressSuggestionController controller = new AddressSuggestionController(addressLookupRestTemplate, "");
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class, () -> controller.suggest("10 Downing Street"));
+
+        assertEquals(503, exception.getStatusCode().value());
+        verifyNoInteractions(addressLookupRestTemplate);
     }
 }

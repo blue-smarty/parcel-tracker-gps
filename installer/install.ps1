@@ -45,11 +45,28 @@ function Read-Password([string]$Prompt) {
     } while ($true)
 }
 
+function Read-OptionalTomTomApiKey {
+    $secureValue = Read-Host -AsSecureString 'TomTom API key (optional; press Enter to skip or keep the current key)'
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
+    try {
+        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+    } finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+    }
+}
+
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 $envFile = Join-Path $InstallDir 'parcel-tracker.env.ps1'
 
 if (Test-Path $envFile) {
     Write-Host "Existing install found in $InstallDir; keeping its configuration and rebuilding the jar."
+    $tomtomApiKey = Read-OptionalTomTomApiKey
+    if (-not [string]::IsNullOrEmpty($tomtomApiKey)) {
+        $escapedApiKey = $tomtomApiKey.Replace("'", "''")
+        Add-Content -Path $envFile -Value "`$env:TOMTOM_API_KEY = '$escapedApiKey'" -Encoding ASCII
+        & icacls $envFile /inheritance:r /grant:r "$($env:USERNAME):(R,W)" | Out-Null
+        Write-Host "TomTom API key saved to $envFile."
+    }
 } else {
     $adminUsername = Read-Username 'Admin username'
     $adminPassword = Read-Password 'Admin password'
@@ -60,6 +77,7 @@ if (Test-Path $envFile) {
         }
     } while ($courierUsername -ceq $adminUsername)
     $courierPassword = Read-Password 'Courier password'
+    $tomtomApiKey = Read-OptionalTomTomApiKey
     $dbPassword = New-Secret
     $secure = Read-Host -AsSecureString "Password for PostgreSQL user '$PgAdmin'"
     $env:PGPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
@@ -85,6 +103,10 @@ if (Test-Path $envFile) {
 `$env:PARCEL_BOOTSTRAP_COURIER_ID = '$($courierUsername.Replace("'", "''"))'
 `$env:PARCEL_BOOTSTRAP_PASSWORD = '$($courierPassword.Replace("'", "''"))'
 "@ | Set-Content -Path $envFile -Encoding ASCII
+    if (-not [string]::IsNullOrEmpty($tomtomApiKey)) {
+        $escapedApiKey = $tomtomApiKey.Replace("'", "''")
+        Add-Content -Path $envFile -Value "`$env:TOMTOM_API_KEY = '$escapedApiKey'" -Encoding ASCII
+    }
     & icacls $envFile /inheritance:r /grant:r "$($env:USERNAME):(R,W)" | Out-Null
     Write-Host "Credentials saved to $envFile (current user only)."
 }
