@@ -90,7 +90,6 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 | Page | Audience | Purpose |
 |------|----------|---------|
 | `/` | Everyone | Landing page with links to sign in or register |
-| `/distance-calculator.html` | Everyone | Calculate straight-line distance between two coordinates and open driving directions |
 | `/login.html` | Everyone | Sign in (customers and admins) or create a customer account; signed-in users are routed to their portal |
 | `/customer.html` | Customers | Book deliveries with address autocomplete, demo price estimate, track orders on a live map, demo receipt and support request |
 | `/book.html` | Customers | Parcel builder: pick item tiles, adjust weight and size, enter the route, choose timing and see a live demo price ticket |

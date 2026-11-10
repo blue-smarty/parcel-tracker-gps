@@ -55,10 +55,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/couriers/**").hasRole("COURIER")
                         .requestMatchers("/", "/index.html", "/login.html", "/forgot-password.html",
                                 "/customer.html", "/admin.html", "/dispatch.html", "/admin-adhoc.html", "/admin-settings.html",
-                                "/book.html", "/distance-calculator.html",
+                                "/book.html",
                                 "/styles.css", "/common.js", "/auth.js", "/password-reset.js",
                                 "/customer.js", "/admin.js", "/admin-adhoc.js", "/admin-settings.js",
-                                "/book.js", "/distance-calculator.js")
+                                "/book.js")
                                 .permitAll()
                         .requestMatchers("/api/branding", "/api/csrf").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pricing").hasAnyRole("ADMIN", "CUSTOMER")
