@@ -16,7 +16,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.Locale;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.stage.FileChooser;
@@ -48,17 +47,13 @@ public class CourierController {
     @FXML private Button acceptButton;
     @FXML private Button rejectButton;
     @FXML private Button routeButton;
-    @FXML private Button earningsButton;
     @FXML private Button proofButton;
     @FXML private Button photoButton;
     @FXML private Button clearSignatureButton;
     @FXML private Canvas signatureCanvas;
     @FXML private TextField barcodeField;
     @FXML private TextField dropOffNoteField;
-    @FXML private TextField tipAmountField;
-    @FXML private TextField payoutAmountField;
     @FXML private Label photoLabel;
-    @FXML private Label earningsLabel;
 
     private ApiService api;
     private Parcel selected;
@@ -82,7 +77,6 @@ public class CourierController {
         rejectButton.setOnAction(event -> decideRequest(false));
         proofButton.setOnAction(event -> submitProof());
         routeButton.setOnAction(event -> openOptimizedRoute());
-        earningsButton.setOnAction(event -> refreshEarnings());
         photoButton.setOnAction(event -> choosePhoto());
         clearSignatureButton.setOnAction(event -> clearSignature());
         signatureCanvas.setOnMousePressed(event -> beginSignature(event.getX(), event.getY()));
@@ -124,7 +118,6 @@ public class CourierController {
             statusLabel.setText("Loaded " + result.deliveries().size() + " active deliveries."
                     + (result.synced() == 0 ? "" : " Synced " + result.synced() + " offline update(s)."));
             if (result.deliveries().isEmpty()) select(null);
-            refreshEarnings();
         });
     }
 
@@ -212,38 +205,30 @@ public class CourierController {
 
     private void submitProof() {
         if (selected == null) return;
-        try {
-            DeliveryProof proof = new DeliveryProof();
-            proof.setRecipientSignature(signature.toString());
-            proof.setBarcode(trim(barcodeField.getText()));
-            proof.setDropOffNote(trim(dropOffNoteField.getText()));
-            proof.setPhotoBase64(photoBase64);
-            proof.setTipAmount(parseAmount(tipAmountField.getText()));
-            proof.setPayoutAmount(parseAmount(payoutAmountField.getText()));
-            if (proof.getRecipientSignature().isBlank() && proof.getBarcode().isBlank()
-                    && (proof.getPhotoBase64() == null || proof.getPhotoBase64().isBlank())) {
-                statusLabel.setText("Draw a recipient signature or add a barcode or drop-off photo.");
-                return;
-            }
-            String courierId = courierIdField.getText().trim();
-            String parcelId = selected.getId();
-            CourierUpdate update = new CourierUpdate(CourierUpdate.Type.PROOF, courierId, parcelId);
-            update.setProof(proof);
-            runQueued("courier-proof", () -> api.completeCourierDelivery(courierId, parcelId, proof), update,
-                    parcel -> {
-                        statusLabel.setText("Proof saved; delivery marked complete.");
-                        clearSignature();
-                        barcodeField.clear();
-                        dropOffNoteField.clear();
-                        tipAmountField.clear();
-                        payoutAmountField.clear();
-                        photoBase64 = null;
-                        photoLabel.setText("No photo selected");
-                        reload();
-                    });
-        } catch (NumberFormatException exception) {
-            statusLabel.setText("Enter non-negative numeric tip and payout amounts.");
+        DeliveryProof proof = new DeliveryProof();
+        proof.setRecipientSignature(signature.toString());
+        proof.setBarcode(trim(barcodeField.getText()));
+        proof.setDropOffNote(trim(dropOffNoteField.getText()));
+        proof.setPhotoBase64(photoBase64);
+        if (proof.getRecipientSignature().isBlank() && proof.getBarcode().isBlank()
+                && (proof.getPhotoBase64() == null || proof.getPhotoBase64().isBlank())) {
+            statusLabel.setText("Draw a recipient signature or add a barcode or drop-off photo.");
+            return;
         }
+        String courierId = courierIdField.getText().trim();
+        String parcelId = selected.getId();
+        CourierUpdate update = new CourierUpdate(CourierUpdate.Type.PROOF, courierId, parcelId);
+        update.setProof(proof);
+        runQueued("courier-proof", () -> api.completeCourierDelivery(courierId, parcelId, proof), update,
+                parcel -> {
+                    statusLabel.setText("Proof saved; delivery marked complete.");
+                    clearSignature();
+                    barcodeField.clear();
+                    dropOffNoteField.clear();
+                    photoBase64 = null;
+                    photoLabel.setText("No photo selected");
+                    reload();
+                });
     }
 
     private void choosePhoto() {
@@ -301,17 +286,6 @@ public class CourierController {
         graphics.strokeRect(0, 0, signatureCanvas.getWidth(), signatureCanvas.getHeight());
         graphics.setStroke(javafx.scene.paint.Color.BLACK);
         graphics.setLineWidth(2.0);
-    }
-
-    private void refreshEarnings() {
-        String courierId = courierIdField.getText() == null ? "" : courierIdField.getText().trim();
-        if (courierId.isEmpty()) {
-            earningsLabel.setText("Enter your courier ID to load earnings.");
-            return;
-        }
-        run("courier-earnings", () -> api.getCourierEarnings(courierId), earnings -> earningsLabel.setText(
-                String.format(Locale.US, "Completed deliveries: %d | tips: $%.2f | payouts: $%.2f",
-                        earnings.getCompletedDeliveries(), earnings.getTips(), earnings.getPayouts())));
     }
 
     private void openOptimizedRoute() {
@@ -400,14 +374,6 @@ public class CourierController {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    private static double parseAmount(String value) {
-        String trimmed = trim(value);
-        if (trimmed.isEmpty()) return 0.0;
-        double amount = Double.parseDouble(trimmed.replace(',', '.'));
-        if (!Double.isFinite(amount) || amount < 0) throw new NumberFormatException();
-        return amount;
-    }
-
     private static String trim(String value) {
         return value == null ? "" : value.trim();
     }
@@ -467,8 +433,6 @@ public class CourierController {
         proofButton.setDisable(!enabled);
         barcodeField.setDisable(!enabled);
         dropOffNoteField.setDisable(!enabled);
-        tipAmountField.setDisable(!enabled);
-        payoutAmountField.setDisable(!enabled);
         photoButton.setDisable(!enabled);
         clearSignatureButton.setDisable(!enabled);
         signatureCanvas.setDisable(!enabled);

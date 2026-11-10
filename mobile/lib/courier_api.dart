@@ -57,10 +57,6 @@ class CourierApi {
     return (data as List).cast<Map<String, dynamic>>();
   }
 
-  Future<Map<String, dynamic>> earnings() async =>
-      Map<String, dynamic>.from(
-          await _send('GET', '/api/couriers/${_segment(_requireId())}/earnings') as Map);
-
   Future<void> accept(String parcelId, bool accepted) => _mutate(
         'PUT',
         '/api/couriers/${_segment(_requireId())}/deliveries/${_segment(parcelId)}/decision',

@@ -14,7 +14,6 @@ public interface ParcelRepository extends JpaRepository<Parcel, String> {
     Optional<Parcel> findByTrackingNumber(String trackingNumber);
     List<Parcel> findByCustomerEmailOrderByCreatedAtDesc(String customerEmail);
     List<Parcel> findByCourierIdAndStatusNotIn(String courierId, Collection<ParcelStatus> statuses);
-    List<Parcel> findByCourierIdAndStatus(String courierId, ParcelStatus status);
 
     @Query("select p from Parcel p where p.status = :status "
             + "and p.courierId is not null and p.courierId <> '' and p.escalatedAt is null "

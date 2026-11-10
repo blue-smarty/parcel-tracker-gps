@@ -2,7 +2,6 @@ package com.parceltracker.controller;
 
 import com.parceltracker.dto.CourierStatusUpdate;
 import com.parceltracker.dto.CourierDecisionRequest;
-import com.parceltracker.dto.CourierEarnings;
 import com.parceltracker.dto.CourierIdentity;
 import com.parceltracker.model.DeliveryProof;
 import com.parceltracker.model.Location;
@@ -42,12 +41,6 @@ public class CourierController {
     @PreAuthorize("#courierId == authentication.name")
     public List<Parcel> activeDeliveries(@PathVariable String courierId) {
         return service.getActiveDeliveries(courierId);
-    }
-
-    @GetMapping("/earnings")
-    @PreAuthorize("#courierId == authentication.name")
-    public CourierEarnings earnings(@PathVariable String courierId) {
-        return service.getEarnings(courierId);
     }
 
     @PutMapping("/deliveries/{parcelId}/decision")

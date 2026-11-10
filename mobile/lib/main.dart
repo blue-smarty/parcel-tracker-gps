@@ -46,7 +46,6 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
   final _passwordField = TextEditingController();
   final _api = CourierApi(_apiBaseUrl(), OfflineQueue());
   List<Map<String, dynamic>> _deliveries = [];
-  Map<String, dynamic> _earnings = {};
   StreamSubscription<Position>? _locationSubscription;
   Position? _lastPosition;
   final ValueNotifier<Position?> _currentPosition = ValueNotifier<Position?>(null);
@@ -108,10 +107,8 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
       // Keep queued updates until the server is reachable.
     }
     late final List<Map<String, dynamic>> deliveries;
-    late final Map<String, dynamic> earnings;
     try {
       deliveries = await _api.deliveries();
-      earnings = await _api.earnings();
     } on SocketException {
       if (mounted) setState(() => _message = 'Offline. Previously loaded deliveries remain available.');
       return;
@@ -123,7 +120,6 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
     if (mounted) {
       setState(() {
         _deliveries = deliveries;
-        _earnings = earnings;
         _queued = queued;
         _message = null;
       });
@@ -242,7 +238,6 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
     if (mounted) {
       setState(() {
         _deliveries = [];
-        _earnings = {};
         _currentPosition.value = null;
         _lastPosition = null;
         _queued = 0;
@@ -325,8 +320,7 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
           padding: const EdgeInsets.all(16),
           children: [
             Text(
-              'Courier ${_api.courierId} · completed ${_earnings['completedDeliveries'] ?? 0} · '
-              'payouts \$${_earnings['payouts'] ?? '0.00'} · queued $_queued',
+              'Courier ${_api.courierId} · queued $_queued',
             ),
             if (_message != null)
               Padding(

@@ -20,7 +20,6 @@ class CourierOfflineQueueTest {
                 CourierOfflineQueue.CourierUpdate.Type.PROOF, "courier-1", "parcel-1");
         DeliveryProof proof = new DeliveryProof();
         proof.setBarcode("BAR-123");
-        proof.setTipAmount(2.0);
         update.setProof(proof);
 
         queue.enqueue(update);

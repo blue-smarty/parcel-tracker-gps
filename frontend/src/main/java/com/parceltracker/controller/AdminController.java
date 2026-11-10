@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.prefs.Preferences;
 import javafx.collections.FXCollections;
@@ -63,7 +62,6 @@ public class AdminController extends BorderPane {
     private final ComboBox<FleetDriver> courierChoice = new ComboBox<>();
     private final TextField driverNameField = new TextField();
     private final TextField courierIdField = new TextField();
-    private final TextField commissionField = new TextField();
     private final Label statusLabel = new Label("Loading operations…");
     private final Label revenueMetric = new Label("—");
     private final Label failedMetric = new Label("—");
@@ -117,7 +115,7 @@ public class AdminController extends BorderPane {
     private Node buildHeader() {
         Label title = new Label("Admin & Dispatcher Command Center");
         title.setStyle("-fx-font-size: 21px; -fx-font-weight: bold;");
-        Label demo = new Label("Demo workspace · fleet, commission, documents and support data are stored locally");
+        Label demo = new Label("Demo workspace · fleet, documents and support data are stored locally");
         Button refresh = new Button("Refresh operations");
         refresh.setOnAction(event -> {
             reloadParcels();
@@ -204,7 +202,6 @@ public class AdminController extends BorderPane {
     private Tab buildFleetTab() {
         addFleetColumn("Courier ID", "courierId", 150);
         addFleetColumn("Name", "name", 160);
-        addFleetColumn("Commission %", "commissionPercent", 120);
         addFleetColumn("Documents", "documentStatus", 130);
         addFleetColumn("Attachments", "documentCount", 100);
         fleetTable.setPlaceholder(new Label("No demo drivers onboarded"));
@@ -212,22 +209,19 @@ public class AdminController extends BorderPane {
             if (driver == null) return;
             driverNameField.setText(driver.name());
             courierIdField.setText(driver.courierId());
-            commissionField.setText(String.valueOf(driver.commissionPercent()));
         });
 
         driverNameField.setPromptText("Driver name");
         courierIdField.setPromptText("Courier ID");
-        commissionField.setPromptText("Commission %");
         Button saveDriver = new Button("Add / update driver");
         saveDriver.setOnAction(event -> saveDriver());
         Button attach = new Button("Attach documents");
         attach.setOnAction(event -> attachDocuments());
         Button review = new Button("Review documents");
         review.setOnAction(event -> reviewDocuments());
-        HBox fields = new HBox(8, driverNameField, courierIdField, commissionField, saveDriver, attach, review);
+        HBox fields = new HBox(8, driverNameField, courierIdField, saveDriver, attach, review);
         fields.setAlignment(Pos.CENTER_LEFT);
-        Tab tab = new Tab("Fleet management", new VBox(8, fleetTable, fields,
-                new Label("Courier IDs and commission rates are local demo settings; commission is not used for real payouts.")));
+        Tab tab = new Tab("Fleet management", new VBox(8, fleetTable, fields));
         tab.setClosable(false);
         return tab;
     }
@@ -520,19 +514,8 @@ public class AdminController extends BorderPane {
             statusLabel.setText("Enter both a driver name and courier ID.");
             return;
         }
-        double commission;
-        try {
-            commission = Double.parseDouble(commissionField.getText().trim());
-        } catch (RuntimeException e) {
-            statusLabel.setText("Enter a commission percentage from 0 to 100.");
-            return;
-        }
-        if (!Double.isFinite(commission) || commission < 0 || commission > 100) {
-            statusLabel.setText("Enter a commission percentage from 0 to 100.");
-            return;
-        }
         FleetDriver existing = drivers.stream().filter(driver -> driver.courierId().equals(id)).findFirst().orElse(null);
-        FleetDriver updated = new FleetDriver(id, name, commission,
+        FleetDriver updated = new FleetDriver(id, name,
                 existing == null ? "PENDING" : existing.documentStatus(),
                 existing == null ? List.of() : existing.documentPaths());
         if (existing == null) drivers.add(updated);
@@ -554,7 +537,7 @@ public class AdminController extends BorderPane {
         if (files == null || files.isEmpty()) return;
         List<String> paths = new ArrayList<>(driver.documentPaths());
         files.stream().map(File::getAbsolutePath).forEach(paths::add);
-        replaceDriver(driver, new FleetDriver(driver.courierId(), driver.name(), driver.commissionPercent(),
+        replaceDriver(driver, new FleetDriver(driver.courierId(), driver.name(),
                 "SUBMITTED", paths));
         statusLabel.setText("Attached " + files.size() + " local document(s) for review.");
     }
@@ -573,7 +556,7 @@ public class AdminController extends BorderPane {
         dialog.setHeaderText(driver.name() + " · " + driver.courierId());
         dialog.setContentText("Attached files: " + names + "\nChoose review result:");
         dialog.showAndWait().ifPresent(result -> {
-            replaceDriver(driver, new FleetDriver(driver.courierId(), driver.name(), driver.commissionPercent(),
+            replaceDriver(driver, new FleetDriver(driver.courierId(), driver.name(),
                     result, driver.documentPaths()));
             statusLabel.setText(result.equals("APPROVED")
                     ? "Driver documents marked approved." : "Driver documents need follow-up.");
@@ -685,15 +668,13 @@ public class AdminController extends BorderPane {
         T get() throws Exception;
     }
 
-    public record FleetDriver(String courierId, String name, double commissionPercent,
-                              String documentStatus, List<String> documentPaths) {
+    public record FleetDriver(String courierId, String name, String documentStatus, List<String> documentPaths) {
         public FleetDriver {
             documentPaths = documentPaths == null ? List.of() : List.copyOf(documentPaths);
         }
 
         public String getCourierId() { return courierId; }
         public String getName() { return name; }
-        public String getCommissionPercent() { return String.format(Locale.US, "%.1f%%", commissionPercent); }
         public String getDocumentStatus() { return documentStatus; }
         public String getDocumentCount() { return String.valueOf(documentPaths.size()); }
     }

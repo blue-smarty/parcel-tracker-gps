@@ -86,21 +86,9 @@ class CourierControllerTest {
         mvc.perform(post("/api/couriers/courier-1/deliveries/parcel-1/proof")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"barcode\":\"BAR-123\",\"tipAmount\":2.5,\"payoutAmount\":8.0}"))
+                        .content("{\"barcode\":\"BAR-123\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DELIVERED"));
-    }
-
-    @Test
-    void returnsEarningsSummary() throws Exception {
-        when(service.getEarnings("courier-1"))
-                .thenReturn(new com.parceltracker.dto.CourierEarnings(2, 3.5, 20.0));
-
-        mvc.perform(get("/api/couriers/courier-1/earnings"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.completedDeliveries").value(2))
-                .andExpect(jsonPath("$.tips").value(3.5))
-                .andExpect(jsonPath("$.payouts").value(20.0));
     }
 
     @Test

@@ -21,7 +21,6 @@
             <PasswordField fx:id="courierPasswordField" promptText="Courier password"/>
             <Button fx:id="refreshButton" text="Load deliveries" onAction="#loadDeliveries"/>
             <Button fx:id="routeButton" text="Optimize &amp; navigate"/>
-            <Button fx:id="earningsButton" text="Refresh earnings"/>
         </HBox>
     </top>
     <center>
@@ -55,11 +54,8 @@
             </HBox>
             <HBox spacing="8" alignment="CENTER_LEFT">
                 <TextField fx:id="dropOffNoteField" promptText="Drop-off note (optional)" HBox.hgrow="ALWAYS"/>
-                <TextField fx:id="tipAmountField" promptText="Tip" prefWidth="100"/>
-                <TextField fx:id="payoutAmountField" promptText="Payout" prefWidth="110"/>
                 <Button fx:id="proofButton" text="Submit proof &amp; complete"/>
             </HBox>
-            <Label fx:id="earningsLabel" text="Completed deliveries: 0 | tips: $0.00 | payouts: $0.00" wrapText="true"/>
             <Label fx:id="statusLabel" wrapText="true"/>
         </VBox>
     </center>

@@ -8,7 +8,6 @@ import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.model.DeliveryProof;
-import com.parceltracker.dto.CourierEarnings;
 import com.parceltracker.repository.ParcelRepository;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -76,14 +75,12 @@ class CourierServiceTest {
     }
 
     @Test
-    void completesDeliveryOnlyWithProofAndRecordsEarnings() {
+    void completesDeliveryWithProof() {
         Parcel parcel = parcel(ParcelStatus.OUT_FOR_DELIVERY);
         when(repository.findById("parcel-1")).thenReturn(Optional.of(parcel));
         when(repository.save(any(Parcel.class))).thenAnswer(invocation -> invocation.getArgument(0));
         DeliveryProof proof = new DeliveryProof();
         proof.setBarcode("BAR-123");
-        proof.setTipAmount(2.5);
-        proof.setPayoutAmount(8.0);
 
         Parcel delivered = service.completeDelivery("courier-1", "parcel-1", proof);
 
@@ -99,23 +96,6 @@ class CourierServiceTest {
         assertThrows(IllegalArgumentException.class,
                 () -> service.completeDelivery("courier-1", "parcel-1", new DeliveryProof()));
         verify(repository, never()).save(any());
-    }
-
-    @Test
-    void summarizesCompletedJobsTipsAndPayouts() {
-        Parcel completed = parcel(ParcelStatus.DELIVERED);
-        DeliveryProof proof = new DeliveryProof();
-        proof.setTipAmount(3.25);
-        proof.setPayoutAmount(12.50);
-        completed.setProofOfDelivery(proof);
-        when(repository.findByCourierIdAndStatus("courier-1", ParcelStatus.DELIVERED))
-                .thenReturn(List.of(completed));
-
-        CourierEarnings earnings = service.getEarnings("courier-1");
-
-        assertEquals(1, earnings.completedDeliveries());
-        assertEquals(3.25, earnings.tips());
-        assertEquals(12.50, earnings.payouts());
     }
 
     @Test

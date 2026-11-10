@@ -4,7 +4,6 @@ import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.model.DeliveryProof;
-import com.parceltracker.dto.CourierEarnings;
 import com.parceltracker.repository.ParcelRepository;
 import java.time.Instant;
 import java.util.List;
@@ -77,21 +76,6 @@ public class CourierService {
         Parcel saved = repository.save(parcel);
         locationService.publishStatusUpdate(saved);
         return saved;
-    }
-
-    public CourierEarnings getEarnings(String courierId) {
-        requireCourierId(courierId);
-        List<Parcel> completed = repository.findByCourierIdAndStatus(courierId, ParcelStatus.DELIVERED);
-        double tips = 0.0;
-        double payouts = 0.0;
-        for (Parcel parcel : completed) {
-            DeliveryProof proof = parcel.getProofOfDelivery();
-            if (proof != null) {
-                tips += proof.getTipAmount() == null ? 0.0 : proof.getTipAmount();
-                payouts += proof.getPayoutAmount() == null ? 0.0 : proof.getPayoutAmount();
-            }
-        }
-        return new CourierEarnings(completed.size(), tips, payouts);
     }
 
     public Parcel updateLocation(String courierId, String parcelId, Location location) {
