@@ -99,6 +99,8 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 
 Address suggestions are requested from the same-origin `/api/address-suggestions` endpoint and looked up through Photon using OpenStreetMap data. Suggestions are optional; addresses can always be entered manually.
 
+**Driving route (optional):** set `GOOGLE_MAPS_API_KEY` to a Google Cloud browser key with the Maps JavaScript API and Routes API enabled, and restrict it to your site's HTTP referrers (do not commit it). The parcel builder at `/book.html` then loads the Google Maps SDK, calculates the driving distance and time between the pickup and delivery addresses, fills in the distance and draws the route. Without a key, or if the lookup fails, enter the distance manually. `GET /api/maps-config` returns the key to signed-in users.
+
 Administrators can update delivery estimate rates from **Admin settings** in the dispatch and ad hoc delivery pages. The saved rates are used for customer previews and newly created parcels; previously saved parcel estimates do not change. Defaults remain a $5 base fee, $1.20 per kilometer, $0.50 per kilogram and a 1.75 same-day multiplier.
 
 The browser refreshes an expired CSRF token once when a write is rejected for that reason. If a save reports that the session is not authorized, sign out and sign back in with an administrator account; the browser must allow same-origin cookies.

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#102a43">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>ParcelPilot — Parcel builder</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/common.js" defer></script>
@@ -65,6 +66,13 @@
                 </div>
               </div>
               <p class="field-note">Start typing an address to see suggestions from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap data</a>, or enter it manually.</p>
+              <div id="routeTools" class="route-tools" hidden>
+                <div class="route-tools-head">
+                  <button id="calculateRouteButton" class="button button-secondary" type="button">Calculate driving route</button>
+                  <span id="routeSummary" class="route-summary" role="status" aria-live="polite"></span>
+                </div>
+                <div id="routeMap" class="route-map" hidden></div>
+              </div>
             </section>
 
             <section class="panel builder-step">

@@ -195,6 +195,88 @@
     }
   }
 
+  const route = { ready: false, loading: null, map: null, line: null, request: 0 };
+
+  function setRouteSummary(message, kind = '') {
+    const element = byId('routeSummary');
+    element.textContent = message;
+    element.className = `route-summary${kind ? ` ${kind}` : ''}`;
+  }
+
+  function loadGoogleMaps(apiKey) {
+    if (route.loading) return route.loading;
+    route.loading = new Promise((resolve, reject) => {
+      window.gm_authFailure = () => setRouteSummary('Google Maps rejected the API key. Enter the distance manually.', 'error');
+      window.initGoogleMaps = resolve;
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&v=weekly&callback=initGoogleMaps`;
+      script.async = true;
+      script.onerror = () => reject(new Error('Google Maps could not be loaded.'));
+      document.head.append(script);
+    });
+    route.loading.catch(() => { route.loading = null; });
+    return route.loading;
+  }
+
+  async function calculateRoute() {
+    const origin = byId('pickupAddress').value.trim();
+    const destination = byId('deliveryAddress').value.trim();
+    if (!route.ready || !origin || !destination) return;
+    const requestId = ++route.request;
+    byId('calculateRouteButton').disabled = true;
+    setRouteSummary('Calculating route…');
+    try {
+      const { Route } = await google.maps.importLibrary('routes');
+      const { routes } = await Route.computeRoutes({
+        origin, destination, travelMode: 'DRIVING',
+        fields: ['distanceMeters', 'durationMillis', 'path']
+      });
+      if (requestId !== route.request) return;
+      const best = routes?.[0];
+      if (!best || !positive(best.distanceMeters)) throw new Error('No driving route found.');
+      const km = Math.max(0.1, Math.round(best.distanceMeters / 100) / 10);
+      byId('routeDistance').value = km;
+      byId('routeDistance').dispatchEvent(new Event('input', { bubbles: true }));
+      const minutes = Math.max(1, Math.round((best.durationMillis || 0) / 60000));
+      setRouteSummary(`Driving distance ${km} km · about ${minutes} min`);
+      await drawRoute(best.path || []);
+    } catch (error) {
+      if (requestId !== route.request) return;
+      console.warn('Route lookup failed.', error);
+      byId('routeMap').hidden = true;
+      setRouteSummary('Could not calculate a route for these addresses. Check them or enter the distance manually.', 'error');
+    } finally {
+      if (requestId === route.request) byId('calculateRouteButton').disabled = false;
+    }
+  }
+
+  async function drawRoute(path) {
+    const { Map: GoogleMap, Polyline } = await google.maps.importLibrary('maps');
+    const points = path.map(point => ({ lat: point.lat, lng: point.lng }));
+    const container = byId('routeMap');
+    container.hidden = false;
+    if (!route.map) route.map = new GoogleMap(container, { disableDefaultUI: true, zoomControl: true, center: points[0], zoom: 10 });
+    route.line?.setMap(null);
+    route.line = new Polyline({ map: route.map, path: points, strokeColor: '#e9904b', strokeWeight: 4 });
+    const bounds = new google.maps.LatLngBounds();
+    points.forEach(point => bounds.extend(point));
+    route.map.fitBounds(bounds, 30);
+  }
+
+  async function setupRouteLookup() {
+    try {
+      const { apiKey } = await api('/api/maps-config');
+      if (!apiKey) return;
+      await loadGoogleMaps(apiKey);
+      route.ready = true;
+      byId('routeTools').hidden = false;
+      byId('calculateRouteButton').addEventListener('click', calculateRoute);
+      ['pickupAddress', 'deliveryAddress'].forEach(id => byId(id).addEventListener('change', calculateRoute));
+    } catch (error) {
+      console.warn('Google Maps route lookup is unavailable.', error);
+    }
+  }
+
   function reset() {
     lines.clear();
     byId('builderForm').reset();
@@ -203,6 +285,8 @@
     byId('builderForm').hidden = false;
     document.querySelector('.booking-ticket').hidden = false;
     byId('bookingDone').hidden = true;
+    byId('routeMap').hidden = true;
+    setRouteSummary('');
     renderTiles();
     renderManifest();
     updateSummary();
@@ -224,6 +308,7 @@
     renderTiles();
     updateSummary();
     byId('builderView').hidden = false;
+    setupRouteLookup();
     try {
       pricing = await api('/api/pricing');
       updateSummary();
