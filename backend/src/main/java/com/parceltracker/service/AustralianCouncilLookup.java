@@ -1,9 +1,16 @@
 package com.parceltracker.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -13,6 +20,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Service
 public class AustralianCouncilLookup {
     private static final String QUERY = "https://geo.abs.gov.au/arcgis/rest/services/ASGS2025/LGA/MapServer/0/query";
+    private static final List<Council> COUNCILS = loadCouncils();
     private final RestTemplate rest;
 
     public record Council(String code, String name, String state) {}
@@ -22,9 +30,7 @@ public class AustralianCouncilLookup {
     }
 
     public List<Council> all() {
-        URI uri = base().queryParam("where", "1=1").queryParam("resultRecordCount", 1000)
-                .build().encode().toUri();
-        return query(uri);
+        return COUNCILS;
     }
 
     public List<Council> at(double latitude, double longitude) {
@@ -39,6 +45,28 @@ public class AustralianCouncilLookup {
         return UriComponentsBuilder.fromHttpUrl(QUERY)
                 .queryParam("outFields", "LGA_CODE_2025,LGA_NAME_2025,STATE_CODE_2021")
                 .queryParam("returnGeometry", "false").queryParam("f", "json");
+    }
+
+    private static List<Council> loadCouncils() {
+        InputStream input = AustralianCouncilLookup.class.getResourceAsStream("/data/abs-lga-2025.tsv");
+        if (input == null) throw new IllegalStateException("Australian council catalogue is missing.");
+        List<Council> councils = new ArrayList<>();
+        Set<String> codes = new HashSet<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] fields = line.split("\t", -1);
+                if (fields.length != 3 || !fields[0].matches("[0-9]{5}")
+                        || fields[1].isBlank() || !fields[2].matches("[1-9]") || !codes.add(fields[0])) {
+                    throw new IllegalStateException("Australian council catalogue is invalid.");
+                }
+                councils.add(new Council(fields[0], fields[1], fields[2]));
+            }
+        } catch (IOException error) {
+            throw new IllegalStateException("Australian council catalogue could not be read.", error);
+        }
+        if (councils.isEmpty()) throw new IllegalStateException("Australian council catalogue is empty.");
+        return List.copyOf(councils);
     }
 
     private List<Council> query(URI uri) {
