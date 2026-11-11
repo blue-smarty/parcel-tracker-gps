@@ -56,13 +56,13 @@ public class SecurityConfig {
                         .requestMatchers("/", "/index.html", "/login.html", "/forgot-password.html",
                                 "/customer.html", "/admin.html", "/dispatch.html", "/admin-adhoc.html", "/admin-settings.html",
                                 "/book.html",
-                                "/styles.css", "/common.js", "/auth.js", "/password-reset.js",
+                                "/styles.css", "/common.js", "/auth.js", "/password-reset.js", "/quote.js",
                                 "/customer.js", "/admin.js", "/admin-adhoc.js", "/admin-settings.js",
                                 "/book.js")
                                 .permitAll()
                         .requestMatchers("/api/branding", "/api/csrf").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/pricing").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
-                        .requestMatchers(HttpMethod.POST, "/api/booking-route").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
+                        .requestMatchers(HttpMethod.GET, "/api/pricing").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/booking-route").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/address-suggestions").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/password-reset",

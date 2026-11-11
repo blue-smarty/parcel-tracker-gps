@@ -23,6 +23,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithAnonymousUser;
 
 @WebMvcTest(PricingController.class)
 @Import(SecurityConfig.class)
@@ -30,6 +31,14 @@ class PricingControllerTest {
     @Autowired private MockMvc mvc;
     @MockBean private CourierAccountRepository courierAccounts;
     @MockBean private PricingSettingsRepository pricingSettings;
+
+    @Test
+    @WithAnonymousUser
+    void anonymousVisitorCanReadPricingForQuote() throws Exception {
+        mvc.perform(get("/api/pricing"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.baseFee").value(5.0));
+    }
 
     @Test
     void customerCanReadDefaultPricing() throws Exception {

@@ -1,11 +1,16 @@
 package com.parceltracker.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.parceltracker.service.PublicQuoteRateLimiter;
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,11 +23,14 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class BookingRouteController {
     private final RestTemplate restTemplate;
     private final String apiKey;
+    private final PublicQuoteRateLimiter rateLimiter;
 
     public BookingRouteController(RestTemplate addressLookupRestTemplate,
-            @Value("${parcel.tomtom.api-key:}") String apiKey) {
+            @Value("${parcel.tomtom.api-key:}") String apiKey,
+            PublicQuoteRateLimiter rateLimiter) {
         this.restTemplate = addressLookupRestTemplate;
         this.apiKey = apiKey.trim();
+        this.rateLimiter = rateLimiter;
     }
 
     record RouteRequest(String origin, String destination) {}
@@ -30,7 +38,12 @@ public class BookingRouteController {
     record RouteResult(double distanceMeters, double durationSeconds, List<Point> points) {}
 
     @PostMapping("/api/booking-route")
-    public RouteResult route(@RequestBody RouteRequest request) {
+    public RouteResult route(@RequestBody RouteRequest request, HttpServletRequest servletRequest) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            rateLimiter.check(servletRequest.getRemoteAddr());
+        }
         String origin = address(request.origin());
         String destination = address(request.destination());
         if (apiKey.isEmpty()) {

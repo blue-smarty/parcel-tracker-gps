@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#102a43">
   <title>ParcelPilot — Parcel operations</title>
   <link rel="stylesheet" href="/styles.css">
+  <script src="/common.js" defer></script>
+  <script src="/quote.js" defer></script>
 </head>
 <body>
   <div class="shell">
@@ -30,6 +32,36 @@
           <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
           <div class="art-pin">↗</div><div class="art-dot dot-one"></div><div class="art-dot dot-two"></div>
         </div>
+      </section>
+
+      <section class="quote-section" aria-labelledby="quoteTitle">
+        <div class="section-heading">
+          <div><p class="eyebrow">QUICK ESTIMATE</p><h2 id="quoteTitle">Get a parcel quote.</h2></div>
+          <p class="field-note">No sign-in required. Enter your route and parcel details to see an estimate.</p>
+        </div>
+        <form id="quoteForm" class="panel quote-panel" novalidate>
+          <section class="quote-block">
+            <h3>Location details</h3>
+            <div class="field-grid two">
+              <label>Origin<input id="quoteOrigin" maxlength="255" autocomplete="off" placeholder="Suburb, postcode or country" required></label>
+              <label>Destination<input id="quoteDestination" maxlength="255" autocomplete="off" placeholder="Suburb, postcode or country" required></label>
+            </div>
+          </section>
+          <section class="quote-block">
+            <div class="quote-packages-heading"><h3>Package details</h3><button id="addQuotePackage" class="button button-quiet" type="button">Add another item</button></div>
+            <div id="quotePackages" class="quote-packages"></div>
+          </section>
+          <div class="quote-actions">
+            <p id="quoteMessage" class="form-message" role="status" aria-live="polite"></p>
+            <button id="calculateQuote" class="button button-primary" type="submit">Calculate quote</button>
+          </div>
+          <div id="quoteResult" class="quote-result" hidden aria-live="polite">
+            <div><span>Route distance</span><strong id="quoteDistance">—</strong></div>
+            <div><span>Total weight</span><strong id="quoteWeight">—</strong></div>
+            <div class="quote-total"><span>Estimated price</span><strong id="quotePrice">—</strong></div>
+            <p class="field-note">Estimate only; the final delivery price may vary. No payment is collected.</p>
+          </div>
+        </form>
       </section>
 
       <section class="landing-cards">

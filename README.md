@@ -92,7 +92,7 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 
 | Page | Audience | Purpose |
 |------|----------|---------|
-| `/` | Everyone | Landing page with links to sign in or register |
+| `/` | Everyone | Landing page with an account-free parcel quote calculator, plus links to sign in or register |
 | `/login.html` | Everyone | Sign in (customers and admins) or create a customer account; signed-in users are routed to their portal |
 | `/customer.html` | Customers | Parcel builder with item selection, route calculation, live price estimate, order tracking, demo receipt and support request |
 | `/book.html` | Customers | Redirects to the customer portal |
@@ -101,6 +101,8 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 | `/admin-settings.html` | Admins | Redirects to the admin area |
 
 Address suggestions are requested from the same-origin `/api/address-suggestions` endpoint and looked up through the TomTom Search API. Configure `TOMTOM_API_KEY` in the backend environment; the API key is never sent to the browser. Suggestions are optional; addresses can always be entered manually.
+
+The homepage quote calculator accepts origin, destination and parcel weight and dimensions, then displays a route-based estimate without creating an account or booking a delivery. Public route lookups are limited to 10 requests per client address per minute. A quote is an estimate only; booking and customer tracking still require a customer account.
 
 **Driving route:** set `TOMTOM_API_KEY` to a TomTom API key with access to the Search and Routing APIs (do not commit it), then restart the backend. In the parcel builder at `/customer.html` or the admin ad hoc delivery page, enter both addresses and select **Calculate driving route** to display the distance, driving time and route. Addresses are sent to TomTom for geocoding and routing; verify the matched route before booking. A successful route lookup is required to book through the parcel builder. The key stays on the server. Booking prices are demo estimates based on the calculated distance.
 
