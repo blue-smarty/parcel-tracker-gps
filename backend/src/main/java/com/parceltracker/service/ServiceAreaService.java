@@ -27,36 +27,43 @@ public class ServiceAreaService {
     private final ServiceAreaSettingsRepository settings;
     private final RestTemplate rest;
     private final String apiKey;
+    private final AustralianCouncilLookup councilLookup;
 
     public ServiceAreaService(ServiceAreaSettingsRepository settings, RestTemplate addressLookupRestTemplate,
-            @Value("${parcel.tomtom.api-key:}") String apiKey) {
+            @Value("${parcel.tomtom.api-key:}") String apiKey, AustralianCouncilLookup councilLookup) {
         this.settings = settings;
         this.rest = addressLookupRestTemplate;
         this.apiKey = apiKey.trim();
+        this.councilLookup = councilLookup;
     }
 
     public void requireDelivery(String pickup, String destination) {
-        if (!enabled()) return;
-        requireAddress(pickup, "Pickup");
-        requireAddress(destination, "Delivery");
+        ServiceAreaSettings current = currentSettings();
+        if ("UNRESTRICTED".equals(current.getCoverageMode())) return;
+        requireAddress(pickup, "Pickup", current);
+        requireAddress(destination, "Delivery", current);
     }
 
     public void requirePickup(String address) {
-        if (enabled()) requireAddress(address, "Pickup");
+        ServiceAreaSettings current = currentSettings();
+        if (!"UNRESTRICTED".equals(current.getCoverageMode())) requireAddress(address, "Pickup", current);
     }
 
     public void requireDestination(String address) {
-        if (enabled()) requireAddress(address, "Delivery");
+        ServiceAreaSettings current = currentSettings();
+        if (!"UNRESTRICTED".equals(current.getCoverageMode())) requireAddress(address, "Delivery", current);
     }
 
-    private boolean enabled() {
-        return settings.findById(ServiceAreaSettings.SINGLETON_ID)
+    private ServiceAreaSettings currentSettings() {
+        ServiceAreaSettings current = settings.findById(ServiceAreaSettings.SINGLETON_ID)
                 .orElseThrow(() -> new ServiceAreaException(HttpStatus.SERVICE_UNAVAILABLE,
-                        "Delivery service area settings are unavailable."))
-                .isMelbourneMetroOnly();
+                        "Delivery service area settings are unavailable."));
+        if (current.getCoverageMode() == null
+                || !Set.of("UNRESTRICTED", "MELBOURNE", "CUSTOM").contains(current.getCoverageMode())) throw unavailable();
+        return current;
     }
 
-    private void requireAddress(String address, String label) {
+    private void requireAddress(String address, String label, ServiceAreaSettings current) {
         if (address == null || address.isBlank() || address.trim().length() > 255) {
             throw new ServiceAreaException(HttpStatus.BAD_REQUEST, label + " address is required (up to 255 characters).");
         }
@@ -82,6 +89,17 @@ public class ServiceAreaService {
             double longitude = position.path("lon").asDouble();
             if (!Double.isFinite(latitude) || !Double.isFinite(longitude)
                     || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) throw invalidAddress(label);
+            if ("CUSTOM".equals(current.getCoverageMode())) {
+                for (var polygon : current.getPolygons()) {
+                    if (CoveragePolygon.contains(polygon, latitude, longitude)) return;
+                }
+                if (!current.getStates().isEmpty() || !current.getCouncils().isEmpty()) {
+                    var matching = councilLookup.at(latitude, longitude);
+                    if (matching.stream().anyMatch(c -> current.getStates().contains(c.state())
+                            || current.getCouncils().contains(c.code()))) return;
+                }
+                throw outside(label);
+            }
             URI query = UriComponentsBuilder.fromHttpUrl(VICMAP)
                     .queryParam("geometry", "{point}").queryParam("geometryType", "esriGeometryPoint")
                     .queryParam("inSR", "4326").queryParam("spatialRel", "esriSpatialRelIntersects")
@@ -115,7 +133,7 @@ public class ServiceAreaService {
 
     private static ServiceAreaException outside(String label) {
         return new ServiceAreaException(HttpStatus.UNPROCESSABLE_ENTITY,
-                label + " address is outside the Melbourne metropolitan service area.");
+                label + " address is outside the configured service area.");
     }
 
     private static ServiceAreaException unavailable() {

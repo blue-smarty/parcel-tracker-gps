@@ -2,12 +2,117 @@
   const { byId, api, money, setMessage } = PP;
   const fields = ['baseFee', 'perKmRate', 'perKgRate', 'sameDayMultiplier'];
   let savedServiceArea = null;
+  let polygons = [];
+  let savedCouncilCodes = [];
+  let councilsLoaded = false;
+  let coverageMap = null;
+  let coverageLayer = null;
+  let drawing = null;
+  const stateNames = { 1: 'NSW', 2: 'VIC', 3: 'QLD', 4: 'SA', 5: 'WA', 6: 'TAS', 7: 'NT', 8: 'ACT', 9: 'Other territories' };
+
+  function selectedValues(id) {
+    return [...byId(id).selectedOptions].map(option => option.value);
+  }
+
+  function renderPolygons() {
+    const list = byId('coveragePolygonList');
+    list.replaceChildren();
+    if (coverageLayer) coverageLayer.clearLayers();
+    polygons.forEach((polygon, index) => {
+      if (coverageLayer) L.polygon(polygon, { color: '#087e83' }).addTo(coverageLayer);
+      const row = document.createElement('div');
+      row.className = 'settings-actions';
+      const label = document.createElement('span');
+      label.textContent = `Custom area ${index + 1} (${polygon.length} points)`;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'button button-quiet';
+      remove.textContent = 'Remove';
+      remove.addEventListener('click', () => { polygons.splice(index, 1); renderPolygons(); });
+      row.append(label, remove);
+      list.append(row);
+    });
+    if (coverageLayer && drawing?.length) {
+      L.polyline(drawing, { color: '#e9904b' }).addTo(coverageLayer);
+      drawing.forEach(point => L.circleMarker(point, { radius: 4 }).addTo(coverageLayer));
+    }
+  }
+
+  function updateCoverageMode() {
+    const custom = byId('serviceAreaMode').value === 'CUSTOM';
+    if (!custom && drawing) {
+      byId('serviceAreaMode').value = 'CUSTOM';
+      setMessage('drawingMessage', 'Finish or cancel the area before changing coverage.', 'error');
+      return;
+    }
+    byId('customCoverage').hidden = !custom;
+    if (!custom) return;
+    if (!window.L) {
+      setMessage('drawingMessage', 'The map is unavailable; existing drawn areas are preserved.', 'error');
+      byId('drawCoverageButton').disabled = true;
+      return;
+    }
+    if (!coverageMap) {
+      coverageMap = L.map('coverageMap').setView([-37.8136, 144.9631], 9);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(coverageMap);
+      coverageLayer = L.layerGroup().addTo(coverageMap);
+      coverageMap.on('click', event => {
+        if (!drawing) return;
+        if (drawing.length >= 100) {
+          setMessage('drawingMessage', 'An area can have at most 100 points.', 'error');
+          return;
+        }
+        drawing.push([event.latlng.lat, event.latlng.lng]);
+        byId('finishCoverageButton').disabled = drawing.length < 3;
+        setMessage('drawingMessage', `${drawing.length} points placed.`);
+        renderPolygons();
+      });
+      renderPolygons();
+    }
+    window.setTimeout(() => coverageMap.invalidateSize(), 0);
+  }
+
+  function stopDrawing() {
+    drawing = null;
+    byId('drawCoverageButton').disabled = false;
+    byId('finishCoverageButton').disabled = true;
+    byId('cancelCoverageButton').disabled = true;
+    setMessage('drawingMessage', '');
+    renderPolygons();
+  }
+
+  async function loadCouncils() {
+    try {
+      const councils = await api('/api/admin/service-area/councils');
+      const select = byId('coverageCouncils');
+      select.replaceChildren(...councils.sort((a, b) => a.name.localeCompare(b.name)).map(council => {
+        const option = document.createElement('option');
+        option.value = council.code;
+        option.textContent = `${council.name} (${stateNames[council.state] || council.state})`;
+        option.selected = savedCouncilCodes.includes(council.code);
+        return option;
+      }));
+      councilsLoaded = true;
+      setMessage('councilMessage', 'ABS 2025 statistical council boundaries.');
+    } catch (error) {
+      setMessage('councilMessage', `Could not load council areas: ${error.message}`, 'error');
+    }
+  }
 
   async function loadServiceArea() {
     try {
       const settings = await api('/api/admin/service-area');
-      savedServiceArea = settings.melbourneMetroOnly;
-      byId('serviceAreaMode').value = String(savedServiceArea);
+      savedServiceArea = settings.coverageMode;
+      byId('serviceAreaMode').value = savedServiceArea;
+      polygons = settings.polygons || [];
+      savedCouncilCodes = settings.councils || [];
+      [...byId('coverageStates').options].forEach(option => {
+        option.selected = (settings.states || []).includes(option.value);
+      });
+      updateCoverageMode();
+      await loadCouncils();
       byId('saveServiceAreaButton').disabled = false;
       setMessage('serviceAreaMessage', 'Current service area loaded.');
     } catch (error) {
@@ -17,17 +122,27 @@
 
   async function saveServiceArea(event) {
     event.preventDefault();
-    const enabled = byId('serviceAreaMode').value === 'true';
-    if (savedServiceArea && !enabled
-        && !window.confirm('Disable the Melbourne restriction? New deliveries can be booked outside the service area.')) return;
+    const mode = byId('serviceAreaMode').value;
+    if (drawing) {
+      setMessage('serviceAreaMessage', 'Finish or cancel the area being drawn before saving.', 'error');
+      return;
+    }
+    if (savedServiceArea !== 'UNRESTRICTED' && mode === 'UNRESTRICTED'
+        && !window.confirm('Disable coverage restrictions? New deliveries can be booked outside the service area.')) return;
     const button = byId('saveServiceAreaButton');
     button.disabled = true;
     try {
       const settings = await api('/api/admin/service-area', {
-        method: 'PUT', body: JSON.stringify({ melbourneMetroOnly: enabled })
+        method: 'PUT', body: JSON.stringify({
+          coverageMode: mode,
+          states: selectedValues('coverageStates'),
+          councils: councilsLoaded ? selectedValues('coverageCouncils') : savedCouncilCodes,
+          polygons
+        })
       });
-      savedServiceArea = settings.melbourneMetroOnly;
-      byId('serviceAreaMode').value = String(savedServiceArea);
+      savedServiceArea = settings.coverageMode;
+      savedCouncilCodes = settings.councils;
+      byId('serviceAreaMode').value = savedServiceArea;
       setMessage('serviceAreaMessage', 'Service area saved.', 'success');
     } catch (error) {
       setMessage('serviceAreaMessage', `Could not save service area: ${error.message}`, 'error');
@@ -176,6 +291,20 @@
     byId('signOutButton').addEventListener('click', PP.signOut);
     byId('pricingForm').addEventListener('submit', savePricing);
     byId('serviceAreaForm').addEventListener('submit', saveServiceArea);
+    byId('serviceAreaMode').addEventListener('change', updateCoverageMode);
+    byId('drawCoverageButton').addEventListener('click', () => {
+      if (!coverageMap || drawing || polygons.length >= 20) return;
+      drawing = [];
+      byId('drawCoverageButton').disabled = true;
+      byId('cancelCoverageButton').disabled = false;
+      setMessage('drawingMessage', 'Click the map to add at least three boundary points.');
+    });
+    byId('finishCoverageButton').addEventListener('click', () => {
+      if (!drawing || drawing.length < 3) return;
+      polygons.push(drawing);
+      stopDrawing();
+    });
+    byId('cancelCoverageButton').addEventListener('click', stopDrawing);
     byId('reloadPricingButton').addEventListener('click', loadPricing);
     byId('dispatcherForm').addEventListener('submit', createDispatcher);
     fields.forEach(field => byId(field).addEventListener('input', renderPreview));

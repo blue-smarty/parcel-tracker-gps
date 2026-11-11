@@ -4,13 +4,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' } } = {}) {
+async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' }, withMap = false } = {}) {
   const elements = new Map();
   function byId(id) {
     if (!elements.has(id)) elements.set(id, {
-      value: '', textContent: '', disabled: false, hidden: true, listeners: {},
+      value: '', textContent: '', disabled: false, hidden: true, listeners: {}, options: [],
+      get selectedOptions() { return this.options.filter(option => option.selected); },
       addEventListener(event, callback) { this.listeners[event] = callback; },
-      replaceChildren() {},
+      append() {},
+      replaceChildren(...children) { this.options = children; },
       classList: { add() {} }
     });
     return elements.get(id);
@@ -33,17 +35,24 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
         return JSON.parse(options.body);
       }
       if (route === '/api/admin/service-area') {
-        return options?.method === 'PUT' ? JSON.parse(options.body) : { melbourneMetroOnly: false };
+        return options?.method === 'PUT' ? JSON.parse(options.body)
+          : { coverageMode: 'UNRESTRICTED', states: [], councils: [], polygons: [] };
       }
+      if (route === '/api/admin/service-area/councils') return [{ code: '25150', name: 'Melbourne', state: '2' }];
       if (route === '/api/admin/dispatchers') return [];
       throw new Error(`Unexpected request ${route}`);
     }
   };
+  const map = { setView() { return this; }, on(event, handler) { this[event] = handler; }, invalidateSize() {} };
+  const layer = { addTo() { return this; }, clearLayers() {} };
+  const L = { map: () => map, tileLayer: () => layer, layerGroup: () => layer,
+    polygon: () => layer, polyline: () => layer, circleMarker: () => layer };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin-settings.js'), 'utf8'), {
-    PP, window: { confirm: () => true }
+    PP, L, window: { confirm: () => true, L: withMap ? L : undefined, setTimeout: fn => fn() },
+    document: { createElement: () => ({ append() {}, addEventListener() {} }) }
   });
   await new Promise(resolve => setImmediate(resolve));
-  return { byId, requests, messages };
+  return { byId, requests, messages, map };
 }
 
 test('loads current pricing and previews sample estimates', async () => {
@@ -94,10 +103,39 @@ test('creates a dispatcher through the admin-only endpoint', async () => {
 
 test('loads and saves the Melbourne service area choice', async () => {
   const { byId, requests, messages } = await setup();
-  assert.equal(byId('serviceAreaMode').value, 'false');
-  byId('serviceAreaMode').value = 'true';
+  assert.equal(byId('serviceAreaMode').value, 'UNRESTRICTED');
+  byId('serviceAreaMode').value = 'MELBOURNE';
   await byId('serviceAreaForm').listeners.submit({ preventDefault() {} });
   const request = requests.find(item => item.route === '/api/admin/service-area' && item.options?.method === 'PUT');
-  assert.deepEqual(JSON.parse(request.options.body), { melbourneMetroOnly: true });
+  assert.deepEqual(JSON.parse(request.options.body), { coverageMode: 'MELBOURNE', states: [], councils: [], polygons: [] });
   assert.equal(messages.serviceAreaMessage.kind, 'success');
+});
+
+test('saves selected states and council codes in custom coverage', async () => {
+  const { byId, requests } = await setup();
+  byId('serviceAreaMode').value = 'CUSTOM';
+  byId('coverageStates').options = [{ value: '2', selected: true }];
+  byId('coverageCouncils').options[0].selected = true;
+  await byId('serviceAreaForm').listeners.submit({ preventDefault() {} });
+  const request = requests.find(item => item.route === '/api/admin/service-area' && item.options?.method === 'PUT');
+  assert.deepEqual(JSON.parse(request.options.body), {
+    coverageMode: 'CUSTOM', states: ['2'], councils: ['25150'], polygons: []
+  });
+});
+
+test('draws and saves a custom area and blocks unfinished drawings', async () => {
+    const { byId, requests, messages, map } = await setup({ withMap: true });
+    byId('serviceAreaMode').value = 'CUSTOM';
+    byId('serviceAreaMode').listeners.change();
+    byId('drawCoverageButton').listeners.click();
+    map.click({ latlng: { lat: -38, lng: 144 } });
+    map.click({ latlng: { lat: -38, lng: 145 } });
+    map.click({ latlng: { lat: -37, lng: 145 } });
+    await byId('serviceAreaForm').listeners.submit({ preventDefault() {} });
+    assert.match(messages.serviceAreaMessage.message, /Finish or cancel/);
+    assert.equal(requests.filter(item => item.options?.method === 'PUT').length, 0);
+    byId('finishCoverageButton').listeners.click();
+    await byId('serviceAreaForm').listeners.submit({ preventDefault() {} });
+    const request = requests.find(item => item.route === '/api/admin/service-area' && item.options?.method === 'PUT');
+    assert.deepEqual(JSON.parse(request.options.body).polygons, [[[-38, 144], [-38, 145], [-37, 145]]]);
 });
