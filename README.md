@@ -64,6 +64,7 @@ Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override desktop cl
 | PUT | `/api/parcels/{id}/courier` | Assign a provisioned courier with `{courierId}` (admin or dispatcher) |
 | GET | `/api/dispatch/couriers` | List courier IDs for dispatch (admin or dispatcher) |
 | GET, POST | `/api/admin/dispatchers` | List or create dispatcher accounts (admin only) |
+| GET, PUT | `/api/admin/service-area` | Read or change the Melbourne metro delivery restriction (admin only) |
 | PUT, DELETE | `/api/admin/dispatchers/{username}/password`, `/api/admin/dispatchers/{username}` | Reset password or revoke dispatcher account (admin only) |
 | GET | `/api/admin/me` | Verify admin credentials |
 | GET | `/api/couriers/{courierId}/deliveries` | List that courier's active assigned deliveries |
@@ -104,6 +105,8 @@ Address suggestions are requested from the same-origin `/api/address-suggestions
 **Driving route:** set `TOMTOM_API_KEY` to a TomTom API key with access to the Search and Routing APIs (do not commit it), then restart the backend. In the parcel builder at `/customer.html` or the admin ad hoc delivery page, enter both addresses and select **Calculate driving route** to display the distance, driving time and route. Addresses are sent to TomTom for geocoding and routing; verify the matched route before booking. A successful route lookup is required to book through the parcel builder. The key stays on the server. Booking prices are demo estimates based on the calculated distance.
 
 Administrators can update delivery estimate rates from **Admin settings** in the dispatch and ad hoc delivery pages. The saved rates are used for customer previews and newly created parcels; previously saved parcel estimates do not change. Defaults remain a $5 base fee, $1.20 per kilometer, $0.50 per kilogram and a 1.75 same-day multiplier.
+
+Administrators can enable **Melbourne metro councils only** in the admin area. The default is unrestricted. When enabled, new customer and ad hoc parcels must have both addresses geocoded by TomTom as street addresses and checked against the 31 metropolitan local government areas in the Victorian Government's [Vicmap Admin LGA service](https://services-ap1.arcgis.com/P744lA0wf4LlBZ84/ArcGIS/rest/services/Vicmap_Admin/FeatureServer/9). Pickup requests and changes to a parcel's delivery address are checked too. The full council areas are included, including their rural portions. Existing deliveries are not changed. Verification requires `TOMTOM_API_KEY` and network access to TomTom and Vicmap; bookings are rejected if verification is unavailable. Address matching depends on TomTom and should be confirmed by the operator. Settings changes are recorded with the administrator and timestamp in `service_area_audit`. Boundary source: State of Victoria, Vicmap Admin, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 The browser refreshes an expired CSRF token once when a write is rejected for that reason. If a save reports that the session is not authorized, sign out and sign back in with an administrator account; the browser must allow same-origin cookies.
 

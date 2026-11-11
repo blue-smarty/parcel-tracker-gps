@@ -11,12 +11,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class PickupService {
     private final PickupRepository repository;
+    private final ServiceAreaService serviceArea;
 
-    public PickupService(PickupRepository repository) {
+    public PickupService(PickupRepository repository, ServiceAreaService serviceArea) {
         this.repository = repository;
+        this.serviceArea = serviceArea;
     }
 
     public Pickup create(PickupRequest request, String customerEmail) {
+        serviceArea.requirePickup(request.getStreet().trim() + ", " + request.getCity().trim()
+                + " " + request.getPostalCode().trim() + ", Victoria, Australia");
         Pickup p = new Pickup();
         p.setContactName(request.getContactName().trim());
         p.setContactPhone(request.getContactPhone().trim());

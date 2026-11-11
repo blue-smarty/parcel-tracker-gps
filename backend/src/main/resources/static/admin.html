@@ -25,6 +25,21 @@
           <a class="button button-secondary" href="/dispatch.html">Open dispatch workspace</a>
         </div>
         <div class="settings-grid">
+          <section class="panel settings-panel" aria-labelledby="serviceAreaTitle">
+            <div class="panel-heading"><div><p class="eyebrow">DELIVERY COVERAGE</p><h3 id="serviceAreaTitle">Service area</h3></div></div>
+            <p class="field-note">When enabled, pickup and delivery addresses must be verified within the 31 Melbourne metropolitan council areas. Vicmap and TomTom must be available. Existing deliveries are not changed.</p>
+            <form id="serviceAreaForm" class="settings-form">
+              <label>Coverage
+                <select id="serviceAreaMode">
+                  <option value="false">Unrestricted</option>
+                  <option value="true">Melbourne metro councils only</option>
+                </select>
+              </label>
+              <p class="field-note">Unrestricted allows bookings outside Melbourne. Changes are recorded in the server audit log.</p>
+              <button id="saveServiceAreaButton" class="button button-primary" type="submit" disabled>Save service area</button>
+              <p id="serviceAreaMessage" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </section>
           <section class="panel settings-panel" aria-labelledby="pricingTitle">
             <div class="panel-heading"><div><p class="eyebrow">DELIVERY PRICING</p><h3 id="pricingTitle">Estimate rates</h3></div></div>
             <p class="field-note">These rates determine estimates for new parcels. Existing parcel estimates are not changed.</p>

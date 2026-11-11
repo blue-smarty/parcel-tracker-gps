@@ -32,12 +32,15 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
         if (failSave) throw new Error('Rejected');
         return JSON.parse(options.body);
       }
+      if (route === '/api/admin/service-area') {
+        return options?.method === 'PUT' ? JSON.parse(options.body) : { melbourneMetroOnly: false };
+      }
       if (route === '/api/admin/dispatchers') return [];
       throw new Error(`Unexpected request ${route}`);
     }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin-settings.js'), 'utf8'), {
-    PP, window: {}
+    PP, window: { confirm: () => true }
   });
   await new Promise(resolve => setImmediate(resolve));
   return { byId, requests, messages };
@@ -87,4 +90,14 @@ test('creates a dispatcher through the admin-only endpoint', async () => {
   assert.deepEqual(JSON.parse(request.options.body), { username: 'dispatch1', password: 'strong-password' });
   assert.equal(byId('dispatcherPassword').value, '');
   assert.match(messages.dispatcherMessage.message, /created/);
+});
+
+test('loads and saves the Melbourne service area choice', async () => {
+  const { byId, requests, messages } = await setup();
+  assert.equal(byId('serviceAreaMode').value, 'false');
+  byId('serviceAreaMode').value = 'true';
+  await byId('serviceAreaForm').listeners.submit({ preventDefault() {} });
+  const request = requests.find(item => item.route === '/api/admin/service-area' && item.options?.method === 'PUT');
+  assert.deepEqual(JSON.parse(request.options.body), { melbourneMetroOnly: true });
+  assert.equal(messages.serviceAreaMessage.kind, 'success');
 });
