@@ -52,6 +52,7 @@ Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override desktop cl
 | Method | Path | Description |
 |---|---|---|
 | POST | `/api/parcels` | Create parcel (customer or admin authentication required) |
+| POST | `/api/booking-route` | Calculate a TomTom driving route from `{origin, destination}` (customer authentication required) |
 | POST | `/api/parcels/adhoc` | Create a parcel and assign a provisioned courier (admin or dispatcher) |
 | GET | `/api/parcels` | List parcels (admin or dispatcher) |
 | GET | `/api/parcels/mine` | List the authenticated customer's parcels |
@@ -93,11 +94,14 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 | `/` | Everyone | Landing page with links to sign in or register |
 | `/login.html` | Everyone | Sign in (customers and admins) or create a customer account; signed-in users are routed to their portal |
 | `/customer.html` | Customers | Book deliveries with address autocomplete, demo price estimate, track orders on a live map, demo receipt and support request |
+| `/book.html` | Customers | Parcel builder: pick item tiles, adjust weight and size, enter the route, choose timing and see a live demo price ticket |
 | `/admin.html` | Admins | Configure delivery pricing and create, reset or revoke dispatcher accounts |
 | `/dispatch.html` | Admins and dispatchers | Parcel queue, fleet map, assignments, ad hoc deliveries and local support requests |
 | `/admin-settings.html` | Admins | Redirects to the admin area |
 
 Address suggestions are requested from the same-origin `/api/address-suggestions` endpoint and looked up through the TomTom Search API. Configure `TOMTOM_API_KEY` in the backend environment; the API key is never sent to the browser. Suggestions are optional; addresses can always be entered manually.
+
+**Driving route:** set `TOMTOM_API_KEY` to a TomTom API key with access to the Search and Routing APIs (do not commit it), then restart the backend. In the parcel builder at `/book.html`, enter both addresses and select **Calculate driving route** to display the distance, driving time and route. Addresses are sent to TomTom for geocoding and routing; verify the matched route before booking. A successful route lookup is required to book through the parcel builder. The key stays on the server. Booking prices are demo estimates based on the calculated distance.
 
 Administrators can update delivery estimate rates from **Admin settings** in the dispatch and ad hoc delivery pages. The saved rates are used for customer previews and newly created parcels; previously saved parcel estimates do not change. Defaults remain a $5 base fee, $1.20 per kilometer, $0.50 per kilogram and a 1.75 same-day multiplier.
 
