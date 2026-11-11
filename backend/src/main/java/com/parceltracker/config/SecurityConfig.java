@@ -61,8 +61,8 @@ public class SecurityConfig {
                                 "/book.js")
                                 .permitAll()
                         .requestMatchers("/api/branding", "/api/csrf").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/pricing").hasAnyRole("ADMIN", "CUSTOMER")
-                        .requestMatchers(HttpMethod.POST, "/api/booking-route").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/pricing").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
+                        .requestMatchers(HttpMethod.POST, "/api/booking-route").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
                         .requestMatchers(HttpMethod.GET, "/api/address-suggestions").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/password-reset",

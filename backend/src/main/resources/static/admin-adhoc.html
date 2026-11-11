@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#102a43">
   <title>ParcelPilot — New ad hoc delivery</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <link rel="stylesheet" href="/styles.css">
   <script src="/common.js" defer></script>
   <script src="/admin-adhoc.js" defer></script>
@@ -31,32 +33,87 @@
             <a class="button button-quiet" href="/dispatch.html">Back to dispatch</a>
           </div>
         </div>
-        <div class="panel adhoc-panel">
-          <div class="panel-heading"><div><p class="eyebrow">AD HOC DELIVERY</p><h3>Create and assign a parcel</h3></div></div>
-          <p class="field-note">Enter pickup and delivery details and choose a provisioned courier. This parcel is not linked to a customer account.</p>
-          <form id="adhocForm">
-            <div class="field-grid two">
-              <label>Sender name<input id="adhocSender" maxlength="255" required></label>
-              <label>Sender contact (phone or email)<input id="adhocContact" maxlength="255" required></label>
-              <label class="span-two">Pickup address<input id="adhocPickup" maxlength="255" required></label>
-              <label>Recipient name<input id="adhocRecipient" maxlength="255" required></label>
-              <div>
-                <div class="adhoc-courier-heading">
-                  <label for="adhocCourier">Courier</label>
-                  <button id="refreshCouriersButton" class="button button-quiet" type="button">Refresh couriers</button>
+        <p class="field-note">Build the parcel, calculate and verify its driving route, then choose a provisioned courier. Ad hoc deliveries are not linked to a customer account.</p>
+        <div class="builder-layout">
+          <form id="adhocForm" class="builder-steps">
+            <section class="panel builder-step">
+              <div class="step-title"><span class="step-number">1</span><div><h3>What are you sending?</h3><p class="field-note">Tap a tile to add it. Tap again to add more.</p></div></div>
+              <div id="itemTiles" class="item-tiles"></div>
+            </section>
+
+            <section class="panel builder-step" id="manifestStep" hidden>
+              <div class="step-title"><span class="step-number">2</span><div><h3>Check the details</h3><p class="field-note">Adjust the typical size and weight for this parcel.</p></div></div>
+              <div id="manifestRows" class="manifest-rows"></div>
+            </section>
+
+            <section class="panel builder-step">
+              <div class="step-title"><span class="step-number">3</span><div><h3>Pickup and delivery</h3></div></div>
+              <div class="route-grid">
+                <div class="route-stop">
+                  <p class="eyebrow">FROM</p>
+                  <div class="field-grid">
+                    <label>Sender name<input id="adhocSender" maxlength="255" required></label>
+                    <label>Sender contact<input id="adhocContact" maxlength="255" required></label>
+                    <label>Pickup address<input id="adhocPickup" autocomplete="street-address" maxlength="255" required></label>
+                  </div>
                 </div>
-                <select id="adhocCourier" required><option value="">Loading couriers…</option></select>
+                <div class="route-line" aria-hidden="true"><i></i><i></i><i></i></div>
+                <div class="route-stop">
+                  <p class="eyebrow">TO</p>
+                  <div class="field-grid">
+                    <label>Recipient name<input id="adhocRecipient" maxlength="255" required></label>
+                    <label>Delivery address<input id="adhocDestination" maxlength="255" required></label>
+                    <div class="route-distance">Route distance (km)<output id="routeDistance" aria-live="polite">Not calculated</output></div>
+                  </div>
+                </div>
               </div>
-              <label class="span-two">Delivery address<input id="adhocDestination" maxlength="255" required></label>
-            </div>
-            <p class="field-note">Start typing to see address suggestions. You can also enter an address manually. Suggestions powered by <a href="https://developer.tomtom.com/" target="_blank" rel="noopener noreferrer">TomTom</a>.</p>
-            <p id="courierMessage" class="form-message" role="status" aria-live="polite"></p>
-            <div class="adhoc-actions">
-              <button id="adhocButton" class="button button-primary" type="submit">Create and assign delivery</button>
-              <a id="viewDeliveryLink" class="button button-secondary" href="/dispatch.html" hidden>View in dispatch</a>
-            </div>
-            <p id="adhocMessage" class="form-message" role="status" aria-live="polite"></p>
+              <p class="field-note">Start typing for address suggestions or enter addresses manually. Suggestions and routes are powered by TomTom.</p>
+              <div class="route-tools">
+                <div class="route-tools-head">
+                  <button id="calculateRouteButton" class="button button-secondary" type="button">Calculate driving route</button>
+                  <span id="routeSummary" class="route-summary" role="status" aria-live="polite"></span>
+                </div>
+                <div id="routeMap" class="route-map" hidden></div>
+                <p class="field-note">Confirm the route before assigning the delivery.</p>
+              </div>
+            </section>
+
+            <section class="panel builder-step">
+              <div class="step-title"><span class="step-number">4</span><div><h3>When and how?</h3></div></div>
+              <div class="choice-row" role="radiogroup" aria-label="Delivery speed">
+                <label class="choice"><input type="radio" name="speed" value="SCHEDULED" checked><span><strong>Scheduled</strong><small>Pick a date and time window</small></span></label>
+                <label class="choice"><input type="radio" name="speed" value="SAME_DAY"><span><strong>Same-day</strong><small>Priority handling at a premium</small></span></label>
+              </div>
+              <div id="scheduleFields" class="field-grid two">
+                <label>Delivery date<input id="scheduleDate" type="date"></label>
+                <label>Time window<select id="scheduleWindow"><option value="">Choose a window</option><option>08:00-10:00</option><option>10:00-12:00</option><option>12:00-14:00</option><option>14:00-16:00</option><option>16:00-18:00</option></select></label>
+              </div>
+              <label class="payment-field">Payment (demo)
+                <select id="paymentChoice"><option value="DEMO_CARD">Demo card</option><option value="DEMO_MOBILE_WALLET">Demo mobile wallet</option><option value="CASH_ON_DELIVERY">Cash on delivery</option></select>
+              </label>
+            </section>
           </form>
+
+          <aside class="booking-ticket" aria-label="Ad hoc booking summary">
+            <div class="ticket-head"><p class="eyebrow">AD HOC DELIVERY</p><h3>Assignment summary</h3></div>
+            <ul id="ticketItems" class="ticket-items"><li class="ticket-empty">No items yet</li></ul>
+            <dl class="ticket-stats">
+              <div><dt>Total weight</dt><dd id="ticketWeight">—</dd></div>
+              <div><dt>Distance</dt><dd id="ticketDistance">—</dd></div>
+              <div><dt>Speed</dt><dd id="ticketSpeed">Scheduled</dd></div>
+            </dl>
+            <div class="ticket-total"><span>Estimated price</span><strong id="ticketPrice">$—</strong></div>
+            <p class="field-note">Demo estimate only; no payment is collected.</p>
+            <div class="adhoc-courier-heading">
+              <label for="adhocCourier">Assign courier</label>
+              <button id="refreshCouriersButton" class="button button-quiet" type="button">Refresh</button>
+            </div>
+            <select id="adhocCourier" required form="adhocForm"><option value="">Loading couriers…</option></select>
+            <p id="courierMessage" class="form-message" role="status" aria-live="polite"></p>
+            <button id="adhocButton" class="button button-primary full-button" type="submit" form="adhocForm">Create and assign <span>→</span></button>
+            <a id="viewDeliveryLink" class="button button-secondary full-button" href="/dispatch.html" hidden>View in dispatch</a>
+            <p id="adhocMessage" class="form-message" role="status" aria-live="polite"></p>
+          </aside>
         </div>
       </section>
     </main>

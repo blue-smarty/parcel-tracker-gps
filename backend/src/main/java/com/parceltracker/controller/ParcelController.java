@@ -45,6 +45,16 @@ public class ParcelController {
         parcel.setPickupAddress(request.pickupAddress().trim());
         parcel.setRecipient(request.recipient().trim());
         parcel.setDestination(request.destination().trim());
+        parcel.setPackageSize(request.packageSize());
+        parcel.setWidthCm(request.widthCm());
+        parcel.setLengthCm(request.lengthCm());
+        parcel.setHeightCm(request.heightCm());
+        parcel.setWeightKg(request.weightKg());
+        parcel.setDistanceKm(request.distanceKm());
+        parcel.setDeliverySpeed(request.deliverySpeed());
+        parcel.setScheduledDate(request.scheduledDate());
+        parcel.setScheduledWindow(request.scheduledWindow());
+        parcel.setPaymentMethod(request.paymentMethod());
         return service.createAssigned(parcel, courierId);
     }
 
