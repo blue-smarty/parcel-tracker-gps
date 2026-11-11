@@ -1,6 +1,40 @@
 (() => {
   const { byId, api, money, setMessage } = PP;
   const fields = ['baseFee', 'perKmRate', 'perKgRate', 'sameDayMultiplier'];
+  let savedServiceArea = null;
+
+  async function loadServiceArea() {
+    try {
+      const settings = await api('/api/admin/service-area');
+      savedServiceArea = settings.melbourneMetroOnly;
+      byId('serviceAreaMode').value = String(savedServiceArea);
+      byId('saveServiceAreaButton').disabled = false;
+      setMessage('serviceAreaMessage', 'Current service area loaded.');
+    } catch (error) {
+      setMessage('serviceAreaMessage', `Could not load service area: ${error.message}`, 'error');
+    }
+  }
+
+  async function saveServiceArea(event) {
+    event.preventDefault();
+    const enabled = byId('serviceAreaMode').value === 'true';
+    if (savedServiceArea && !enabled
+        && !window.confirm('Disable the Melbourne restriction? New deliveries can be booked outside the service area.')) return;
+    const button = byId('saveServiceAreaButton');
+    button.disabled = true;
+    try {
+      const settings = await api('/api/admin/service-area', {
+        method: 'PUT', body: JSON.stringify({ melbourneMetroOnly: enabled })
+      });
+      savedServiceArea = settings.melbourneMetroOnly;
+      byId('serviceAreaMode').value = String(savedServiceArea);
+      setMessage('serviceAreaMessage', 'Service area saved.', 'success');
+    } catch (error) {
+      setMessage('serviceAreaMessage', `Could not save service area: ${error.message}`, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
 
   function readForm() {
     return Object.fromEntries(fields.map(field => [field, Number(byId(field).value)]));
@@ -141,12 +175,13 @@
     byId('accountName').textContent = user.name;
     byId('signOutButton').addEventListener('click', PP.signOut);
     byId('pricingForm').addEventListener('submit', savePricing);
+    byId('serviceAreaForm').addEventListener('submit', saveServiceArea);
     byId('reloadPricingButton').addEventListener('click', loadPricing);
     byId('dispatcherForm').addEventListener('submit', createDispatcher);
     fields.forEach(field => byId(field).addEventListener('input', renderPreview));
     byId('settingsView').hidden = false;
     byId('settingsView').classList.add('active-view');
-    await Promise.all([loadPricing(), loadDispatchers()]);
+    await Promise.all([loadPricing(), loadDispatchers(), loadServiceArea()]);
   }
 
   initialize();

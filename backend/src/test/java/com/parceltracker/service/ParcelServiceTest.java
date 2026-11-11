@@ -16,7 +16,7 @@ class ParcelServiceTest {
         ParcelRepository repository = mock(ParcelRepository.class);
         when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
         ParcelService service = new ParcelService(repository,
-                new DemoPricingService(mock(PricingSettingsRepository.class)));
+                new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class));
         Parcel parcel = new Parcel();
         parcel.setId("client-id");
         parcel.setTrackingNumber("client-tracking");
@@ -34,5 +34,22 @@ class ParcelServiceTest {
         assertEquals("courier-1", result.getCourierId());
         assertNull(result.getCustomerEmail());
         assertEquals("1 Main St", result.getPickupAddress());
+    }
+
+    @Test
+    void doesNotSaveWhenDeliveryIsOutsideServiceArea() {
+        ParcelRepository repository = mock(ParcelRepository.class);
+        ServiceAreaService area = mock(ServiceAreaService.class);
+        doThrow(new ServiceAreaException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "outside"))
+                .when(area).requireDelivery(anyString(), anyString());
+        ParcelService service = new ParcelService(repository,
+                new DemoPricingService(mock(PricingSettingsRepository.class)), area);
+        Parcel parcel = new Parcel();
+        parcel.setPickupAddress("Pickup");
+        parcel.setDestination("Outside");
+
+        assertThrows(ServiceAreaException.class, () -> service.create(parcel, "customer@example.com"));
+        assertThrows(ServiceAreaException.class, () -> service.createAssigned(parcel, "courier"));
+        verify(repository, never()).save(any());
     }
 }

@@ -15,18 +15,22 @@ import com.parceltracker.repository.ParcelRepository;
 public class ParcelService {
     private final ParcelRepository repository;
     private final DemoPricingService pricing;
+    private final ServiceAreaService serviceArea;
 
-    public ParcelService(ParcelRepository repository, DemoPricingService pricing) {
+    public ParcelService(ParcelRepository repository, DemoPricingService pricing, ServiceAreaService serviceArea) {
         this.repository = repository;
         this.pricing = pricing;
+        this.serviceArea = serviceArea;
     }
 
     public Parcel create(Parcel parcel, String customerEmail) {
+        serviceArea.requireDelivery(parcel.getPickupAddress(), parcel.getDestination());
         prepareNewParcel(parcel, customerEmail);
         return repository.save(parcel);
     }
 
     public Parcel createAssigned(Parcel parcel, String courierId) {
+        serviceArea.requireDelivery(parcel.getPickupAddress(), parcel.getDestination());
         prepareNewParcel(parcel, null);
         parcel.setCourierId(courierId);
         return repository.save(parcel);
@@ -71,6 +75,7 @@ public class ParcelService {
 
     public Parcel update(String id, Parcel changes) {
         Parcel existing = get(id);
+        if (changes.getDestination() != null) serviceArea.requireDestination(changes.getDestination());
         if (changes.getSender() != null) existing.setSender(changes.getSender());
         if (changes.getRecipient() != null) existing.setRecipient(changes.getRecipient());
         if (changes.getDestination() != null) existing.setDestination(changes.getDestination());
