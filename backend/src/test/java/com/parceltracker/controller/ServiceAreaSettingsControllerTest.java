@@ -11,6 +11,7 @@ import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.model.ServiceAreaSettings;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.ServiceAreaSettingsRepository;
+import com.parceltracker.service.AustralianCouncilLookup;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ class ServiceAreaSettingsControllerTest {
     @MockBean private ServiceAreaSettingsRepository settings;
     @MockBean private CourierAccountRepository couriers;
     @MockBean private JdbcTemplate jdbc;
+    @MockBean private AustralianCouncilLookup councilLookup;
 
     @Test
     void onlyAdminCanChangeSettingWithCsrf() throws Exception {
@@ -42,6 +44,42 @@ class ServiceAreaSettingsControllerTest {
                 .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.melbourneMetroOnly").value(true));
         verify(settings).save(any(ServiceAreaSettings.class));
-        verify(jdbc).update(anyString(), any(), eq("admin"), eq(true));
+        verify(jdbc).update(anyString(), any(), eq("admin"), eq(true), any());
+    }
+
+    @Test
+    void rejectsEmptyCustomCoverage() throws Exception {
+        when(settings.findForUpdate()).thenReturn(Optional.of(new ServiceAreaSettings()));
+        mvc.perform(put("/api/admin/service-area").with(user("admin").roles("ADMIN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"coverageMode\":\"CUSTOM\"}"))
+                .andExpect(status().isBadRequest());
+        verify(settings, never()).save(any());
+    }
+
+    @Test
+    void acceptsCustomStateAndPolygonAndAuditsConfiguration() throws Exception {
+        when(settings.findForUpdate()).thenReturn(Optional.of(new ServiceAreaSettings()));
+        mvc.perform(put("/api/admin/service-area").with(user("admin").roles("ADMIN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"coverageMode":"CUSTOM","states":["2"],"councils":[],
+                         "polygons":[[[-38,144],[-38,145],[-37,145]]]}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coverageMode").value("CUSTOM"))
+                .andExpect(jsonPath("$.states[0]").value("2"))
+                .andExpect(jsonPath("$.polygons[0][0][0]").value(-38));
+        verify(settings).save(any(ServiceAreaSettings.class));
+        verify(jdbc).update(anyString(), any(), eq("admin"), eq(false), contains("\"coverageMode\":\"CUSTOM\""));
+    }
+
+    @Test
+    void rejectsMalformedPolygon() throws Exception {
+        when(settings.findForUpdate()).thenReturn(Optional.of(new ServiceAreaSettings()));
+        mvc.perform(put("/api/admin/service-area").with(user("admin").roles("ADMIN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"coverageMode\":\"CUSTOM\",\"polygons\":[[[-38,144],[-38,145]]]}"))
+                .andExpect(status().isBadRequest());
+        verify(settings, never()).save(any());
     }
 }
