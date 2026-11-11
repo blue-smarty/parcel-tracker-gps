@@ -55,7 +55,8 @@
     if (!coverageMap) {
       coverageMap = L.map('coverageMap').setView([-37.8136, 144.9631], 9);
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
+        maxZoom: 19, referrerPolicy: 'origin',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(coverageMap);
       coverageLayer = L.layerGroup().addTo(coverageMap);
       coverageMap.on('click', event => {
