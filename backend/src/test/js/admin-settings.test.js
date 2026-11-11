@@ -45,14 +45,15 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
   };
   const map = { setView() { return this; }, on(event, handler) { this[event] = handler; }, invalidateSize() {} };
   const layer = { addTo() { return this; }, clearLayers() {} };
-  const L = { map: () => map, tileLayer: () => layer, layerGroup: () => layer,
+  const tileRequests = [];
+  const L = { map: () => map, tileLayer: (url, options) => { tileRequests.push({ url, options }); return layer; }, layerGroup: () => layer,
     polygon: () => layer, polyline: () => layer, circleMarker: () => layer };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin-settings.js'), 'utf8'), {
     PP, L, window: { confirm: () => true, L: withMap ? L : undefined, setTimeout: fn => fn() },
     document: { createElement: () => ({ append() {}, addEventListener() {} }) }
   });
   await new Promise(resolve => setImmediate(resolve));
-  return { byId, requests, messages, map };
+  return { byId, requests, messages, map, tileRequests };
 }
 
 test('loads current pricing and previews sample estimates', async () => {
@@ -124,9 +125,11 @@ test('saves selected states and council codes in custom coverage', async () => {
 });
 
 test('draws and saves a custom area and blocks unfinished drawings', async () => {
-    const { byId, requests, messages, map } = await setup({ withMap: true });
+    const { byId, requests, messages, map, tileRequests } = await setup({ withMap: true });
     byId('serviceAreaMode').value = 'CUSTOM';
     byId('serviceAreaMode').listeners.change();
+    assert.equal(tileRequests[0].url, 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+    assert.equal(tileRequests[0].options.referrerPolicy, 'origin');
     byId('drawCoverageButton').listeners.click();
     map.click({ latlng: { lat: -38, lng: 144 } });
     map.click({ latlng: { lat: -38, lng: 145 } });
