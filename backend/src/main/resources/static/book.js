@@ -14,6 +14,7 @@
   const maxQuantity = 20;
   let pricing = { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75 };
   const lines = new Map();
+  const route = { request: 0, distanceKm: null, origin: '', destination: '' };
   let user = null;
 
   const positive = value => Number.isFinite(value) && value > 0;
@@ -115,7 +116,7 @@
 
   function updateSummary() {
     const { all, weight, valid } = totals();
-    const distance = Number(byId('routeDistance').value);
+    const distance = route.distanceKm;
     const list = byId('ticketItems');
     list.replaceChildren(...(all.length ? all.map(line => {
       const item = document.createElement('li');
@@ -136,8 +137,11 @@
     const { all, weight, valid } = totals();
     if (!all.length) throw new Error('Choose at least one item to send.');
     if (!valid) throw new Error('Enter a weight and size greater than zero for each item.');
-    const distance = Number(byId('routeDistance').value);
-    if (!positive(distance)) throw new Error('Enter the route distance in kilometres.');
+    const distance = route.distanceKm;
+    if (!positive(distance) || route.origin !== byId('pickupAddress').value.trim()
+        || route.destination !== byId('deliveryAddress').value.trim()) {
+      throw new Error('Calculate the driving route for the current addresses before booking.');
+    }
     const fields = {
       sender: byId('pickupName').value.trim(),
       customerContact: byId('pickupContact').value.trim(),
@@ -195,89 +199,72 @@
     }
   }
 
-  const route = { ready: false, loading: null, map: null, line: null, request: 0 };
-
   function setRouteSummary(message, kind = '') {
     const element = byId('routeSummary');
     element.textContent = message;
     element.className = `route-summary${kind ? ` ${kind}` : ''}`;
   }
 
-  function loadGoogleMaps(apiKey) {
-    if (route.loading) return route.loading;
-    route.loading = new Promise((resolve, reject) => {
-      window.gm_authFailure = () => setRouteSummary('Google Maps rejected the API key. Enter the distance manually.', 'error');
-      window.initGoogleMaps = resolve;
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&v=weekly&callback=initGoogleMaps`;
-      script.async = true;
-      script.onerror = () => reject(new Error('Google Maps could not be loaded.'));
-      document.head.append(script);
-    });
-    route.loading.catch(() => { route.loading = null; });
-    return route.loading;
+  function invalidateRoute() {
+    route.request++;
+    route.distanceKm = null;
+    route.origin = '';
+    route.destination = '';
+    byId('calculateRouteButton').disabled = false;
+    byId('routeMap').hidden = true;
+    byId('routeDistance').textContent = 'Not calculated';
+    setRouteSummary('');
+    updateSummary();
   }
 
   async function calculateRoute() {
     const origin = byId('pickupAddress').value.trim();
     const destination = byId('deliveryAddress').value.trim();
-    if (!route.ready || !origin || !destination) return;
+    invalidateRoute();
+    if (!origin || !destination) {
+      setRouteSummary('Enter both pickup and delivery addresses.', 'error');
+      return;
+    }
     const requestId = ++route.request;
     byId('calculateRouteButton').disabled = true;
     setRouteSummary('Calculating route…');
     try {
-      const { Route } = await google.maps.importLibrary('routes');
-      const { routes } = await Route.computeRoutes({
-        origin, destination, travelMode: 'DRIVING',
-        fields: ['distanceMeters', 'durationMillis', 'path']
+      const result = await api('/api/booking-route', {
+        method: 'POST', body: JSON.stringify({ origin, destination })
       });
       if (requestId !== route.request) return;
-      const best = routes?.[0];
-      if (!best || !positive(best.distanceMeters)) throw new Error('No driving route found.');
-      const km = Math.max(0.1, Math.round(best.distanceMeters / 100) / 10);
-      byId('routeDistance').value = km;
-      byId('routeDistance').dispatchEvent(new Event('input', { bubbles: true }));
-      const minutes = Math.max(1, Math.round((best.durationMillis || 0) / 60000));
+      if (!Number.isFinite(result.distanceMeters) || result.distanceMeters < 0
+          || !Number.isFinite(result.durationSeconds) || result.durationSeconds < 0
+          || !Array.isArray(result.points) || result.points.length < 2) {
+        throw new Error('The route provider returned an invalid route.');
+      }
+      const km = Math.max(0.1, Math.round(result.distanceMeters / 100) / 10);
+      const minutes = Math.max(1, Math.round(result.durationSeconds / 60));
+      const points = result.points;
+      const map = byId('routeMap');
+      map.hidden = false;
+      PP.drawMap(map, [
+        { id: 'start', trackingNumber: 'Pickup', currentLocation: points[0] },
+        { id: 'end', trackingNumber: 'Delivery', currentLocation: points[points.length - 1] }
+      ], 'start', points);
+      route.distanceKm = km;
+      route.origin = origin;
+      route.destination = destination;
+      byId('routeDistance').textContent = `${km} km`;
+      updateSummary();
       setRouteSummary(`Driving distance ${km} km · about ${minutes} min`);
-      await drawRoute(best.path || []);
     } catch (error) {
       if (requestId !== route.request) return;
       console.warn('Route lookup failed.', error);
       byId('routeMap').hidden = true;
-      setRouteSummary('Could not calculate a route for these addresses. Check them or enter the distance manually.', 'error');
+      setRouteSummary(`Could not calculate the route: ${error.message} Check the addresses or try again later.`, 'error');
     } finally {
       if (requestId === route.request) byId('calculateRouteButton').disabled = false;
     }
   }
 
-  async function drawRoute(path) {
-    const { Map: GoogleMap, Polyline } = await google.maps.importLibrary('maps');
-    const points = path.map(point => ({ lat: point.lat, lng: point.lng }));
-    const container = byId('routeMap');
-    container.hidden = false;
-    if (!route.map) route.map = new GoogleMap(container, { disableDefaultUI: true, zoomControl: true, center: points[0], zoom: 10 });
-    route.line?.setMap(null);
-    route.line = new Polyline({ map: route.map, path: points, strokeColor: '#e9904b', strokeWeight: 4 });
-    const bounds = new google.maps.LatLngBounds();
-    points.forEach(point => bounds.extend(point));
-    route.map.fitBounds(bounds, 30);
-  }
-
-  async function setupRouteLookup() {
-    try {
-      const { apiKey } = await api('/api/maps-config');
-      if (!apiKey) return;
-      await loadGoogleMaps(apiKey);
-      route.ready = true;
-      byId('routeTools').hidden = false;
-      byId('calculateRouteButton').addEventListener('click', calculateRoute);
-      ['pickupAddress', 'deliveryAddress'].forEach(id => byId(id).addEventListener('change', calculateRoute));
-    } catch (error) {
-      console.warn('Google Maps route lookup is unavailable.', error);
-    }
-  }
-
   function reset() {
+    invalidateRoute();
     lines.clear();
     byId('builderForm').reset();
     byId('pickupName').value = user.name;
@@ -285,8 +272,6 @@
     byId('builderForm').hidden = false;
     document.querySelector('.booking-ticket').hidden = false;
     byId('bookingDone').hidden = true;
-    byId('routeMap').hidden = true;
-    setRouteSummary('');
     renderTiles();
     renderManifest();
     updateSummary();
@@ -308,7 +293,11 @@
     renderTiles();
     updateSummary();
     byId('builderView').hidden = false;
-    setupRouteLookup();
+    byId('calculateRouteButton').addEventListener('click', calculateRoute);
+    ['pickupAddress', 'deliveryAddress'].forEach(id => {
+      byId(id).addEventListener('input', invalidateRoute);
+      byId(id).addEventListener('change', invalidateRoute);
+    });
     try {
       pricing = await api('/api/pricing');
       updateSummary();

@@ -277,10 +277,12 @@ footer b { color: var(--teal); padding: 0 3px; }
 .route-line { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; }
 .route-line i { width: 5px; height: 5px; border-radius: 50%; background: var(--orange); }
 .route-tools { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.route-distance { color: #536779; font-size: 11px; font-weight: 600; }
+.route-distance output { display: block; margin-top: 6px; padding: 11px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--canvas); color: var(--ink); font-size: 12px; }
 .route-tools-head { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .route-summary { color: #536779; font-size: 12px; }
 .route-summary.error { color: #bb4c41; }
-.route-map { height: 260px; margin-top: 12px; border: 1px solid #dfe9e8; border-radius: 8px; }
+.route-map { position: relative; overflow: hidden; height: 260px; margin-top: 12px; border: 1px solid #dfe9e8; border-radius: 8px; }
 .choice-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
 .choice { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
 .choice:has(input:checked) { border-color: var(--teal); background: var(--mint); }
