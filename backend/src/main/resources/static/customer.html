@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/styles.css">
   <script src="/common.js" defer></script>
   <script src="/customer.js" defer></script>
+  <script src="/book.js" defer></script>
 </head>
 <body>
   <div class="shell">
@@ -26,82 +27,122 @@
       </div>
     </header>
     <main>
-      <section id="customerView" class="view active-view">
+      <section id="builderView" class="view active-view" hidden>
         <div class="section-heading">
-          <div><p class="eyebrow">CUSTOMER PORTAL</p><h2>Send something with care.</h2></div>
-          <a class="button button-secondary" href="/book.html">Open parcel builder</a>
-          <button class="button button-quiet" id="refreshOrdersButton">↻ <span>Refresh orders</span></button>
+          <div><p class="eyebrow">NEW BOOKING</p><h2>Build your parcel.</h2></div>
+          <button class="button button-quiet" id="refreshOrdersButton" type="button">↻ <span>Refresh orders</span></button>
         </div>
-        <div class="customer-grid">
-          <div class="panel booking-panel">
-            <div class="panel-heading"><div><p class="eyebrow">NEW DELIVERY</p><h3>Book a parcel</h3></div><span class="step-badge">01 / 02</span></div>
-            <form id="bookingForm">
-              <div class="form-section">
-                <h4>Your details</h4>
-                <div class="field-grid two">
-                  <label>Your name<input id="customerName" name="customerName" autocomplete="name" required></label>
-                  <label>Email or phone<input id="customerContact" name="customerContact" autocomplete="email" required></label>
-                </div>
-                <p class="field-note">Filled from your account. Orders are linked to this browser session.</p>
-              </div>
-              <div class="form-section">
-                <h4>Delivery details</h4>
-                <div class="field-grid two">
-                  <label>Recipient<input id="recipient" required></label>
-                  <label>Package size<select id="packageSize" required><option value="">Choose size</option><option value="SMALL">Small</option><option value="MEDIUM">Medium</option><option value="LARGE">Large</option></select></label>
-                  <label class="span-two">Pickup address<input id="pickupAddress" autocomplete="street-address" required></label>
-                  <label class="span-two">Delivery address<input id="destination" required></label>
-                  <p class="span-two field-note">Start typing to see address suggestions. You can also enter an address manually. Suggestions powered by <a href="https://developer.tomtom.com/" target="_blank" rel="noopener noreferrer">TomTom</a>.</p>
-                  <fieldset class="span-two dimensions-fieldset">
-                    <legend>Package dimensions (W x L x H, cm)</legend>
-                    <div class="field-grid three">
-                      <label>Width (W)<input id="widthCm" type="number" min="0.1" step="0.1" required></label>
-                      <label>Length (L)<input id="lengthCm" type="number" min="0.1" step="0.1" required></label>
-                      <label>Height (H)<input id="heightCm" type="number" min="0.1" step="0.1" required></label>
-                    </div>
-                  </fieldset>
-                  <label>Distance (km)<input id="distanceKm" type="number" min="0.1" step="0.1" placeholder="e.g. 8.5" required></label>
-                  <label>Weight (kg)<input id="weightKg" type="number" min="0.1" step="0.1" placeholder="e.g. 2" required></label>
-                  <label>Delivery speed<select id="deliverySpeed"><option value="SCHEDULED">Scheduled</option><option value="SAME_DAY">Same-day</option></select></label>
-                  <label>Payment demo<select id="paymentMethod"><option value="DEMO_CARD">Demo card</option><option value="DEMO_MOBILE_WALLET">Demo mobile wallet</option><option value="CASH_ON_DELIVERY">Cash on delivery</option></select></label>
-                </div>
-                <div id="scheduleFields" class="field-grid two schedule-fields">
-                  <label>Delivery date<input id="scheduledDate" type="date"></label>
-                  <label>Time window<select id="scheduledWindow"><option value="">Choose a window</option><option>08:00-10:00</option><option>10:00-12:00</option><option>12:00-14:00</option><option>14:00-16:00</option><option>16:00-18:00</option></select></label>
-                </div>
-                <details class="coordinates">
-                  <summary>Optional destination coordinates</summary>
-                  <div class="field-grid two">
-                    <label>Latitude<input id="destinationLatitude" type="number" min="-90" max="90" step="any" placeholder="e.g. 37.7749"></label>
-                    <label>Longitude<input id="destinationLongitude" type="number" min="-180" max="180" step="any" placeholder="e.g. -122.4194"></label>
-                  </div>
-                </details>
-              </div>
-              <div class="estimate-row"><span>Estimated demo price</span><strong id="priceEstimate">$—</strong></div>
-              <p class="field-note">Estimate uses your entered route distance, weight and speed. It is not a quote; no payment is collected.</p>
-              <button class="button button-primary full-button" id="bookButton" type="submit">Create demo delivery <span>→</span></button>
-              <p id="bookingMessage" class="form-message" role="status"></p>
-            </form>
-          </div>
 
-          <div class="customer-side">
+        <div class="builder-layout">
+          <form id="builderForm" class="builder-steps" novalidate>
+            <section class="panel builder-step">
+              <div class="step-title"><span class="step-number">1</span><div><h3>What are you sending?</h3><p class="field-note">Tap a tile to add it. Tap again to add more.</p></div></div>
+              <div id="itemTiles" class="item-tiles"></div>
+            </section>
+
+            <section class="panel builder-step" id="manifestStep" hidden>
+              <div class="step-title"><span class="step-number">2</span><div><h3>Check the details</h3><p class="field-note">We start with typical sizes. Adjust them if your parcel is heavier or larger.</p></div></div>
+              <div id="manifestRows" class="manifest-rows"></div>
+            </section>
+
+            <section class="panel builder-step">
+              <div class="step-title"><span class="step-number">3</span><div><h3>Pickup and delivery</h3></div></div>
+              <div class="route-grid">
+                <div class="route-stop">
+                  <p class="eyebrow">FROM</p>
+                  <div class="field-grid">
+                    <label>Contact name<input id="pickupName" autocomplete="name" maxlength="255" required></label>
+                    <label>Email or phone<input id="pickupContact" autocomplete="email" maxlength="255" required></label>
+                    <label>Pickup address<input id="pickupAddress" autocomplete="street-address" maxlength="255" required></label>
+                  </div>
+                </div>
+                <div class="route-line" aria-hidden="true"><i></i><i></i><i></i></div>
+                <div class="route-stop">
+                  <p class="eyebrow">TO</p>
+                  <div class="field-grid">
+                    <label>Recipient name<input id="recipientName" maxlength="255" required></label>
+                    <label>Delivery address<input id="deliveryAddress" maxlength="255" required></label>
+                    <div class="route-distance">Route distance (km)
+                      <output id="routeDistance" aria-live="polite">Not calculated</output>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p class="field-note">Start typing an address to see suggestions from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap data</a>, or enter it manually.</p>
+              <div id="routeTools" class="route-tools">
+                <div class="route-tools-head">
+                  <button id="calculateRouteButton" class="button button-secondary" type="button">Calculate driving route</button>
+                  <span id="routeSummary" class="route-summary" role="status" aria-live="polite"></span>
+                </div>
+                <div id="routeMap" class="route-map" hidden></div>
+                <p class="field-note">Calculate a TomTom route before booking. Confirm both addresses and the distance.</p>
+              </div>
+            </section>
+
+            <section class="panel builder-step">
+              <div class="step-title"><span class="step-number">4</span><div><h3>When and how?</h3></div></div>
+              <div class="choice-row" role="radiogroup" aria-label="Delivery speed">
+                <label class="choice"><input type="radio" name="speed" value="SCHEDULED" checked><span><strong>Scheduled</strong><small>Pick a date and time window</small></span></label>
+                <label class="choice"><input type="radio" name="speed" value="SAME_DAY"><span><strong>Same-day</strong><small>Priority handling at a premium</small></span></label>
+              </div>
+              <div id="scheduleFields" class="field-grid two">
+                <label>Delivery date<input id="scheduleDate" type="date"></label>
+                <label>Time window<select id="scheduleWindow"><option value="">Choose a window</option><option>08:00-10:00</option><option>10:00-12:00</option><option>12:00-14:00</option><option>14:00-16:00</option><option>16:00-18:00</option></select></label>
+              </div>
+              <label class="payment-field">Payment (demo)
+                <select id="paymentChoice"><option value="DEMO_CARD">Demo card</option><option value="DEMO_MOBILE_WALLET">Demo mobile wallet</option><option value="CASH_ON_DELIVERY">Cash on delivery</option></select>
+              </label>
+            </section>
+          </form>
+
+          <aside class="booking-ticket" aria-label="Booking summary">
+            <div class="ticket-head"><p class="eyebrow">YOUR BOOKING</p><h3>Summary</h3></div>
+            <ul id="ticketItems" class="ticket-items"><li class="ticket-empty">No items yet</li></ul>
+            <dl class="ticket-stats">
+              <div><dt>Total weight</dt><dd id="ticketWeight">—</dd></div>
+              <div><dt>Distance</dt><dd id="ticketDistance">—</dd></div>
+              <div><dt>Speed</dt><dd id="ticketSpeed">Scheduled</dd></div>
+            </dl>
+            <div class="ticket-total"><span>Estimated price</span><strong id="ticketPrice">$—</strong></div>
+            <p class="field-note">Demo estimate only. It is not a quote and no payment is collected.</p>
+            <button id="submitBooking" class="button button-primary full-button" type="submit" form="builderForm">Book delivery <span>→</span></button>
+            <p id="builderMessage" class="form-message" role="status" aria-live="polite"></p>
+          </aside>
+        </div>
+
+        <div id="bookingDone" class="panel booking-done" hidden>
+          <p class="eyebrow">BOOKING CONFIRMED</p>
+          <h3 id="doneTracking">—</h3>
+          <p id="doneText" class="field-note"></p>
+          <div class="landing-actions">
+            <a class="button button-primary" href="#trackingSection">Track this delivery</a>
+            <button id="bookAnotherButton" class="button button-quiet" type="button">Book another</button>
+          </div>
+        </div>
+
+        <section id="trackingSection" class="customer-tracking" hidden>
+          <div class="section-heading">
+            <div><p class="eyebrow">YOUR ACTIVITY</p><h2>Track your deliveries.</h2></div>
+            <span id="orderCount" class="count-pill">0</span>
+          </div>
+          <div class="customer-grid">
             <div class="panel orders-panel">
-              <div class="panel-heading"><div><p class="eyebrow">YOUR ACTIVITY</p><h3>Track your deliveries</h3></div><span id="orderCount" class="count-pill">0</span></div>
+              <div class="panel-heading"><div><p class="eyebrow">YOUR PARCELS</p><h3>Delivery history</h3></div></div>
               <div id="ordersList" class="orders-list"><div class="empty-state">Your deliveries will appear here after you book.</div></div>
-              <p id="ordersMessage" class="field-note status-message" role="status">Orders you book are saved to your account on this browser.</p>
+              <p id="ordersMessage" class="field-note status-message" role="status">Orders you book are saved to your account.</p>
             </div>
             <div class="panel tracking-panel">
               <div class="panel-heading"><div><p class="eyebrow">LIVE TRACKING</p><h3 id="trackingTitle">Select an order</h3></div><span id="trackingStatus" class="status-chip">WAITING</span></div>
               <div id="customerMap" class="map-canvas map-empty"><div class="map-grid"></div><span class="map-empty-label">Live location will appear when GPS is available</span></div>
               <div id="trackingDetails" class="tracking-details">Select a delivery to see its route and status.</div>
               <div class="tracking-actions">
-                <button id="receiptButton" class="button button-quiet" disabled>View receipt</button>
-                <button id="supportButton" class="button button-quiet" disabled>Contact demo support</button>
+                <button id="receiptButton" class="button button-quiet" type="button" disabled>View receipt</button>
+                <button id="supportButton" class="button button-quiet" type="button" disabled>Contact demo support</button>
               </div>
               <p id="customerNotice" class="field-note status-message" role="status"></p>
             </div>
           </div>
-        </div>
+        </section>
       </section>
     </main>
     <footer><span>PARCELPILOT <b>·</b> DEMO OPERATIONS</span><span>Payments are simulated.</span></footer>

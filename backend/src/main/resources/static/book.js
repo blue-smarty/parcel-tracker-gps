@@ -192,6 +192,7 @@
       byId('builderForm').hidden = true;
       document.querySelector('.booking-ticket').hidden = true;
       setMessage('builderMessage', '');
+      await PP.customerTracking.refresh(parcel.id);
     } catch (error) {
       setMessage('builderMessage', `Could not book delivery: ${error.message}`, 'error');
     } finally {
@@ -282,6 +283,7 @@
     if (!user) return;
     byId('accountName').textContent = user.name;
     byId('signOutButton').addEventListener('click', PP.signOut);
+    PP.customerTracking.initialize();
     byId('builderForm').addEventListener('submit', submit);
     byId('builderForm').addEventListener('input', updateSummary);
     byId('builderForm').addEventListener('change', updateSummary);
