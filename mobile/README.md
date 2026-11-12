@@ -12,6 +12,14 @@ flutter pub get
 flutter run --dart-define=API_URL=https://your-api.example.com
 ```
 
+The Android project is generated locally and is not included in this repository. If Flutter reports that Android Gradle Plugin (AGP) 9.1.0 is below its minimum supported version, update the `com.android.application` plugin version in the `plugins` block of `android/settings.gradle.kts` (or `android/settings.gradle`) to at least `9.1.1`, then rerun the build. For example, in the Kotlin file the declaration is:
+
+```kotlin
+id("com.android.application") version "9.1.1" apply false
+```
+
+Keep any newer compatible version already present. If Gradle reports an incompatible wrapper version after the AGP upgrade, update `android/gradle/wrapper/gradle-wrapper.properties` to the Gradle version required by that AGP release. Do not bypass Flutter's dependency validation.
+
 Set `API_URL` to the backend's HTTPS origin. For a local Android emulator use `http://10.0.2.2:8080`; for an iOS simulator use `http://127.0.0.1:8080`. Physical devices need a reachable host address. Do not use plain HTTP outside local development.
 
 Android 9+ blocks plain HTTP by default. For local development with an `http://` `API_URL`, add `android:usesCleartextTraffic="true"` to the `<application>` tag in `android/app/src/main/AndroidManifest.xml`, and remove it for release builds. iOS also blocks plain HTTP unless an App Transport Security exception is added to `Info.plist`; prefer HTTPS where possible. If sign-in reports "Connection refused" or a timeout, check that the backend is running and the `API_URL` host is reachable from the device.
