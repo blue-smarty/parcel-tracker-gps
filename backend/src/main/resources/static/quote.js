@@ -140,7 +140,12 @@
       setMessage('quoteMessage', '');
     } catch (error) {
       if (requestId === routeRequest) {
-        setMessage('quoteMessage', `Could not calculate the quote: ${error.message}`, 'error');
+        const message = error.status === 503
+          ? 'Route lookup is unavailable. Check that the backend has a valid TOMTOM_API_KEY with Search and Routing access and can connect to TomTom.'
+          : error.status === 429
+            ? 'Too many quote requests. Please wait a minute and try again.'
+            : `Could not calculate the quote: ${error.message}`;
+        setMessage('quoteMessage', message, 'error');
       }
     } finally {
       if (requestId === routeRequest) button.disabled = false;

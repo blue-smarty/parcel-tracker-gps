@@ -24,9 +24,9 @@ cd backend
 mvn spring-boot:run
 ```
 
-In Windows PowerShell, use `$env:NAME = 'value'` instead of `export` for each variable. All admin and courier passwords must be at least 12 characters. Keep the same terminal open so the backend inherits these variables. `TOMTOM_API_KEY` is required for address autocomplete; keep it private and configure it on the backend, not in browser code. Addresses can still be entered manually when suggestions are unavailable. For a managed PostgreSQL database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead; require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
+In Windows PowerShell, use `$env:NAME = 'value'` instead of `export` for each variable. All admin and courier passwords must be at least 12 characters. Keep the same terminal open so the backend inherits these variables. `TOMTOM_API_KEY` must be configured on the backend with TomTom Search and Routing access for address autocomplete and route-based quotes; keep it private and never put it in browser code. Addresses can still be entered manually when suggestions are unavailable, but route quotes require the key. For a managed PostgreSQL database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead; require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.
 
-**Installer (optional):** with JDK 17+, Maven and PostgreSQL running, the installer prompts for an admin username and password, a courier username (courier ID) and password, and an optional TomTom API key for address suggestions. It creates the database role and database with a generated database password, builds the backend and writes a start script to `~/.parcel-tracker`. Usernames must differ and contain 1-255 letters, digits, dots, underscores or hyphens; passwords must contain 12-72 printable ASCII characters, including at least one non-space character. Password input is hidden, and credentials and the API key are kept in an owner-only file. On reruns, you can enter a new API key to add or replace the configured one, or press Enter to keep the current setting.
+**Installer (optional):** with JDK 17+, Maven and PostgreSQL running, the installer prompts for an admin username and password, a courier username (courier ID) and password, and an optional TomTom API key for address suggestions and route quotes. It creates the database role and database with a generated database password, builds the backend and writes a start script to `~/.parcel-tracker`. Usernames must differ and contain 1-255 letters, digits, dots, underscores or hyphens; passwords must contain 12-72 printable ASCII characters, including at least one non-space character. Password input is hidden, and credentials and the API key are kept in an owner-only file. On reruns, you can enter a new API key to add or replace the configured one, or press Enter to keep the current setting.
 
 ```bash
 installer/install.sh              # Linux/macOS; optional argument: install directory
@@ -52,7 +52,7 @@ Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override desktop cl
 | Method | Path | Description |
 |---|---|---|
 | POST | `/api/parcels` | Create parcel (customer or admin authentication required) |
-| POST | `/api/booking-route` | Calculate a TomTom driving route from `{origin, destination}` (customer authentication required) |
+| POST | `/api/booking-route` | Calculate a TomTom driving route from `{origin, destination}` (public, rate-limited) |
 | POST | `/api/parcels/adhoc` | Create a parcel and assign a provisioned courier (admin or dispatcher) |
 | GET | `/api/parcels` | List parcels (admin or dispatcher) |
 | GET | `/api/parcels/mine` | List the authenticated customer's parcels |

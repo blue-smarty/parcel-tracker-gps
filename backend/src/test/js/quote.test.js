@@ -103,6 +103,25 @@ test('rejects incomplete parcel details without calling quote APIs', async () =>
   assert.match(byId('quoteMessage').textContent, /weight and dimensions/);
 });
 
+test('explains how to resolve an unavailable route service', async () => {
+  const { byId } = await setup(async url => {
+    if (url === '/api/booking-route') {
+      const error = new Error('Service Unavailable');
+      error.status = 503;
+      throw error;
+    }
+    return { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5 };
+  });
+  byId('quoteOrigin').value = 'Pickup';
+  byId('quoteDestination').value = 'Destination';
+  fillPackage(byId('quotePackages').children[0]);
+
+  await byId('quoteForm').dispatch('submit');
+
+  assert.match(byId('quoteMessage').textContent, /TOMTOM_API_KEY/);
+  assert.match(byId('quoteMessage').textContent, /Routing access/);
+});
+
 test('discards a quote result after the visitor changes an address', async () => {
   let resolveRoute;
   const { byId } = await setup(async url => {
