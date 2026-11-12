@@ -27,6 +27,20 @@
           <a class="button button-secondary" href="/dispatch.html">Open dispatch workspace</a>
         </div>
         <div class="settings-grid">
+          <section class="panel settings-panel" aria-labelledby="integrationsTitle">
+            <div class="panel-heading"><div><p class="eyebrow">BACKEND INTEGRATIONS</p><h3 id="integrationsTitle">TomTom API</h3></div></div>
+            <p class="field-note">Used for address suggestions, driving routes, quotes and restricted service-area checks. The key needs Search and Routing access.</p>
+            <p id="integrationStatus" class="field-note" role="status">Loading integration settings…</p>
+            <form id="integrationForm" class="settings-form">
+              <label>New API key<input id="tomtomKey" type="password" maxlength="512" autocomplete="new-password" required></label>
+              <p class="field-note">Keys are encrypted before storage and never displayed again. Configure PARCEL_INTEGRATIONS_ENCRYPTION_KEY on the server first.</p>
+              <div class="settings-actions">
+                <button id="saveIntegrationButton" class="button button-primary" type="submit" disabled>Save key</button>
+                <button id="removeIntegrationButton" class="button button-quiet" type="button" disabled>Remove saved key</button>
+              </div>
+              <p id="integrationMessage" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </section>
           <section class="panel settings-panel" aria-labelledby="serviceAreaTitle">
             <div class="panel-heading"><div><p class="eyebrow">DELIVERY COVERAGE</p><h3 id="serviceAreaTitle">Service area</h3></div></div>
             <p class="field-note">Both addresses must be inside the selected coverage. Existing deliveries are not changed.</p>

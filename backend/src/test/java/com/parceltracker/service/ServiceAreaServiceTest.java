@@ -20,13 +20,15 @@ class ServiceAreaServiceTest {
     private final ServiceAreaSettingsRepository repository = mock(ServiceAreaSettingsRepository.class);
     private final RestTemplate rest = mock(RestTemplate.class);
     private final AustralianCouncilLookup councilLookup = mock(AustralianCouncilLookup.class);
+    private final TomTomSettingsService tomTomSettings = mock(TomTomSettingsService.class);
     private final ObjectMapper json = new ObjectMapper();
     private final ServiceAreaSettings settings = new ServiceAreaSettings();
-    private final ServiceAreaService service = new ServiceAreaService(repository, rest, "test-key", councilLookup);
+    private final ServiceAreaService service = new ServiceAreaService(repository, rest, tomTomSettings, councilLookup);
 
     @BeforeEach
     void setUp() {
         when(repository.findById("default")).thenReturn(Optional.of(settings));
+        lenient().when(tomTomSettings.routeKey()).thenReturn("test-key");
     }
 
     private JsonNode json(String text) throws Exception { return json.readTree(text); }

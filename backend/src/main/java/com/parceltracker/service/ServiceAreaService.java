@@ -6,7 +6,6 @@ import com.parceltracker.repository.ServiceAreaSettingsRepository;
 import java.net.URI;
 import java.util.Locale;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -26,14 +25,14 @@ public class ServiceAreaService {
 
     private final ServiceAreaSettingsRepository settings;
     private final RestTemplate rest;
-    private final String apiKey;
+    private final TomTomSettingsService tomTomSettings;
     private final AustralianCouncilLookup councilLookup;
 
     public ServiceAreaService(ServiceAreaSettingsRepository settings, RestTemplate addressLookupRestTemplate,
-            @Value("${parcel.tomtom.api-key:}") String apiKey, AustralianCouncilLookup councilLookup) {
+            TomTomSettingsService tomTomSettings, AustralianCouncilLookup councilLookup) {
         this.settings = settings;
         this.rest = addressLookupRestTemplate;
-        this.apiKey = apiKey.trim();
+        this.tomTomSettings = tomTomSettings;
         this.councilLookup = councilLookup;
     }
 
@@ -67,6 +66,7 @@ public class ServiceAreaService {
         if (address == null || address.isBlank() || address.trim().length() > 255) {
             throw new ServiceAreaException(HttpStatus.BAD_REQUEST, label + " address is required (up to 255 characters).");
         }
+        String apiKey = tomTomSettings.routeKey();
         if (apiKey.isEmpty()) throw unavailable();
         try {
             URI geocode = UriComponentsBuilder.fromHttpUrl("https://api.tomtom.com")

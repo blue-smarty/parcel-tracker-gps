@@ -1,12 +1,12 @@
 package com.parceltracker.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.parceltracker.service.TomTomSettingsService;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,13 +23,13 @@ public class AddressSuggestionController {
     private static final int MAX_SUGGESTIONS = 5;
 
     private final RestTemplate restTemplate;
-    private final String apiKey;
+    private final TomTomSettingsService settings;
 
     public AddressSuggestionController(
             RestTemplate addressLookupRestTemplate,
-            @Value("${parcel.address-lookup.tomtom-api-key:}") String apiKey) {
+            TomTomSettingsService settings) {
         this.restTemplate = addressLookupRestTemplate;
-        this.apiKey = apiKey;
+        this.settings = settings;
     }
 
     @GetMapping("/api/address-suggestions")
@@ -39,6 +39,7 @@ public class AddressSuggestionController {
         if (normalized.length() > MAX_QUERY_LENGTH) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search text must be 120 characters or fewer.");
         }
+        String apiKey = settings.searchKey();
         if (apiKey.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "Address suggestions are not configured.");
@@ -46,9 +47,9 @@ public class AddressSuggestionController {
 
         URI uri = UriComponentsBuilder.fromHttpUrl(TOMTOM_SEARCH_URL)
                 .pathSegment("{query}.json")
-                .queryParam("key", apiKey)
+                .queryParam("key", "{key}")
                 .queryParam("limit", MAX_SUGGESTIONS)
-                .buildAndExpand(normalized)
+                .buildAndExpand(normalized, apiKey)
                 .encode()
                 .toUri();
         JsonNode response;

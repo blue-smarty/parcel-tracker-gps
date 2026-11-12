@@ -2,11 +2,11 @@ package com.parceltracker.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.parceltracker.service.PublicQuoteRateLimiter;
+import com.parceltracker.service.TomTomSettingsService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -22,14 +22,14 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RestController
 public class BookingRouteController {
     private final RestTemplate restTemplate;
-    private final String apiKey;
+    private final TomTomSettingsService settings;
     private final PublicQuoteRateLimiter rateLimiter;
 
     public BookingRouteController(RestTemplate addressLookupRestTemplate,
-            @Value("${parcel.tomtom.api-key:}") String apiKey,
+            TomTomSettingsService settings,
             PublicQuoteRateLimiter rateLimiter) {
         this.restTemplate = addressLookupRestTemplate;
-        this.apiKey = apiKey.trim();
+        this.settings = settings;
         this.rateLimiter = rateLimiter;
     }
 
@@ -46,12 +46,13 @@ public class BookingRouteController {
         }
         String origin = address(request.origin());
         String destination = address(request.destination());
+        String apiKey = settings.routeKey();
         if (apiKey.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Route lookup is not configured.");
         }
         try {
-            Point start = geocode(origin);
-            Point end = geocode(destination);
+            Point start = geocode(origin, apiKey);
+            Point end = geocode(destination, apiKey);
             String locations = start.latitude() + "," + start.longitude() + ":"
                     + end.latitude() + "," + end.longitude();
             URI uri = UriComponentsBuilder.fromHttpUrl("https://api.tomtom.com")
@@ -83,7 +84,7 @@ public class BookingRouteController {
         }
     }
 
-    private Point geocode(String address) {
+    private Point geocode(String address, String apiKey) {
         URI uri = UriComponentsBuilder.fromHttpUrl("https://api.tomtom.com")
                 .pathSegment("search", "2", "geocode", "{address}.json")
                 .queryParam("key", "{key}").queryParam("limit", 1)

@@ -10,6 +10,55 @@
   let drawing = null;
   const stateNames = { 1: 'NSW', 2: 'VIC', 3: 'QLD', 4: 'SA', 5: 'WA', 6: 'TAS', 7: 'NT', 8: 'ACT', 9: 'Other territories' };
 
+  function showIntegrationStatus(status) {
+    const source = status.saved ? (status.savedUsable ? 'A saved key is active.'
+      : 'The saved key cannot be decrypted. Restore the original server encryption key or replace the saved key.')
+      : status.environmentConfigured ? 'Using the server environment key.' : 'No key is configured.';
+    byId('integrationStatus').textContent = `${source}${status.encryptionConfigured ? '' : ' Server encryption key is not configured; saving is disabled.'}`;
+    byId('saveIntegrationButton').disabled = !status.encryptionConfigured;
+    byId('removeIntegrationButton').disabled = !status.saved;
+  }
+
+  async function loadIntegration() {
+    try {
+      showIntegrationStatus(await api('/api/admin/integrations/tomtom'));
+    } catch (error) {
+      setMessage('integrationMessage', `Could not load integration settings: ${error.message}`, 'error');
+    }
+  }
+
+  async function saveIntegration(event) {
+    event.preventDefault();
+    const button = byId('saveIntegrationButton');
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      const status = await api('/api/admin/integrations/tomtom', {
+        method: 'PUT', body: JSON.stringify({ apiKey: byId('tomtomKey').value })
+      });
+      byId('tomtomKey').value = '';
+      showIntegrationStatus(status);
+      setMessage('integrationMessage', 'TomTom key saved. Changes take effect immediately.', 'success');
+    } catch (error) {
+      button.disabled = false;
+      setMessage('integrationMessage', `Could not save TomTom key: ${error.message}`, 'error');
+    }
+  }
+
+  async function removeIntegration() {
+    if (!window.confirm('Remove the saved TomTom key? The server environment key will be used if configured.')) return;
+    const button = byId('removeIntegrationButton');
+    button.disabled = true;
+    try {
+      showIntegrationStatus(await api('/api/admin/integrations/tomtom', { method: 'DELETE' }));
+      byId('tomtomKey').value = '';
+      setMessage('integrationMessage', 'Saved TomTom key removed.', 'success');
+    } catch (error) {
+      button.disabled = false;
+      setMessage('integrationMessage', `Could not remove TomTom key: ${error.message}`, 'error');
+    }
+  }
+
   function selectedValues(id) {
     return [...byId(id).selectedOptions].map(option => option.value);
   }
@@ -290,6 +339,8 @@
     if (!user) return;
     byId('accountName').textContent = user.name;
     byId('signOutButton').addEventListener('click', PP.signOut);
+    byId('integrationForm').addEventListener('submit', saveIntegration);
+    byId('removeIntegrationButton').addEventListener('click', removeIntegration);
     byId('pricingForm').addEventListener('submit', savePricing);
     byId('serviceAreaForm').addEventListener('submit', saveServiceArea);
     byId('serviceAreaMode').addEventListener('change', updateCoverageMode);
@@ -311,7 +362,7 @@
     fields.forEach(field => byId(field).addEventListener('input', renderPreview));
     byId('settingsView').hidden = false;
     byId('settingsView').classList.add('active-view');
-    await Promise.all([loadPricing(), loadDispatchers(), loadServiceArea()]);
+    await Promise.all([loadPricing(), loadDispatchers(), loadServiceArea(), loadIntegration()]);
   }
 
   initialize();

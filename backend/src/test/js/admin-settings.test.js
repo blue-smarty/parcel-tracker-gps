@@ -40,6 +40,9 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
       }
       if (route === '/api/admin/service-area/councils') return [{ code: '25150', name: 'Melbourne', state: '2' }];
       if (route === '/api/admin/dispatchers') return [];
+      if (route === '/api/admin/integrations/tomtom') {
+        return { saved: options?.method === 'PUT', savedUsable: true, environmentConfigured: false, encryptionConfigured: true };
+      }
       throw new Error(`Unexpected request ${route}`);
     }
   };
@@ -89,6 +92,19 @@ test('requires a verified admin before loading settings', async () => {
   const { byId, requests } = await setup({ user: null });
   assert.equal(requests.length, 0);
   assert.equal(byId('settingsView').hidden, true);
+});
+
+test('saves and removes the TomTom key without displaying it', async () => {
+  const { byId, requests, messages } = await setup();
+  byId('tomtomKey').value = 'test-secret';
+  await byId('integrationForm').listeners.submit({ preventDefault() {} });
+  const save = requests.find(item => item.route === '/api/admin/integrations/tomtom' && item.options?.method === 'PUT');
+  assert.deepEqual(JSON.parse(save.options.body), { apiKey: 'test-secret' });
+  assert.equal(byId('tomtomKey').value, '');
+  assert.doesNotMatch(byId('integrationStatus').textContent, /test-secret/);
+  assert.match(messages.integrationMessage.message, /saved/);
+  await byId('removeIntegrationButton').listeners.click();
+  assert.ok(requests.some(item => item.route === '/api/admin/integrations/tomtom' && item.options?.method === 'DELETE'));
 });
 
 test('creates a dispatcher through the admin-only endpoint', async () => {
