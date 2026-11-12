@@ -260,6 +260,12 @@ footer b { color: var(--teal); padding: 0 3px; }
 .auth-form label { display: grid; gap: 6px; }
 .auth-form[hidden] { display: none; }
 .landing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; padding: 32px 0; }
+.landing-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 28px; align-items: start; }
+.landing-layout main { min-width: 0; }
+.landing-nav { position: sticky; top: 24px; display: grid; gap: 4px; padding: 20px 10px; margin-top: 32px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); box-shadow: var(--shadow); }
+.landing-nav .eyebrow { padding: 0 10px; margin-bottom: 8px; }
+.landing-nav a { display: block; padding: 11px 10px; border-radius: 5px; color: var(--ink); font-size: 13px; font-weight: 700; text-decoration: none; }
+.landing-nav a:hover, .landing-nav a:focus-visible { background: var(--mint); color: var(--teal-dark); }
 .landing-card { padding: 24px; display: grid; gap: 10px; align-content: start; }
 .landing-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .quote-section { padding-top: 32px; }
@@ -340,11 +346,20 @@ footer b { color: var(--teal); padding: 0 3px; }
 .booking-ticket .form-message.error { color: #ffb4ab; }
 .booking-ticket .form-message.success { color: #83d2ca; }
 .booking-done { max-width: 520px; padding: 26px; }
+@media (max-width: 1200px) {
+  .landing-layout .quote-package { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 @media (max-width: 980px) {
   .builder-layout { grid-template-columns: 1fr; }
   .booking-ticket { position: static; order: -1; }
 }
 @media (max-width: 650px) {
+  .landing-layout { grid-template-columns: 1fr; gap: 0; }
+  .landing-nav { position: static; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 18px; padding: 6px; }
+  .landing-nav .eyebrow { display: none; }
+  .landing-nav a { flex: 1 1 auto; text-align: center; }
+  .landing-layout .quote-package { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .landing-layout .quote-result { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .route-grid, .choice-row { grid-template-columns: 1fr; }
   .route-line { flex-direction: row; }
   .manifest-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }

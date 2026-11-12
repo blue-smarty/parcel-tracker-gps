@@ -21,8 +21,15 @@
       </div>
     </header>
 
-    <main>
-      <section class="intro">
+    <div class="landing-layout">
+      <nav class="landing-nav" aria-label="Main navigation">
+        <p class="eyebrow">EXPLORE</p>
+        <a href="#home">Home</a>
+        <a href="#delivery-prices">Delivery prices</a>
+        <a href="#accounts">Book and track</a>
+      </nav>
+      <main>
+      <section id="home" class="intro">
         <div>
           <p class="eyebrow">PARCEL OPERATIONS, MADE SIMPLE</p>
           <h1>Everything moving.<br><span>All in one place.</span></h1>
@@ -34,7 +41,7 @@
         </div>
       </section>
 
-      <section class="quote-section" aria-labelledby="quoteTitle">
+      <section id="delivery-prices" class="quote-section" aria-labelledby="quoteTitle">
         <div class="section-heading">
           <div><p class="eyebrow">QUICK ESTIMATE</p><h2 id="quoteTitle">Get a parcel quote.</h2></div>
           <p class="field-note">No sign-in required. Route quotes need a server-configured TomTom key.</p>
@@ -64,7 +71,7 @@
         </form>
       </section>
 
-      <section class="landing-cards">
+      <section id="accounts" class="landing-cards" aria-label="Booking and operations">
         <div class="panel landing-card">
           <p class="eyebrow">FOR CUSTOMERS</p><h3>Book and track parcels</h3>
           <p class="field-note">Create an account, book deliveries and follow them live on the map.</p>
@@ -76,7 +83,8 @@
           <div class="landing-actions"><a class="button button-primary" href="/login.html">Staff sign in</a></div>
         </div>
       </section>
-    </main>
+      </main>
+    </div>
     <footer><span>PARCELPILOT <b>·</b> DEMO OPERATIONS</span><span>Payments and customer profiles are simulated.</span></footer>
   </div>
 </body>
