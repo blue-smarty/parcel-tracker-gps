@@ -118,8 +118,8 @@ test('explains how to resolve an unavailable route service', async () => {
 
   await byId('quoteForm').dispatch('submit');
 
-  assert.match(byId('quoteMessage').textContent, /Admin settings/);
-  assert.match(byId('quoteMessage').textContent, /connection to TomTom/);
+  assert.match(byId('quoteMessage').textContent, /TOMTOM_API_KEY/);
+  assert.match(byId('quoteMessage').textContent, /Routing access/);
 });
 
 test('discards a quote result after the visitor changes an address', async () => {

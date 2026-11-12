@@ -16,10 +16,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.repository.CourierAccountRepository;
-import com.parceltracker.service.TomTomSettingsService;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -42,12 +40,6 @@ class AddressSuggestionControllerTest {
     @Autowired private ObjectMapper objectMapper;
     @MockBean private CourierAccountRepository accounts;
     @MockBean private RestTemplate addressLookupRestTemplate;
-    @MockBean private TomTomSettingsService settings;
-
-    @BeforeEach
-    void setUp() {
-        when(settings.searchKey()).thenReturn("test-tomtom-key");
-    }
 
     @Test
     void returnsFormattedSuggestionsToAuthenticatedUsers() throws Exception {
@@ -105,8 +97,7 @@ class AddressSuggestionControllerTest {
 
     @Test
     void reportsMissingTomTomApiKeyAsServiceUnavailable() {
-        when(settings.searchKey()).thenReturn("");
-        AddressSuggestionController controller = new AddressSuggestionController(addressLookupRestTemplate, settings);
+        AddressSuggestionController controller = new AddressSuggestionController(addressLookupRestTemplate, "");
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class, () -> controller.suggest("10 Downing Street"));

@@ -141,7 +141,7 @@
     } catch (error) {
       if (requestId === routeRequest) {
         const message = error.status === 503
-          ? 'Route lookup is unavailable. Ask an administrator to check the TomTom key in Admin settings and the connection to TomTom.'
+          ? 'Route lookup is unavailable. Check that the backend has a valid TOMTOM_API_KEY with Search and Routing access and can connect to TomTom.'
           : error.status === 429
             ? 'Too many quote requests. Please wait a minute and try again.'
             : `Could not calculate the quote: ${error.message}`;

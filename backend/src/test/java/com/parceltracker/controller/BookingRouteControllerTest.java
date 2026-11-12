@@ -3,7 +3,6 @@ package com.parceltracker.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,10 +16,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.service.PublicQuoteRateLimiter;
-import com.parceltracker.service.TomTomSettingsService;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -43,14 +40,12 @@ class BookingRouteControllerTest {
     @MockBean private CourierAccountRepository accounts;
     @MockBean private RestTemplate addressLookupRestTemplate;
     @MockBean private PublicQuoteRateLimiter rateLimiter;
-    @MockBean private TomTomSettingsService settings;
     private static final String REQUEST = """
             {"origin":"10 Main Street","destination":"20 Main Street"}
             """;
 
     @Test
     void geocodesAddressesAndReturnsRoute() throws Exception {
-        when(settings.routeKey()).thenReturn("test-key");
         JsonNode start = mapper.readTree("""
                 {"results":[{"position":{"lat":51.5,"lon":-0.1}}]}
                 """);
@@ -73,7 +68,6 @@ class BookingRouteControllerTest {
 
     @Test
     void reportsMissingAddressAndProviderErrors() throws Exception {
-        when(settings.routeKey()).thenReturn("test-key");
         when(addressLookupRestTemplate.getForObject(any(URI.class), eq(JsonNode.class)))
                 .thenReturn(mapper.readTree("{\"results\":[]}"))
                 .thenThrow(new ResourceAccessException("offline"));
@@ -94,8 +88,7 @@ class BookingRouteControllerTest {
     @Test
     void reportsUnconfiguredProviderWithoutCallingIt() {
         BookingRouteController controller = new BookingRouteController(
-                addressLookupRestTemplate, settings, new PublicQuoteRateLimiter());
-        when(settings.routeKey()).thenReturn("");
+                addressLookupRestTemplate, "", new PublicQuoteRateLimiter());
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
                 () -> controller.route(new BookingRouteController.RouteRequest("A", "B"), new MockHttpServletRequest()));
         assertEquals(503, error.getStatusCode().value());
@@ -105,7 +98,6 @@ class BookingRouteControllerTest {
     @Test
     @WithAnonymousUser
     void allowsAnonymousQuoteRequests() throws Exception {
-        when(settings.routeKey()).thenReturn("test-key");
         JsonNode start = mapper.readTree("""
                 {"results":[{"position":{"lat":51.5,"lon":-0.1}}]}
                 """);
@@ -122,20 +114,5 @@ class BookingRouteControllerTest {
         mvc.perform(post("/api/booking-route").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.distanceMeters").value(12345));
-    }
-
-    @Test
-    void usesCurrentKeyForEveryRouteRequest() throws Exception {
-        when(settings.routeKey()).thenReturn("first-key", "updated-key");
-        when(addressLookupRestTemplate.getForObject(any(URI.class), eq(JsonNode.class)))
-                .thenReturn(mapper.readTree("{\"results\":[]}"));
-        mvc.perform(post("/api/booking-route").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(REQUEST))
-                .andExpect(status().isUnprocessableEntity());
-        mvc.perform(post("/api/booking-route").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(REQUEST))
-                .andExpect(status().isUnprocessableEntity());
-        ArgumentCaptor<URI> uris = ArgumentCaptor.forClass(URI.class);
-        verify(addressLookupRestTemplate, org.mockito.Mockito.times(2)).getForObject(uris.capture(), eq(JsonNode.class));
-        org.junit.jupiter.api.Assertions.assertTrue(uris.getAllValues().get(0).getQuery().contains("first-key"));
-        org.junit.jupiter.api.Assertions.assertTrue(uris.getAllValues().get(1).getQuery().contains("updated-key"));
     }
 }
