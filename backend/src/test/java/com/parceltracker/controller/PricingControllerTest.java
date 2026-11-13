@@ -66,6 +66,30 @@ class PricingControllerTest {
     }
 
     @Test
+    void adminCanSaveRadiusBandsAndRejectsInvalidBandOrder() throws Exception {
+        when(pricingSettings.findById(PricingSettings.SINGLETON_ID)).thenReturn(Optional.empty());
+        when(pricingSettings.save(any(PricingSettings.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        mvc.perform(put("/api/admin/pricing").with(user("ops").roles("ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"baseFee":5,"perKmRate":1.2,"perKgRate":0.5,"sameDayMultiplier":1.75,
+                                 "pricingMode":"RADIUS","radiusBands":[
+                                   {"upToKm":5,"distanceFee":3},{"upToKm":null,"distanceFee":8}]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pricingMode").value("RADIUS"))
+                .andExpect(jsonPath("$.radiusBands[1].distanceFee").value(8));
+        mvc.perform(put("/api/admin/pricing").with(user("ops").roles("ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"baseFee":5,"perKmRate":1.2,"perKgRate":0.5,"sameDayMultiplier":1.75,
+                                 "pricingMode":"RADIUS","radiusBands":[
+                                   {"upToKm":10,"distanceFee":3},{"upToKm":5,"distanceFee":8}]}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void rejectsInvalidRatesAndNonAdminUpdates() throws Exception {
         mvc.perform(put("/api/admin/pricing").with(user("ops").roles("ADMIN")).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)

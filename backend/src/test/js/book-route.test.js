@@ -34,8 +34,10 @@ async function setup(routeRequest) {
   const maps = [];
   const bookings = [];
   const PP = {
-    byId, money: String, setMessage: (id, message) => { byId(id).textContent = message; }, signOut() {},
+    byId, money: String, estimatePrice: () => 10,
+    setMessage: (id, message) => { byId(id).textContent = message; }, signOut() {},
     requireRole: async () => ({ name: 'Customer', username: 'customer' }),
+    customerTracking: { initialize() {}, refresh: async () => {} },
     api: async (url, options) => {
       if (url === '/api/booking-route') return routeRequest(JSON.parse(options.body));
       if (url === '/api/parcels') {
@@ -56,6 +58,7 @@ async function setup(routeRequest) {
 
 const response = {
   distanceMeters: 12345, durationSeconds: 1500,
+  straightLineDistanceKm: 11,
   points: [{ latitude: 51.5, longitude: -0.1 }, { latitude: 51.6, longitude: -0.2 }]
 };
 
@@ -111,6 +114,7 @@ test('requires a current calculated route before submitting a booking', async ()
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(bookings.length, 1);
   assert.equal(bookings[0].distanceKm, 12.3);
+  assert.equal(bookings[0].straightLineDistanceKm, 11);
 
   byId('deliveryAddress').value = 'Different address';
   byId('builderForm').dispatch('submit');

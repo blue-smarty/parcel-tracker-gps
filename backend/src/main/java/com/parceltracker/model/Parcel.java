@@ -91,6 +91,9 @@ public class Parcel {
     @Column(name = "distance_km")
     private Double distanceKm;
 
+    @Column(name = "straight_line_distance_km")
+    private Double straightLineDistanceKm;
+
     @Column(name = "destination_latitude")
     @DecimalMin("-90.0")
     @DecimalMax("90.0")
@@ -176,6 +179,8 @@ public class Parcel {
     public void setScheduledWindow(String scheduledWindow) { this.scheduledWindow = scheduledWindow; }
     public Double getDistanceKm() { return distanceKm; }
     public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
+    public Double getStraightLineDistanceKm() { return straightLineDistanceKm; }
+    public void setStraightLineDistanceKm(Double straightLineDistanceKm) { this.straightLineDistanceKm = straightLineDistanceKm; }
     public Double getDestinationLatitude() { return destinationLatitude; }
     public void setDestinationLatitude(Double destinationLatitude) { this.destinationLatitude = destinationLatitude; }
     public Double getDestinationLongitude() { return destinationLongitude; }

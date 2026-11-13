@@ -63,6 +63,7 @@ class BookingRouteControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.distanceMeters").value(12345))
                 .andExpect(jsonPath("$.durationSeconds").value(1500))
+                .andExpect(jsonPath("$.straightLineDistanceKm").value(org.hamcrest.Matchers.greaterThan(13.0)))
                 .andExpect(jsonPath("$.points[1].latitude").value(51.6));
     }
 

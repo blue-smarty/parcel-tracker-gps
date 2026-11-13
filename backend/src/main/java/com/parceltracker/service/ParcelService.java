@@ -53,7 +53,7 @@ public class ParcelService {
         if (parcel.getDistanceKm() != null && parcel.getWeightKg() != null
                 && parcel.getDeliverySpeed() != null) {
             parcel.setEstimatedPrice(pricing.estimate(parcel.getDistanceKm(), parcel.getWeightKg(),
-                    parcel.getDeliverySpeed()));
+                    parcel.getDeliverySpeed(), parcel.getStraightLineDistanceKm()));
         } else {
             parcel.setEstimatedPrice(null);
         }

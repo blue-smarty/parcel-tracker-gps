@@ -114,3 +114,26 @@ test('shows a manual-entry fallback when address lookup fails', async () => {
   assert.match(status.textContent, /unavailable/);
   assert.equal(list.hidden, true);
 });
+
+test('calculates a fixed radius band charge while preserving weight and speed pricing', () => {
+  const context = {
+    window: {},
+    document: {},
+    sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+    localStorage: { getItem: () => null, setItem() {} }
+  };
+  vm.runInNewContext(
+    fs.readFileSync(path.join(__dirname, '../../main/resources/static/common.js'), 'utf8'),
+    context
+  );
+  const pricing = {
+    baseFee: 5,
+    perKmRate: 100,
+    perKgRate: 0.5,
+    sameDayMultiplier: 1.75,
+    pricingMode: 'RADIUS',
+    radiusBands: [{ upToKm: 5, distanceFee: 3 }, { upToKm: null, distanceFee: 8 }]
+  };
+  assert.equal(context.window.PP.estimatePrice(pricing, 20, 2, 'SCHEDULED', 12), 14);
+  assert.equal(context.window.PP.estimatePrice(pricing, 20, 2, 'SAME_DAY', 4), 15.75);
+});

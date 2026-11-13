@@ -9,10 +9,11 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
   function byId(id) {
     if (!elements.has(id)) elements.set(id, {
       value: '', textContent: '', disabled: false, hidden: true, listeners: {}, options: [],
+      children: [],
       get selectedOptions() { return this.options.filter(option => option.selected); },
       addEventListener(event, callback) { this.listeners[event] = callback; },
-      append() {},
-      replaceChildren(...children) { this.options = children; },
+      append(...children) { this.children.push(...children); },
+      replaceChildren(...children) { this.options = children; this.children = children; },
       classList: { add() {} }
     });
     return elements.get(id);
@@ -21,6 +22,14 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
   const messages = {};
   const PP = {
     byId, money: value => `$${Number(value).toFixed(2)}`,
+    estimatePrice(pricing, distance, weight, speed, radiusDistance) {
+      const charge = pricing.pricingMode === 'RADIUS'
+        ? pricing.radiusBands.find(band => band.upToKm == null || radiusDistance <= band.upToKm)?.distanceFee
+        : distance * pricing.perKmRate;
+      if (charge == null) throw new Error('No matching band');
+      return Math.round((pricing.baseFee + charge + weight * pricing.perKgRate)
+        * (speed === 'SAME_DAY' ? pricing.sameDayMultiplier : 1) * 100) / 100;
+    },
     setMessage(id, message, kind = '') { messages[id] = { message, kind }; },
     requireRole: async role => { assert.equal(role, 'ADMIN'); return user; },
     signOut() {},
@@ -28,7 +37,8 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
       requests.push({ route, options });
       if (route === '/api/pricing') {
         if (failLoad) throw new Error('Unavailable');
-        return { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75 };
+        return { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75,
+          pricingMode: 'ROUTE', radiusBands: [] };
       }
       if (route === '/api/admin/pricing') {
         if (failSave) throw new Error('Rejected');
@@ -39,7 +49,13 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
     }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin-settings.js'), 'utf8'), {
-    PP, window: { confirm: () => true }
+    PP, window: { confirm: () => true },
+    document: { createElement: tag => ({
+      tag, value: '', textContent: '', children: [], listeners: {},
+      append(...children) { this.children.push(...children); },
+      addEventListener(event, callback) { this.listeners[event] = callback; },
+      setAttribute() {}
+    }) }
   });
   await new Promise(resolve => setImmediate(resolve));
   return { byId, requests, messages };
@@ -60,9 +76,27 @@ test('saves edited rates and reports success', async () => {
   const request = requests.find(item => item.route === '/api/admin/pricing');
   assert.equal(request.options.method, 'PUT');
   assert.deepEqual(JSON.parse(request.options.body), {
-    baseFee: 7, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75
+    baseFee: 7, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75,
+    pricingMode: 'ROUTE', radiusBands: []
   });
   assert.match(messages.pricingMessage.message, /Pricing saved/);
+});
+
+test('saves configurable radius bands and shows a radius-based preview', async () => {
+  const { byId, requests } = await setup();
+  byId('pricingMode').value = 'RADIUS';
+  byId('pricingMode').listeners.change();
+  byId('addRadiusBandButton').listeners.click();
+  const row = byId('radiusBandsList').children[0];
+  const feeInput = row.children[1].children[0];
+  feeInput.value = '12';
+  feeInput.listeners.input();
+  byId('pricingForm').listeners.submit({ preventDefault() {} });
+  await new Promise(resolve => setImmediate(resolve));
+  const request = requests.find(item => item.route === '/api/admin/pricing' && item.options?.method === 'PUT');
+  assert.deepEqual(JSON.parse(request.options.body).radiusBands, [{ upToKm: null, distanceFee: 12 }]);
+  assert.equal(JSON.parse(request.options.body).pricingMode, 'RADIUS');
+  assert.equal(byId('pricingPreview').textContent, 'Example (10 km, 2 kg): scheduled $18.00 · same-day $31.50');
 });
 
 test('shows pricing load and save errors instead of claiming success', async () => {

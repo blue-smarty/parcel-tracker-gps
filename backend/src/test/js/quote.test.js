@@ -49,6 +49,12 @@ async function setup(api = async () => {}) {
     byId,
     api,
     money: value => `$${value.toFixed(2)}`,
+    estimatePrice(pricing, distance, weight, speed, radiusDistance) {
+      const charge = pricing.pricingMode === 'RADIUS'
+        ? pricing.radiusBands.find(band => band.upToKm == null || radiusDistance <= band.upToKm).distanceFee
+        : distance * pricing.perKmRate;
+      return Math.round((pricing.baseFee + charge + weight * pricing.perKgRate) * 100) / 100;
+    },
     setMessage: (id, message, kind = '') => {
       byId(id).textContent = message;
       byId(id).kind = kind;
@@ -73,6 +79,7 @@ test('calculates a route and quote from the public homepage form', async () => {
       return {
         distanceMeters: 12345,
         durationSeconds: 1500,
+        straightLineDistanceKm: 11,
         points: [{ latitude: 51.5, longitude: -0.1 }, { latitude: 51.6, longitude: -0.2 }]
       };
     }
@@ -86,9 +93,35 @@ test('calculates a route and quote from the public homepage form', async () => {
 
   assert.deepEqual(requests.sort(), ['/api/booking-route', '/api/pricing']);
   assert.equal(byId('quoteDistance').textContent, '12.3 km');
+  assert.equal(byId('quoteRadiusDistance').textContent, '11 km');
   assert.equal(byId('quoteWeight').textContent, '5 kg');
   assert.equal(byId('quotePrice').textContent, '$22.26');
   assert.equal(byId('quoteResult').hidden, false);
+});
+
+test('uses the straight-line distance band in radius pricing mode', async () => {
+  const { byId } = await setup(async url => {
+    if (url === '/api/booking-route') {
+      return {
+        distanceMeters: 30000,
+        durationSeconds: 2400,
+        straightLineDistanceKm: 11,
+        points: [{ latitude: -37.8, longitude: 144.9 }, { latitude: -37.9, longitude: 145 }]
+      };
+    }
+    return {
+      baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75,
+      pricingMode: 'RADIUS',
+      radiusBands: [{ upToKm: 5, distanceFee: 3 }, { upToKm: null, distanceFee: 8 }]
+    };
+  });
+  byId('quoteOrigin').value = 'Pickup';
+  byId('quoteDestination').value = 'Destination';
+  fillPackage(byId('quotePackages').children[0]);
+
+  await byId('quoteForm').dispatch('submit');
+
+  assert.equal(byId('quotePrice').textContent, '$15.50');
 });
 
 test('rejects incomplete parcel details without calling quote APIs', async () => {
@@ -137,6 +170,7 @@ test('discards a quote result after the visitor changes an address', async () =>
   resolveRoute({
     distanceMeters: 12345,
     durationSeconds: 1500,
+    straightLineDistanceKm: 11,
     points: [{ latitude: 51.5, longitude: -0.1 }, { latitude: 51.6, longitude: -0.2 }]
   });
   await pending;

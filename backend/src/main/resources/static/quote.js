@@ -1,5 +1,5 @@
 (() => {
-  const { byId, api, money, setMessage } = PP;
+  const { byId, api, money, setMessage, estimatePrice } = PP;
   const maxPackages = 10;
   const types = ['Carton/box', 'Documents', 'Satchel', 'Pallet', 'Other'];
   let routeRequest = 0;
@@ -123,6 +123,7 @@
       if (requestId !== routeRequest) return;
       if (!Number.isFinite(route.distanceMeters) || route.distanceMeters < 0
           || !Number.isFinite(route.durationSeconds) || route.durationSeconds < 0
+          || !Number.isFinite(route.straightLineDistanceKm) || route.straightLineDistanceKm < 0
           || !Array.isArray(route.points) || route.points.length < 2) {
         throw new Error('The route provider returned an invalid route.');
       }
@@ -132,8 +133,9 @@
       }
       pricing = currentPricing;
       const distance = Math.max(0.1, Math.round(route.distanceMeters / 100) / 10);
-      const price = Math.round((pricing.baseFee + distance * pricing.perKmRate + weight * pricing.perKgRate) * 100) / 100;
+      const price = estimatePrice(pricing, distance, weight, 'SCHEDULED', route.straightLineDistanceKm);
       byId('quoteDistance').textContent = `${distance} km`;
+      byId('quoteRadiusDistance').textContent = `${Math.round(route.straightLineDistanceKm * 100) / 100} km`;
       byId('quoteWeight').textContent = `${Math.round(weight * 100) / 100} kg`;
       byId('quotePrice').textContent = money(price);
       byId('quoteResult').hidden = false;
