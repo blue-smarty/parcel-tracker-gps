@@ -1,5 +1,5 @@
 (() => {
-  const { byId, money, api, setMessage } = PP;
+  const { byId, money, api, setMessage, estimatePrice } = PP;
 
   // Sizes are ordered so the largest selected item sets the parcel's package size.
   const catalog = [
@@ -14,7 +14,7 @@
   const maxQuantity = 20;
   let pricing = { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75 };
   const lines = new Map();
-  const route = { request: 0, distanceKm: null, origin: '', destination: '' };
+  const route = { request: 0, distanceKm: null, straightLineDistanceKm: null, origin: '', destination: '' };
   let user = null;
 
   const positive = value => Number.isFinite(value) && value > 0;
@@ -109,11 +109,6 @@
     return { all, weight, valid };
   }
 
-  function estimate(distance, weight) {
-    const multiplier = speed() === 'SAME_DAY' ? pricing.sameDayMultiplier : 1;
-    return Math.round((pricing.baseFee + distance * pricing.perKmRate + weight * pricing.perKgRate) * multiplier * 100) / 100;
-  }
-
   function updateSummary() {
     const { all, weight, valid } = totals();
     const distance = route.distanceKm;
@@ -124,9 +119,11 @@
       return item;
     }) : [Object.assign(document.createElement('li'), { className: 'ticket-empty', textContent: 'No items yet' })]));
     byId('ticketWeight').textContent = valid ? kg(weight) : '—';
-    byId('ticketDistance').textContent = positive(distance) ? `${distance} km` : '—';
+    byId('ticketDistance').textContent = positive(distance)
+      ? `${distance} km route · ${Math.round((route.straightLineDistanceKm || 0) * 100) / 100} km straight-line` : '—';
     byId('ticketSpeed').textContent = speed() === 'SAME_DAY' ? 'Same-day' : 'Scheduled';
-    byId('ticketPrice').textContent = valid && positive(distance) ? money(estimate(distance, weight)) : '$—';
+    byId('ticketPrice').textContent = valid && positive(distance) && pricing
+      ? money(estimatePrice(pricing, distance, weight, speed(), route.straightLineDistanceKm)) : '$—';
     const scheduled = speed() === 'SCHEDULED';
     byId('scheduleFields').hidden = !scheduled;
     byId('scheduleDate').required = scheduled;
@@ -164,6 +161,7 @@
       heightCm: all.reduce((sum, line) => sum + line.quantity * line.height, 0),
       weightKg: weight,
       distanceKm: distance,
+      straightLineDistanceKm: route.straightLineDistanceKm,
       deliverySpeed: speed(),
       paymentMethod: byId('paymentChoice').value,
       scheduledDate: scheduled ? byId('scheduleDate').value : null,
@@ -209,6 +207,7 @@
   function invalidateRoute() {
     route.request++;
     route.distanceKm = null;
+    route.straightLineDistanceKm = null;
     route.origin = '';
     route.destination = '';
     byId('calculateRouteButton').disabled = false;
@@ -236,6 +235,7 @@
       if (requestId !== route.request) return;
       if (!Number.isFinite(result.distanceMeters) || result.distanceMeters < 0
           || !Number.isFinite(result.durationSeconds) || result.durationSeconds < 0
+          || !Number.isFinite(result.straightLineDistanceKm) || result.straightLineDistanceKm < 0
           || !Array.isArray(result.points) || result.points.length < 2) {
         throw new Error('The route provider returned an invalid route.');
       }
@@ -249,11 +249,12 @@
         { id: 'end', trackingNumber: 'Delivery', currentLocation: points[points.length - 1] }
       ], 'start', points);
       route.distanceKm = km;
+      route.straightLineDistanceKm = result.straightLineDistanceKm;
       route.origin = origin;
       route.destination = destination;
       byId('routeDistance').textContent = `${km} km`;
       updateSummary();
-      setRouteSummary(`Driving distance ${km} km · about ${minutes} min`);
+      setRouteSummary(`Driving distance ${km} km · straight-line ${Math.round(result.straightLineDistanceKm * 100) / 100} km · about ${minutes} min`);
     } catch (error) {
       if (requestId !== route.request) return;
       console.warn('Route lookup failed.', error);

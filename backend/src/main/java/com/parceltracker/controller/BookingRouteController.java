@@ -35,7 +35,8 @@ public class BookingRouteController {
 
     record RouteRequest(String origin, String destination) {}
     record Point(double latitude, double longitude) {}
-    record RouteResult(double distanceMeters, double durationSeconds, List<Point> points) {}
+    record RouteResult(double distanceMeters, double durationSeconds, double straightLineDistanceKm,
+            List<Point> points) {}
 
     @PostMapping("/api/booking-route")
     public RouteResult route(@RequestBody RouteRequest request, HttpServletRequest servletRequest) {
@@ -77,7 +78,7 @@ public class BookingRouteController {
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Route provider returned an invalid route.");
             }
             return new RouteResult(summary.path("lengthInMeters").asDouble(),
-                    summary.path("travelTimeInSeconds").asDouble(), points);
+                    summary.path("travelTimeInSeconds").asDouble(), straightLineDistanceKm(start, end), points);
         } catch (RestClientException error) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Route lookup is temporarily unavailable.");
         }
@@ -108,6 +109,17 @@ public class BookingRouteController {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Route provider returned invalid coordinates.");
         }
         return new Point(latitude.asDouble(), longitude.asDouble());
+    }
+
+    private static double straightLineDistanceKm(Point start, Point end) {
+        double startLatitude = Math.toRadians(start.latitude());
+        double endLatitude = Math.toRadians(end.latitude());
+        double latitudeDelta = endLatitude - startLatitude;
+        double longitudeDelta = Math.toRadians(end.longitude() - start.longitude());
+        double haversine = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
+                + Math.cos(startLatitude) * Math.cos(endLatitude)
+                * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2);
+        return 2 * 6371.0088 * Math.asin(Math.sqrt(Math.min(1, haversine)));
     }
 
     private static String address(String value) {

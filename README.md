@@ -40,6 +40,8 @@ Open [http://localhost:8080](http://localhost:8080) and use **Create account** f
 
 From the dispatch workspace, an administrator or dispatcher can select **New ad hoc delivery** to build a parcel from item tiles, adjust its dimensions and weight, calculate a driving route and estimate, and select a provisioned courier. The parcel is created and assigned in one request, appears in the dispatch queue and is offered to the courier for acceptance. Ad hoc parcels are not linked to a customer account. This creates a parcel, not a separate scheduled pickup request.
 
+Administrators can choose driving-route per-kilometre pricing or configure fixed distance charges for straight-line pickup-to-delivery bands. Radius estimates use geocoded pickup and delivery addresses; the last band applies to all longer trips. Base, weight and same-day charges continue to apply. Payments remain simulated and no charge is collected.
+
 ## REST API
 | Method | Path | Description |
 |---|---|---|

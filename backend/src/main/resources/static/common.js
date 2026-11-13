@@ -413,8 +413,27 @@ window.PP = (() => {
     }
   }
 
+  function estimatePrice(pricing, routeDistanceKm, weightKg, deliverySpeed, straightLineDistanceKm) {
+    let distanceCharge = routeDistanceKm * pricing.perKmRate;
+    if (pricing.pricingMode === 'RADIUS') {
+      if (!Number.isFinite(straightLineDistanceKm) || straightLineDistanceKm < 0
+          || !Array.isArray(pricing.radiusBands)) {
+        throw new Error('Straight-line distance pricing data is unavailable.');
+      }
+      const band = pricing.radiusBands.find(candidate => candidate.upToKm == null
+        || straightLineDistanceKm <= candidate.upToKm);
+      if (!band || !Number.isFinite(band.distanceFee)) {
+        throw new Error('No radius pricing band covers this trip.');
+      }
+      distanceCharge = band.distanceFee;
+    }
+    const multiplier = deliverySpeed === 'SAME_DAY' ? pricing.sameDayMultiplier || 1 : 1;
+    return Math.round((pricing.baseFee + distanceCharge + weightKg * pricing.perKgRate) * multiplier * 100) / 100;
+  }
+
   return {
     keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
-    session, basicAuthorization, signOut, requireRole, api, setMessage, detail, setupAddressAutocomplete, drawMap
+    session, basicAuthorization, signOut, requireRole, api, setMessage, detail, setupAddressAutocomplete, drawMap,
+    estimatePrice
   };
 })();

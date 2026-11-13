@@ -64,6 +64,14 @@ h1 span { color: #83d2ca; }
 .settings-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
 .settings-preview { border-top: 1px solid var(--line); margin-top: 15px; padding-top: 14px; color: #607280; font-size: 12px; }
 .settings-preview strong { color: var(--navy); }
+.radius-bands-section { display: grid; gap: 10px; }
+.radius-bands-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.radius-bands-heading strong { color: var(--navy); font-size: 12px; }
+.radius-bands-list { display: grid; gap: 8px; }
+.radius-band-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: end; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfd; }
+.radius-band-row label { display: block; color: #536779; font-size: 10px; font-weight: 600; }
+.radius-band-row input { margin-top: 5px; }
+.radius-band-row .button { margin-bottom: 0; }
 .coverage-map { height: min(62vh, 680px); min-height: 470px; margin: 16px 0 10px; border: 1px solid var(--line); border-radius: 6px; z-index: 0; }
 .coverage-page { max-width: 1330px; margin: auto; }
 .coverage-intro { margin: -7px 0 17px; color: #748493; font-size: 13px; line-height: 1.5; }
