@@ -14,6 +14,7 @@ echo 'openjdk version "17.0.1"' >&2
 EOF
 cat > "$tmp/bin/mvn" <<'EOF'
 #!/usr/bin/env bash
+printf '%s\n' "$*" >> "$MVN_LOG"
 exit 0
 EOF
 cat > "$tmp/bin/psql" <<'EOF'
@@ -21,11 +22,11 @@ cat > "$tmp/bin/psql" <<'EOF'
 printf '%s\n' "$*" >> "$PSQL_LOG"
 EOF
 chmod +x "$tmp/bin/java" "$tmp/bin/mvn" "$tmp/bin/psql"
-export PATH="$tmp/bin:$PATH" PSQL_LOG="$tmp/psql.log"
+export PATH="$tmp/bin:$PATH" PSQL_LOG="$tmp/psql.log" MVN_LOG="$tmp/mvn.log"
 
 admin_password='admin $HOME '"'"' " `test`'
 courier_password='courier $(touch injected) \ !'
-printf '%s\n' 'bad:name' 'admin-1' 'short' '            ' "$admin_password" 'admin-1' 'courier-1' "$courier_password" |
+printf '%s\n' 'bad:name' 'admin-1' 'short' '            ' "$admin_password" 'admin-1' 'courier-1' "$courier_password" '' |
   bash "$tmp/repo/installer/install.sh" "$tmp/install" > "$tmp/output" 2>&1
 
 grep -q 'Use 1-255' "$tmp/output"
@@ -42,9 +43,10 @@ test ! -e injected
 )
 cp "$tmp/install/parcel-tracker.env" "$tmp/original.env"
 cp "$PSQL_LOG" "$tmp/original-psql.log"
-bash "$tmp/repo/installer/install.sh" "$tmp/install" </dev/null > "$tmp/reinstall-output"
+printf '\n' | bash "$tmp/repo/installer/install.sh" "$tmp/install" > "$tmp/reinstall-output"
 cmp "$tmp/original.env" "$tmp/install/parcel-tracker.env"
 cmp "$tmp/original-psql.log" "$PSQL_LOG"
 grep -q 'keeping its configuration' "$tmp/reinstall-output"
+test "$(grep -c -- '-q -DskipTests clean package' "$MVN_LOG")" -eq 2
 
 echo 'Installer credential tests passed.'
