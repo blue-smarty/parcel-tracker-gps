@@ -21,7 +21,7 @@ export PARCEL_BOOTSTRAP_COURIER_ID=courier-001
 export PARCEL_BOOTSTRAP_PASSWORD='your-courier-password'
 export TOMTOM_API_KEY='your-tomtom-api-key'
 cd backend
-mvn spring-boot:run
+mvn clean spring-boot:run
 ```
 
 In Windows PowerShell, use `$env:NAME = 'value'` instead of `export` for each variable. All admin and courier passwords must be at least 12 characters. Keep the same terminal open so the backend inherits these variables. `TOMTOM_API_KEY` must be configured on the backend with TomTom Search and Routing access for address autocomplete and route-based quotes; keep it private and never put it in browser code. Addresses can still be entered manually when suggestions are unavailable, but route quotes require the key. For a managed PostgreSQL database, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD` instead; require TLS in the connection URL (for example, `?sslmode=require`). Flyway creates the schema on startup and Hibernate validates it. Existing MongoDB data is not automatically migrated.

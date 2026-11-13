@@ -101,7 +101,7 @@ else
 fi
 
 echo "Building backend..."
-(cd "$REPO_DIR/backend" && mvn -q -DskipTests package)
+(cd "$REPO_DIR/backend" && mvn -q -DskipTests clean package)
 cp "$REPO_DIR/backend/target/parcel-tracker-backend-1.0.0.jar" "$INSTALL_DIR/parcel-tracker-backend.jar"
 
 cat > "$INSTALL_DIR/start.sh" <<'EOF'

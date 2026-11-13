@@ -114,7 +114,7 @@ if (Test-Path $envFile) {
 Write-Host 'Building backend...'
 Push-Location (Join-Path $repo 'backend')
 try {
-    & mvn -q -DskipTests package
+    & mvn -q -DskipTests clean package
     if ($LASTEXITCODE -ne 0) { throw 'Maven build failed.' }
 } finally { Pop-Location }
 Copy-Item (Join-Path $repo 'backend\target\parcel-tracker-backend-1.0.0.jar') (Join-Path $InstallDir 'parcel-tracker-backend.jar') -Force
