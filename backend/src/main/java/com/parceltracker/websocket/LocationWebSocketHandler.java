@@ -1,7 +1,7 @@
 package com.parceltracker.websocket;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.service.LocationService;
@@ -118,7 +118,7 @@ public class LocationWebSocketHandler extends TextWebSocketHandler {
             update.put("status", String.valueOf(parcel.getStatus()));
             update.put("location", location);
             payload = mapper.writeValueAsString(update);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("Cannot serialize location update", e);
             return;
         }

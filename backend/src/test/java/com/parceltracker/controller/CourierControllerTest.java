@@ -16,8 +16,8 @@ import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.service.CourierService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -31,9 +31,9 @@ import com.parceltracker.repository.CourierAccountRepository;
 @WithMockUser(username = "courier-1", roles = "COURIER")
 class CourierControllerTest {
     @Autowired private MockMvc mvc;
-    @MockBean private CourierService service;
-    @MockBean private com.parceltracker.service.DriverActionService actions;
-    @MockBean private CourierAccountRepository accounts;
+    @MockitoBean private CourierService service;
+    @MockitoBean private com.parceltracker.service.DriverActionService actions;
+    @MockitoBean private CourierAccountRepository accounts;
 
     @Test
     void updatesCourierDeliveryStatus() throws Exception {

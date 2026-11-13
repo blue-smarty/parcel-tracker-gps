@@ -21,8 +21,8 @@ import com.parceltracker.service.ParcelService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
@@ -36,8 +36,8 @@ import org.springframework.test.web.servlet.MockMvc;
 })
 class ParcelAdminAuthorizationTest {
     @Autowired private MockMvc mvc;
-    @MockBean private ParcelService service;
-    @MockBean private CourierAccountRepository accounts;
+    @MockitoBean private ParcelService service;
+    @MockitoBean private CourierAccountRepository accounts;
     private static final String ADHOC = """
             {"sender":" Alice ","customerContact":" 1234567 ","pickupAddress":" 1 Main St ",
              "recipient":" Bob ","destination":" 2 Oak St ","courierId":" courier-1 "}

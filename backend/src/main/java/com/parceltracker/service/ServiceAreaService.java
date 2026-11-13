@@ -1,6 +1,6 @@
 package com.parceltracker.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.parceltracker.model.ServiceAreaSettings;
 import com.parceltracker.repository.ServiceAreaSettingsRepository;
 import java.net.URI;
@@ -69,7 +69,7 @@ public class ServiceAreaService {
         }
         if (apiKey.isEmpty()) throw unavailable();
         try {
-            URI geocode = UriComponentsBuilder.fromHttpUrl("https://api.tomtom.com")
+            URI geocode = UriComponentsBuilder.fromUriString("https://api.tomtom.com")
                     .pathSegment("search", "2", "geocode", "{address}.json")
                     .queryParam("key", "{key}").queryParam("limit", 1)
                     .buildAndExpand(address.trim(), apiKey).encode().toUri();
@@ -100,7 +100,7 @@ public class ServiceAreaService {
                 }
                 throw outside(label);
             }
-            URI query = UriComponentsBuilder.fromHttpUrl(VICMAP)
+            URI query = UriComponentsBuilder.fromUriString(VICMAP)
                     .queryParam("geometry", "{point}").queryParam("geometryType", "esriGeometryPoint")
                     .queryParam("inSR", "4326").queryParam("spatialRel", "esriSpatialRelIntersects")
                     .queryParam("outFields", "lga_name").queryParam("returnGeometry", "false")

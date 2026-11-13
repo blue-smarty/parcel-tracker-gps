@@ -1,6 +1,6 @@
 package com.parceltracker.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,7 +42,7 @@ public class AustralianCouncilLookup {
     }
 
     private UriComponentsBuilder base() {
-        return UriComponentsBuilder.fromHttpUrl(QUERY)
+        return UriComponentsBuilder.fromUriString(QUERY)
                 .queryParam("outFields", "LGA_CODE_2025,LGA_NAME_2025,STATE_CODE_2021")
                 .queryParam("returnGeometry", "false").queryParam("f", "json");
     }

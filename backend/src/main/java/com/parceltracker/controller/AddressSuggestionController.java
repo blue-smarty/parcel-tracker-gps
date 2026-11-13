@@ -1,6 +1,6 @@
 package com.parceltracker.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -44,7 +44,7 @@ public class AddressSuggestionController {
                     "Address suggestions are not configured.");
         }
 
-        URI uri = UriComponentsBuilder.fromHttpUrl(TOMTOM_SEARCH_URL)
+        URI uri = UriComponentsBuilder.fromUriString(TOMTOM_SEARCH_URL)
                 .pathSegment("{query}.json")
                 .queryParam("key", apiKey)
                 .queryParam("limit", MAX_SUGGESTIONS)

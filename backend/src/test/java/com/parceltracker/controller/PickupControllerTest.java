@@ -14,8 +14,8 @@ import com.parceltracker.service.PickupService;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.context.annotation.Import;
@@ -28,8 +28,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 @Import(SecurityConfig.class)
 class PickupControllerTest {
     @Autowired private MockMvc mvc;
-    @MockBean private PickupService service;
-    @MockBean private CourierAccountRepository accounts;
+    @MockitoBean private PickupService service;
+    @MockitoBean private CourierAccountRepository accounts;
 
     private String json(String date, String weight, String phone) {
         return "{\"contactName\":\"Ann\",\"contactPhone\":\"" + phone + "\",\"street\":\"1 Main St\","

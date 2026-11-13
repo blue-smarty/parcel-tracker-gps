@@ -1,6 +1,6 @@
 package com.parceltracker.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.parceltracker.service.PublicQuoteRateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
@@ -54,7 +54,7 @@ public class BookingRouteController {
             Point end = geocode(destination);
             String locations = start.latitude() + "," + start.longitude() + ":"
                     + end.latitude() + "," + end.longitude();
-            URI uri = UriComponentsBuilder.fromHttpUrl("https://api.tomtom.com")
+            URI uri = UriComponentsBuilder.fromUriString("https://api.tomtom.com")
                     .pathSegment("routing", "1", "calculateRoute", "{locations}", "json")
                     .queryParam("key", "{key}").queryParam("travelMode", "car")
                     .buildAndExpand(locations, apiKey).encode().toUri();
@@ -84,7 +84,7 @@ public class BookingRouteController {
     }
 
     private Point geocode(String address) {
-        URI uri = UriComponentsBuilder.fromHttpUrl("https://api.tomtom.com")
+        URI uri = UriComponentsBuilder.fromUriString("https://api.tomtom.com")
                 .pathSegment("search", "2", "geocode", "{address}.json")
                 .queryParam("key", "{key}").queryParam("limit", 1)
                 .buildAndExpand(address, apiKey).encode().toUri();
