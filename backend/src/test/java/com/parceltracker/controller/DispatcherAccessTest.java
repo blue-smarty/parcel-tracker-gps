@@ -24,8 +24,8 @@ import com.parceltracker.service.PasswordResetService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,11 +36,11 @@ import org.springframework.test.web.servlet.MockMvc;
 class DispatcherAccessTest {
     @Autowired private MockMvc mvc;
     @Autowired private PasswordEncoder encoder;
-    @MockBean private CourierAccountRepository couriers;
-    @MockBean private CustomerAccountRepository customers;
-    @MockBean private DispatcherAccountRepository dispatchers;
-    @MockBean private ParcelService parcels;
-    @MockBean private PasswordResetService resets;
+    @MockitoBean private CourierAccountRepository couriers;
+    @MockitoBean private CustomerAccountRepository customers;
+    @MockitoBean private DispatcherAccountRepository dispatchers;
+    @MockitoBean private ParcelService parcels;
+    @MockitoBean private PasswordResetService resets;
 
     @Test
     void dispatcherAuthenticatesAndGetsOperationalAccessOnly() throws Exception {

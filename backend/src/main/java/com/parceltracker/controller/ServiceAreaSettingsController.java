@@ -5,8 +5,8 @@ import com.parceltracker.repository.ServiceAreaSettingsRepository;
 import com.parceltracker.service.AustralianCouncilLookup;
 import com.parceltracker.service.CoveragePolygon;
 import com.parceltracker.service.ServiceAreaException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -88,7 +88,7 @@ public class ServiceAreaSettingsController {
                                 + "VALUES (?, ?, ?, CAST(? AS jsonb))",
                         java.sql.Timestamp.from(Instant.now()), authentication.getName(),
                         settings.isMelbourneMetroOnly(), mapper.writeValueAsString(settings));
-            } catch (JsonProcessingException error) {
+            } catch (JacksonException error) {
                 throw new IllegalStateException("Could not audit service area settings", error);
             }
         }

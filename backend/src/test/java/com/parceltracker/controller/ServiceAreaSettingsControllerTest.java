@@ -15,8 +15,8 @@ import com.parceltracker.service.AustralianCouncilLookup;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,10 +26,10 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import(SecurityConfig.class)
 class ServiceAreaSettingsControllerTest {
     @Autowired private MockMvc mvc;
-    @MockBean private ServiceAreaSettingsRepository settings;
-    @MockBean private CourierAccountRepository couriers;
-    @MockBean private JdbcTemplate jdbc;
-    @MockBean private AustralianCouncilLookup councilLookup;
+    @MockitoBean private ServiceAreaSettingsRepository settings;
+    @MockitoBean private CourierAccountRepository couriers;
+    @MockitoBean private JdbcTemplate jdbc;
+    @MockitoBean private AustralianCouncilLookup councilLookup;
 
     @Test
     void onlyAdminCanChangeSettingWithCsrf() throws Exception {

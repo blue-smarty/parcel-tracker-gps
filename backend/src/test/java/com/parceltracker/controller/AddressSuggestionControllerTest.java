@@ -12,16 +12,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.repository.CourierAccountRepository;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -38,8 +38,8 @@ import org.springframework.web.server.ResponseStatusException;
 class AddressSuggestionControllerTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper objectMapper;
-    @MockBean private CourierAccountRepository accounts;
-    @MockBean private RestTemplate addressLookupRestTemplate;
+    @MockitoBean private CourierAccountRepository accounts;
+    @MockitoBean private RestTemplate addressLookupRestTemplate;
 
     @Test
     void returnsFormattedSuggestionsToAuthenticatedUsers() throws Exception {

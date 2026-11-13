@@ -11,16 +11,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.service.PublicQuoteRateLimiter;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -37,9 +37,9 @@ import org.springframework.web.server.ResponseStatusException;
 class BookingRouteControllerTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper mapper;
-    @MockBean private CourierAccountRepository accounts;
-    @MockBean private RestTemplate addressLookupRestTemplate;
-    @MockBean private PublicQuoteRateLimiter rateLimiter;
+    @MockitoBean private CourierAccountRepository accounts;
+    @MockitoBean private RestTemplate addressLookupRestTemplate;
+    @MockitoBean private PublicQuoteRateLimiter rateLimiter;
     private static final String REQUEST = """
             {"origin":"10 Main Street","destination":"20 Main Street"}
             """;

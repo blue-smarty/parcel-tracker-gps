@@ -16,10 +16,10 @@ import java.net.http.HttpResponse;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Configuration;
@@ -33,8 +33,8 @@ class PricingHttpTest {
     static class App {}
 
     @LocalServerPort private int port;
-    @MockBean private PricingSettingsRepository settings;
-    @MockBean private CourierAccountRepository couriers;
+    @MockitoBean private PricingSettingsRepository settings;
+    @MockitoBean private CourierAccountRepository couriers;
 
     @Test
     void realHttpPricingSaveUsesCookieAndReportsBadInput() throws Exception {
@@ -44,7 +44,7 @@ class PricingHttpTest {
         var csrf = client.send(HttpRequest.newBuilder(URI.create(base + "/api/csrf")).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
         assertEquals(200, csrf.statusCode());
-        String token = new com.fasterxml.jackson.databind.ObjectMapper().readTree(csrf.body()).path("token").asText();
+        String token = new tools.jackson.databind.ObjectMapper().readTree(csrf.body()).path("token").asText();
         String cookie = csrf.headers().firstValue("set-cookie").orElseThrow().split(";")[0];
         String credentials = Base64.getEncoder().encodeToString("test-admin:example-password".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         var request = HttpRequest.newBuilder(URI.create(base + "/api/admin/pricing"))
@@ -79,7 +79,7 @@ class PricingHttpTest {
         String base = "http://localhost:" + port;
         var csrf = client.send(HttpRequest.newBuilder(URI.create(base + "/api/csrf")).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
-        String token = new com.fasterxml.jackson.databind.ObjectMapper().readTree(csrf.body()).path("token").asText();
+        String token = new tools.jackson.databind.ObjectMapper().readTree(csrf.body()).path("token").asText();
         String cookie = csrf.headers().firstValue("set-cookie").orElseThrow().split(";")[0];
         var request = HttpRequest.newBuilder(URI.create(base + "/api/admin/pricing"))
                 .header("Authorization", "Basic " + Base64.getEncoder().encodeToString(
@@ -96,7 +96,7 @@ class PricingHttpTest {
         String base = "http://localhost:" + port;
         var csrf = client.send(HttpRequest.newBuilder(URI.create(base + "/api/csrf")).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
-        String token = new com.fasterxml.jackson.databind.ObjectMapper().readTree(csrf.body()).path("token").asText();
+        String token = new tools.jackson.databind.ObjectMapper().readTree(csrf.body()).path("token").asText();
         String cookie = csrf.headers().firstValue("set-cookie").orElseThrow().split(";")[0];
         var request = HttpRequest.newBuilder(URI.create(base + "/api/admin/pricing"))
                 .header("Authorization", "Basic " + Base64.getEncoder().encodeToString(

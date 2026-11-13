@@ -4,11 +4,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import java.net.URI;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
@@ -38,6 +41,20 @@ class AustralianCouncilLookupTest {
                 lookup.at(-37.8136, 144.9631));
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE,
                 assertThrows(ServiceAreaException.class, () -> lookup.at(-37.8136, 144.9631)).getStatus());
+    }
+
+    @Test
+    void spatialLookupReadsProviderJsonWithConfiguredRestTemplate() {
+        RestTemplate template = new RestTemplateBuilder().build();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(template).build();
+        server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.anything())
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess("""
+                        {"features":[{"attributes":{"LGA_CODE_2025":"24600","LGA_NAME_2025":"Melbourne",
+                        "STATE_CODE_2021":"2"}}]}
+                        """, MediaType.APPLICATION_JSON));
+        assertEquals(java.util.List.of(new AustralianCouncilLookup.Council("24600", "Melbourne", "2")),
+                new AustralianCouncilLookup(template).at(-37.8136, 144.9631));
+        server.verify();
     }
 
     @Test
