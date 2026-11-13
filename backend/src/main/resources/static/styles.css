@@ -64,9 +64,20 @@ h1 span { color: #83d2ca; }
 .settings-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
 .settings-preview { border-top: 1px solid var(--line); margin-top: 15px; padding-top: 14px; color: #607280; font-size: 12px; }
 .settings-preview strong { color: var(--navy); }
-.coverage-map { height: 300px; margin: 10px 0; border: 1px solid var(--line); border-radius: 6px; z-index: 0; }
-#customCoverage label { display: block; margin-top: 12px; }
-#customCoverage select[multiple] { height: auto; }
+.coverage-map { height: min(62vh, 680px); min-height: 470px; margin: 16px 0 10px; border: 1px solid var(--line); border-radius: 6px; z-index: 0; }
+.coverage-page { max-width: 1330px; margin: auto; }
+.coverage-intro { margin: -7px 0 17px; color: #748493; font-size: 13px; line-height: 1.5; }
+.coverage-panel { padding: 26px 30px; }
+.coverage-controls { max-width: 640px; }
+.coverage-controls label, .coverage-selections label { display: block; color: #536779; font-size: 12px; font-weight: 700; }
+.coverage-selections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 16px 0 12px; }
+.coverage-selections select[multiple] { height: 180px; padding: 8px; }
+.coverage-map-actions { margin-top: 12px; }
+.coverage-area-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(210px, .7fr) auto; gap: 12px; border-top: 1px solid var(--line); padding: 12px 0; }
+.coverage-area-row > span { align-self: center; color: #536779; font-weight: 600; }
+.coverage-area-row select { margin: 0; }
+.coverage-save { border-top: 1px solid var(--line); padding-top: 16px; }
+.coverage-save .form-message { margin: 0; }
 h2 { color: var(--navy); margin: 0; font-size: 23px; letter-spacing: -.65px; }
 h3 { margin: 0; font-size: 16px; letter-spacing: -.25px; }
 h4 { margin: 0 0 12px; font-size: 12px; }
@@ -208,6 +219,7 @@ footer b { color: var(--teal); padding: 0 3px; }
 @media (max-width: 980px) {
   .shell { padding: 0 26px; }
   .customer-grid, .dispatch-grid { grid-template-columns: 1fr; }
+  .coverage-page { max-width: none; }
   .customer-side { grid-template-columns: 1fr 1fr; align-items: start; }
   .dispatch-grid .map-panel { grid-row: 1; }
   .intro-art { right: 0; opacity: .45; }
@@ -238,6 +250,11 @@ footer b { color: var(--teal); padding: 0 3px; }
   .section-heading .button { padding: 0 9px; }
   .section-heading .button span { display: none; }
   .customer-side { grid-template-columns: 1fr; }
+  .coverage-panel { padding: 17px; }
+  .coverage-selections { grid-template-columns: 1fr; gap: 10px; }
+  .coverage-map { height: 56vh; min-height: 340px; }
+  .coverage-area-row { grid-template-columns: 1fr; gap: 5px; }
+  .coverage-area-row .button { justify-self: start; }
   .booking-panel, .orders-panel, .tracking-panel, .dispatch-list-panel, .map-panel, .support-panel { padding: 15px; }
   .metric-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .metric-card { padding: 12px; }

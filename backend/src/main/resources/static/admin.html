@@ -4,8 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ParcelPilot — Administration</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <link rel="stylesheet" href="/styles.css">
   <script src="/common.js" defer></script>
   <script src="/admin-settings.js" defer></script>
@@ -24,50 +22,12 @@
       <section id="settingsView" class="view" hidden>
         <div class="section-heading">
           <div><p class="eyebrow">ADMINISTRATION</p><h2>Admin settings</h2></div>
-          <a class="button button-secondary" href="/dispatch.html">Open dispatch workspace</a>
+          <div class="dispatch-actions">
+            <a class="button button-primary" href="/delivery-coverage.html">Delivery coverage</a>
+            <a class="button button-secondary" href="/dispatch.html">Open dispatch workspace</a>
+          </div>
         </div>
         <div class="settings-grid">
-          <section class="panel settings-panel" aria-labelledby="serviceAreaTitle">
-            <div class="panel-heading"><div><p class="eyebrow">DELIVERY COVERAGE</p><h3 id="serviceAreaTitle">Service area</h3></div></div>
-            <p class="field-note">Both addresses must be inside the selected coverage. Existing deliveries are not changed.</p>
-            <form id="serviceAreaForm" class="settings-form">
-              <label>Coverage
-                <select id="serviceAreaMode">
-                  <option value="UNRESTRICTED">Unrestricted</option>
-                  <option value="MELBOURNE">Melbourne metro councils only</option>
-                  <option value="CUSTOM">Custom Australian coverage</option>
-                </select>
-              </label>
-              <div id="customCoverage" hidden>
-                <p class="field-note">Areas are combined: an address can be in any selected state, council, or drawn area. ABS council boundaries are statistical approximations, not legal boundaries.</p>
-                <label>Entire states and territories
-                  <select id="coverageStates" multiple size="8">
-                    <option value="1">New South Wales</option><option value="2">Victoria</option>
-                    <option value="3">Queensland</option><option value="4">South Australia</option>
-                    <option value="5">Western Australia</option><option value="6">Tasmania</option>
-                    <option value="7">Northern Territory</option><option value="8">Australian Capital Territory</option>
-                  </select>
-                </label>
-                <label>Council areas
-                  <select id="coverageCouncils" multiple size="8" aria-describedby="councilMessage"></select>
-                </label>
-                <p id="councilMessage" class="field-note" role="status">Loading council areas…</p>
-                <p class="field-note">Use Ctrl or Command to select multiple options. Draw areas by placing at least three points on the map, then choose Finish. The first drawn area matching a new delivery determines its courier; state and council selections do not assign couriers.</p>
-                <div id="coverageMap" class="coverage-map" aria-label="Custom coverage drawing map"></div>
-                <div class="settings-actions">
-                  <button id="drawCoverageButton" class="button button-quiet" type="button">Draw area</button>
-                  <button id="finishCoverageButton" class="button button-quiet" type="button" disabled>Finish area</button>
-                  <button id="cancelCoverageButton" class="button button-quiet" type="button" disabled>Cancel drawing</button>
-                </div>
-                <p id="drawingMessage" class="field-note" role="status"></p>
-                <p id="courierMessage" class="field-note" role="status"></p>
-                <div id="coveragePolygonList"></div>
-              </div>
-              <p class="field-note">Unrestricted allows deliveries anywhere. Changes are audited. Address and boundary verification must be available when restricted.</p>
-              <button id="saveServiceAreaButton" class="button button-primary" type="submit" disabled>Save service area</button>
-              <p id="serviceAreaMessage" class="form-message" role="status" aria-live="polite"></p>
-            </form>
-          </section>
           <section class="panel settings-panel" aria-labelledby="pricingTitle">
             <div class="panel-heading"><div><p class="eyebrow">DELIVERY PRICING</p><h3 id="pricingTitle">Estimate rates</h3></div></div>
             <p class="field-note">These rates determine estimates for new parcels. Existing parcel estimates are not changed.</p>
