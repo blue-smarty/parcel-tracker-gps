@@ -3,6 +3,10 @@
   const fields = ['baseFee', 'perKmRate', 'perKgRate', 'sameDayMultiplier'];
   let savedServiceArea = null;
   let polygons = [];
+  let polygonCouriers = [];
+  let savedPolygonCouriers = [];
+  let couriers = [];
+  let couriersLoaded = false;
   let savedCouncilCodes = [];
   let councilsLoaded = false;
   let coverageMap = null;
@@ -24,12 +28,36 @@
       row.className = 'settings-actions';
       const label = document.createElement('span');
       label.textContent = `Custom area ${index + 1} (${polygon.length} points)`;
+      const courier = document.createElement('select');
+      courier.setAttribute('aria-label', `Courier for custom area ${index + 1}`);
+      const unassigned = document.createElement('option');
+      unassigned.value = '';
+      unassigned.textContent = 'No auto-assignment';
+      courier.append(unassigned);
+      couriers.forEach(account => {
+        const option = document.createElement('option');
+        option.value = account.courierId;
+        option.textContent = account.courierId;
+        courier.append(option);
+      });
+      if (polygonCouriers[index] && !couriers.some(account => account.courierId === polygonCouriers[index])) {
+        const option = document.createElement('option');
+        option.value = polygonCouriers[index];
+        option.textContent = `Unavailable courier (${polygonCouriers[index]})`;
+        courier.append(option);
+      }
+      courier.value = polygonCouriers[index] || '';
+      courier.addEventListener('change', () => { polygonCouriers[index] = courier.value || null; });
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'button button-quiet';
       remove.textContent = 'Remove';
-      remove.addEventListener('click', () => { polygons.splice(index, 1); renderPolygons(); });
-      row.append(label, remove);
+      remove.addEventListener('click', () => {
+        polygons.splice(index, 1);
+        polygonCouriers.splice(index, 1);
+        renderPolygons();
+      });
+      row.append(label, courier, remove);
       list.append(row);
     });
     if (coverageLayer && drawing?.length) {
@@ -102,18 +130,31 @@
     }
   }
 
+  async function loadCouriers() {
+    try {
+      couriers = await api('/api/admin/couriers');
+      couriersLoaded = true;
+      setMessage('courierMessage', 'Choose which courier receives parcels in each drawn area.');
+    } catch (error) {
+      setMessage('courierMessage', `Could not load couriers: ${error.message}`, 'error');
+    }
+    renderPolygons();
+  }
+
   async function loadServiceArea() {
     try {
       const settings = await api('/api/admin/service-area');
       savedServiceArea = settings.coverageMode;
       byId('serviceAreaMode').value = savedServiceArea;
       polygons = settings.polygons || [];
+      polygonCouriers = polygons.map((_, index) => settings.polygonCouriers?.[index] || null);
+      savedPolygonCouriers = [...polygonCouriers];
       savedCouncilCodes = settings.councils || [];
       [...byId('coverageStates').options].forEach(option => {
         option.selected = (settings.states || []).includes(option.value);
       });
       updateCoverageMode();
-      await loadCouncils();
+      await Promise.all([loadCouncils(), loadCouriers()]);
       byId('saveServiceAreaButton').disabled = false;
       setMessage('serviceAreaMessage', 'Current service area loaded.');
     } catch (error) {
@@ -138,11 +179,15 @@
           coverageMode: mode,
           states: selectedValues('coverageStates'),
           councils: councilsLoaded ? selectedValues('coverageCouncils') : savedCouncilCodes,
-          polygons
+          polygons,
+          polygonCouriers: couriersLoaded ? polygonCouriers : savedPolygonCouriers
         })
       });
       savedServiceArea = settings.coverageMode;
       savedCouncilCodes = settings.councils;
+      polygonCouriers = settings.polygonCouriers || polygons.map(() => null);
+      savedPolygonCouriers = [...polygonCouriers];
+      renderPolygons();
       byId('serviceAreaMode').value = savedServiceArea;
       setMessage('serviceAreaMessage', 'Service area saved.', 'success');
     } catch (error) {
@@ -303,6 +348,7 @@
     byId('finishCoverageButton').addEventListener('click', () => {
       if (!drawing || drawing.length < 3) return;
       polygons.push(drawing);
+      polygonCouriers.push(null);
       stopDrawing();
     });
     byId('cancelCoverageButton').addEventListener('click', stopDrawing);

@@ -52,7 +52,7 @@
                   <select id="coverageCouncils" multiple size="8" aria-describedby="councilMessage"></select>
                 </label>
                 <p id="councilMessage" class="field-note" role="status">Loading council areas…</p>
-                <p class="field-note">Use Ctrl or Command to select multiple options. Draw areas by placing at least three points on the map, then choose Finish.</p>
+                <p class="field-note">Use Ctrl or Command to select multiple options. Draw areas by placing at least three points on the map, then choose Finish. The first drawn area matching a new delivery determines its courier; state and council selections do not assign couriers.</p>
                 <div id="coverageMap" class="coverage-map" aria-label="Custom coverage drawing map"></div>
                 <div class="settings-actions">
                   <button id="drawCoverageButton" class="button button-quiet" type="button">Draw area</button>
@@ -60,6 +60,7 @@
                   <button id="cancelCoverageButton" class="button button-quiet" type="button" disabled>Cancel drawing</button>
                 </div>
                 <p id="drawingMessage" class="field-note" role="status"></p>
+                <p id="courierMessage" class="field-note" role="status"></p>
                 <div id="coveragePolygonList"></div>
               </div>
               <p class="field-note">Unrestricted allows deliveries anywhere. Changes are audited. Address and boundary verification must be available when restricted.</p>
