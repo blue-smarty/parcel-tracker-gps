@@ -6,6 +6,7 @@ const vm = require('node:vm');
 
 async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' }, withMap = false } = {}) {
   const elements = new Map();
+  const createdElements = [];
   function byId(id) {
     if (!elements.has(id)) elements.set(id, {
       value: '', textContent: '', disabled: false, hidden: true, listeners: {}, options: [],
@@ -39,6 +40,7 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
           : { coverageMode: 'UNRESTRICTED', states: [], councils: [], polygons: [] };
       }
       if (route === '/api/admin/service-area/councils') return [{ code: '25150', name: 'Melbourne', state: '2' }];
+      if (route === '/api/admin/couriers') return [{ courierId: 'courier-1' }];
       if (route === '/api/admin/dispatchers') return [];
       throw new Error(`Unexpected request ${route}`);
     }
@@ -48,12 +50,22 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
   const tileRequests = [];
   const L = { map: () => map, tileLayer: (url, options) => { tileRequests.push({ url, options }); return layer; }, layerGroup: () => layer,
     polygon: () => layer, polyline: () => layer, circleMarker: () => layer };
+  function createElement(tag) {
+    const element = {
+      tag, value: '', textContent: '', listeners: {}, children: [],
+      setAttribute() {},
+      append(...children) { this.children.push(...children); },
+      addEventListener(event, callback) { this.listeners[event] = callback; }
+    };
+    createdElements.push(element);
+    return element;
+  }
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin-settings.js'), 'utf8'), {
     PP, L, window: { confirm: () => true, L: withMap ? L : undefined, setTimeout: fn => fn() },
-    document: { createElement: () => ({ append() {}, addEventListener() {} }) }
+    document: { createElement }
   });
   await new Promise(resolve => setImmediate(resolve));
-  return { byId, requests, messages, map, tileRequests };
+  return { byId, requests, messages, map, tileRequests, createdElements };
 }
 
 test('loads current pricing and previews sample estimates', async () => {
@@ -108,7 +120,9 @@ test('loads and saves the Melbourne service area choice', async () => {
   byId('serviceAreaMode').value = 'MELBOURNE';
   await byId('serviceAreaForm').listeners.submit({ preventDefault() {} });
   const request = requests.find(item => item.route === '/api/admin/service-area' && item.options?.method === 'PUT');
-  assert.deepEqual(JSON.parse(request.options.body), { coverageMode: 'MELBOURNE', states: [], councils: [], polygons: [] });
+  assert.deepEqual(JSON.parse(request.options.body), {
+    coverageMode: 'MELBOURNE', states: [], councils: [], polygons: [], polygonCouriers: []
+  });
   assert.equal(messages.serviceAreaMessage.kind, 'success');
 });
 
@@ -120,12 +134,12 @@ test('saves selected states and council codes in custom coverage', async () => {
   await byId('serviceAreaForm').listeners.submit({ preventDefault() {} });
   const request = requests.find(item => item.route === '/api/admin/service-area' && item.options?.method === 'PUT');
   assert.deepEqual(JSON.parse(request.options.body), {
-    coverageMode: 'CUSTOM', states: ['2'], councils: ['25150'], polygons: []
+    coverageMode: 'CUSTOM', states: ['2'], councils: ['25150'], polygons: [], polygonCouriers: []
   });
 });
 
-test('draws and saves a custom area and blocks unfinished drawings', async () => {
-    const { byId, requests, messages, map, tileRequests } = await setup({ withMap: true });
+test('draws and saves a custom area with a courier and blocks unfinished drawings', async () => {
+    const { byId, requests, messages, map, tileRequests, createdElements } = await setup({ withMap: true });
     byId('serviceAreaMode').value = 'CUSTOM';
     byId('serviceAreaMode').listeners.change();
     assert.equal(tileRequests[0].url, 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
@@ -138,7 +152,11 @@ test('draws and saves a custom area and blocks unfinished drawings', async () =>
     assert.match(messages.serviceAreaMessage.message, /Finish or cancel/);
     assert.equal(requests.filter(item => item.options?.method === 'PUT').length, 0);
     byId('finishCoverageButton').listeners.click();
+    const courierSelect = createdElements.find(element => element.tag === 'select');
+    courierSelect.value = 'courier-1';
+    courierSelect.listeners.change();
     await byId('serviceAreaForm').listeners.submit({ preventDefault() {} });
     const request = requests.find(item => item.route === '/api/admin/service-area' && item.options?.method === 'PUT');
     assert.deepEqual(JSON.parse(request.options.body).polygons, [[[-38, 144], [-38, 145], [-37, 145]]]);
+    assert.deepEqual(JSON.parse(request.options.body).polygonCouriers, ['courier-1']);
 });

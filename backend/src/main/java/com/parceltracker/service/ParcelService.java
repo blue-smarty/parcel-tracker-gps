@@ -24,8 +24,9 @@ public class ParcelService {
     }
 
     public Parcel create(Parcel parcel, String customerEmail) {
-        serviceArea.requireDelivery(parcel.getPickupAddress(), parcel.getDestination());
+        String courierId = serviceArea.requireDelivery(parcel.getPickupAddress(), parcel.getDestination());
         prepareNewParcel(parcel, customerEmail);
+        parcel.setCourierId(courierId);
         return repository.save(parcel);
     }
 

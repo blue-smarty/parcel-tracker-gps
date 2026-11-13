@@ -59,18 +59,41 @@ class ServiceAreaSettingsControllerTest {
     @Test
     void acceptsCustomStateAndPolygonAndAuditsConfiguration() throws Exception {
         when(settings.findForUpdate()).thenReturn(Optional.of(new ServiceAreaSettings()));
+        when(couriers.existsById("courier-1")).thenReturn(true);
         mvc.perform(put("/api/admin/service-area").with(user("admin").roles("ADMIN")).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"coverageMode":"CUSTOM","states":["2"],"councils":[],
-                         "polygons":[[[-38,144],[-38,145],[-37,145]]]}
+                         "polygons":[[[-38,144],[-38,145],[-37,145]]],
+                         "polygonCouriers":["courier-1"]}
                         """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.coverageMode").value("CUSTOM"))
                 .andExpect(jsonPath("$.states[0]").value("2"))
-                .andExpect(jsonPath("$.polygons[0][0][0]").value(-38));
+                .andExpect(jsonPath("$.polygons[0][0][0]").value(-38))
+                .andExpect(jsonPath("$.polygonCouriers[0]").value("courier-1"));
         verify(settings).save(any(ServiceAreaSettings.class));
         verify(jdbc).update(anyString(), any(), eq("admin"), eq(false), contains("\"coverageMode\":\"CUSTOM\""));
+    }
+
+    @Test
+    void rejectsCourierAssignmentsWithoutMatchingPolygonsOrAccounts() throws Exception {
+        when(settings.findForUpdate()).thenReturn(Optional.of(new ServiceAreaSettings()));
+        mvc.perform(put("/api/admin/service-area").with(user("admin").roles("ADMIN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"coverageMode":"CUSTOM","polygons":[[[-38,144],[-38,145],[-37,145]]],
+                         "polygonCouriers":[]}
+                        """))
+                .andExpect(status().isBadRequest());
+        String base = """
+                {"coverageMode":"CUSTOM","polygons":[[[-38,144],[-38,145],[-37,145]]],
+                 "polygonCouriers":["courier-1"]}
+                """;
+        mvc.perform(put("/api/admin/service-area").with(user("admin").roles("ADMIN")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(base))
+                .andExpect(status().isBadRequest());
+        verify(settings, never()).save(any());
     }
 
     @Test

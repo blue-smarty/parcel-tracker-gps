@@ -126,6 +126,22 @@ class ServiceAreaServiceTest {
     }
 
     @Test
+    void deliveryInDrawnAreaReturnsItsAssignedCourier() throws Exception {
+        settings.setCoverageMode("CUSTOM");
+        settings.setPolygons(java.util.List.of(java.util.List.of(
+                java.util.List.of(-38.0, 144.0), java.util.List.of(-38.0, 145.0),
+                java.util.List.of(-37.0, 145.0), java.util.List.of(-37.0, 144.0))));
+        settings.setPolygonCouriers(java.util.List.of("courier-1"));
+        JsonNode point = json("""
+                {"results":[{"type":"Point Address","address":{"countryCode":"AU"},
+                 "position":{"lat":-37.5,"lon":144.5}}]}
+                """);
+        when(rest.getForObject(any(URI.class), eq(JsonNode.class))).thenReturn(point, point);
+
+        assertEquals("courier-1", service.requireDelivery("pickup", "destination"));
+    }
+
+    @Test
     void rejectsSelfIntersectingCustomAreaAndIncludesBoundary() {
         var polygon = java.util.List.of(java.util.List.of(-38.0, 144.0), java.util.List.of(-38.0, 145.0),
                 java.util.List.of(-37.0, 145.0), java.util.List.of(-37.0, 144.0));

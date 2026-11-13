@@ -37,11 +37,11 @@ public class ServiceAreaService {
         this.councilLookup = councilLookup;
     }
 
-    public void requireDelivery(String pickup, String destination) {
+    public String requireDelivery(String pickup, String destination) {
         ServiceAreaSettings current = currentSettings();
-        if ("UNRESTRICTED".equals(current.getCoverageMode())) return;
+        if ("UNRESTRICTED".equals(current.getCoverageMode())) return null;
         requireAddress(pickup, "Pickup", current);
-        requireAddress(destination, "Delivery", current);
+        return requireAddress(destination, "Delivery", current);
     }
 
     public void requirePickup(String address) {
@@ -63,7 +63,7 @@ public class ServiceAreaService {
         return current;
     }
 
-    private void requireAddress(String address, String label, ServiceAreaSettings current) {
+    private String requireAddress(String address, String label, ServiceAreaSettings current) {
         if (address == null || address.isBlank() || address.trim().length() > 255) {
             throw new ServiceAreaException(HttpStatus.BAD_REQUEST, label + " address is required (up to 255 characters).");
         }
@@ -90,13 +90,17 @@ public class ServiceAreaService {
             if (!Double.isFinite(latitude) || !Double.isFinite(longitude)
                     || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) throw invalidAddress(label);
             if ("CUSTOM".equals(current.getCoverageMode())) {
-                for (var polygon : current.getPolygons()) {
-                    if (CoveragePolygon.contains(polygon, latitude, longitude)) return;
+                var polygons = current.getPolygons();
+                var polygonCouriers = current.getPolygonCouriers();
+                for (int i = 0; i < polygons.size(); i++) {
+                    if (CoveragePolygon.contains(polygons.get(i), latitude, longitude)) {
+                        return polygonCouriers != null && i < polygonCouriers.size() ? polygonCouriers.get(i) : null;
+                    }
                 }
                 if (!current.getStates().isEmpty() || !current.getCouncils().isEmpty()) {
                     var matching = councilLookup.at(latitude, longitude);
                     if (matching.stream().anyMatch(c -> current.getStates().contains(c.state())
-                            || current.getCouncils().contains(c.code()))) return;
+                            || current.getCouncils().contains(c.code()))) return null;
                 }
                 throw outside(label);
             }
@@ -115,6 +119,7 @@ public class ServiceAreaService {
                 if (!name.isTextual() || name.asText().isBlank()) throw unavailable();
                 if (!METRO.contains(normalize(name.asText()))) throw outside(label);
             }
+            return null;
         } catch (RestClientException error) {
             throw unavailable();
         }

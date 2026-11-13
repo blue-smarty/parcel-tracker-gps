@@ -37,6 +37,23 @@ class ParcelServiceTest {
     }
 
     @Test
+    void assignsCourierReturnedForTheDeliveryArea() {
+        ParcelRepository repository = mock(ParcelRepository.class);
+        ServiceAreaService area = mock(ServiceAreaService.class);
+        when(area.requireDelivery(anyString(), anyString())).thenReturn("courier-2");
+        when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
+        ParcelService service = new ParcelService(repository,
+                new DemoPricingService(mock(PricingSettingsRepository.class)), area);
+        Parcel parcel = new Parcel();
+        parcel.setPickupAddress("Pickup");
+        parcel.setDestination("Destination");
+
+        Parcel result = service.create(parcel, "customer@example.com");
+
+        assertEquals("courier-2", result.getCourierId());
+    }
+
+    @Test
     void doesNotSaveWhenDeliveryIsOutsideServiceArea() {
         ParcelRepository repository = mock(ParcelRepository.class);
         ServiceAreaService area = mock(ServiceAreaService.class);

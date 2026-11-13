@@ -1,6 +1,7 @@
 package com.parceltracker.controller;
 
 import com.parceltracker.model.ServiceAreaSettings;
+import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.ServiceAreaSettingsRepository;
 import com.parceltracker.service.AustralianCouncilLookup;
 import com.parceltracker.service.CoveragePolygon;
@@ -8,6 +9,8 @@ import com.parceltracker.service.ServiceAreaException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -23,18 +26,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ServiceAreaSettingsController {
     public record Request(Boolean melbourneMetroOnly, String coverageMode, List<String> states,
-            List<String> councils, List<List<List<Double>>> polygons) {}
+            List<String> councils, List<List<List<Double>>> polygons, List<String> polygonCouriers) {}
 
     private final ServiceAreaSettingsRepository repository;
     private final JdbcTemplate jdbc;
     private final AustralianCouncilLookup councilLookup;
+    private final CourierAccountRepository couriers;
     private final ObjectMapper mapper;
 
     public ServiceAreaSettingsController(ServiceAreaSettingsRepository repository, JdbcTemplate jdbc,
-            AustralianCouncilLookup councilLookup, ObjectMapper mapper) {
+            AustralianCouncilLookup councilLookup, CourierAccountRepository couriers, ObjectMapper mapper) {
         this.repository = repository;
         this.jdbc = jdbc;
         this.councilLookup = councilLookup;
+        this.couriers = couriers;
         this.mapper = mapper;
     }
 
@@ -62,11 +67,19 @@ public class ServiceAreaSettingsController {
         List<String> states = request.states() == null ? List.of() : request.states();
         List<String> councils = request.councils() == null ? List.of() : request.councils();
         List<List<List<Double>>> polygons = request.polygons() == null ? List.of() : request.polygons();
+        List<String> polygonCouriers = request.polygonCouriers();
+        if (polygonCouriers == null) {
+            List<String> savedCouriers = settings.getPolygonCouriers() == null ? List.of() : settings.getPolygonCouriers();
+            polygonCouriers = polygons.equals(settings.getPolygons()) && savedCouriers.size() == polygons.size()
+                    ? savedCouriers : new ArrayList<>(Collections.nCopies(polygons.size(), null));
+        }
         if (states.size() > 8 || councils.size() > 600 || polygons.size() > 20
+                || polygonCouriers.size() != polygons.size()
                 || states.stream().anyMatch(value -> value == null || !value.matches("[1-8]"))
                 || councils.stream().anyMatch(value -> value == null || !value.matches("[0-9]{5}"))
                 || states.stream().distinct().count() != states.size()
-                || councils.stream().distinct().count() != councils.size()) throw invalid();
+                || councils.stream().distinct().count() != councils.size()
+                || polygonCouriers.stream().anyMatch(value -> value != null && !couriers.existsById(value))) throw invalid();
         polygons.forEach(CoveragePolygon::validate);
         if ("CUSTOM".equals(mode) && states.isEmpty() && councils.isEmpty() && polygons.isEmpty()) throw invalid();
         if ("CUSTOM".equals(mode) && !councils.isEmpty()) {
@@ -75,13 +88,15 @@ public class ServiceAreaSettingsController {
             if (!valid.containsAll(councils)) throw invalid();
         }
         boolean changed = !mode.equals(settings.getCoverageMode()) || !states.equals(settings.getStates())
-                || !councils.equals(settings.getCouncils()) || !polygons.equals(settings.getPolygons());
+                || !councils.equals(settings.getCouncils()) || !polygons.equals(settings.getPolygons())
+                || !polygonCouriers.equals(settings.getPolygonCouriers());
         if (changed) {
             settings.setCoverageMode(mode);
             settings.setMelbourneMetroOnly("MELBOURNE".equals(mode));
             settings.setStates(states);
             settings.setCouncils(councils);
             settings.setPolygons(polygons);
+            settings.setPolygonCouriers(polygonCouriers);
             repository.save(settings);
             try {
                 jdbc.update("INSERT INTO service_area_audit (changed_at, changed_by, melbourne_metro_only, coverage_settings) "
