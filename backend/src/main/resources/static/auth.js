@@ -1,6 +1,6 @@
 (() => {
   const { byId, api, session, basicAuthorization, setMessage } = PP;
-  const destinations = { ADMIN: '/admin.html', DISPATCHER: '/dispatch.html', CUSTOMER: '/customer.html' };
+  const destinations = { ADMIN: '/admin.html', DISPATCHER: '/dispatch.html', CUSTOMER: '/customer.html', COURIER: '/courier.html' };
 
   function setMode(mode) {
     const registering = mode === 'register';
@@ -18,7 +18,7 @@
       const identity = await api('/api/auth/me');
       const destination = destinations[identity.role];
       if (!destination) {
-        throw new Error('Courier accounts sign in with the mobile courier app.');
+        throw new Error('This account type cannot use the web portal.');
       }
       session.set({ authorization, username: identity.username, name: identity.name, role: identity.role });
       window.location.href = destination;
