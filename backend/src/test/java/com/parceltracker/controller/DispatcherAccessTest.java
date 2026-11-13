@@ -61,6 +61,14 @@ class DispatcherAccessTest {
     }
 
     @Test
+    void deliveryCoveragePageIsReachableButItsSettingsRemainAdminOnly() throws Exception {
+        mvc.perform(get("/delivery-coverage.html")).andExpect(status().isOk());
+        mvc.perform(get("/admin-coverage.js")).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/service-area").with(user("dispatch-1").roles("DISPATCHER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void adminCreatesAndRevokesDispatcherButOtherRolesCannot() throws Exception {
         String body = "{\"username\":\"Dispatch-1\",\"password\":\"a-strong-password\"}";
         mvc.perform(post("/api/admin/dispatchers").with(user("admin").roles("ADMIN")).with(csrf())
