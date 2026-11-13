@@ -1,6 +1,6 @@
 # Parcel Tracker GPS
 
-Real-time GPS parcel tracking: Spring Boot + PostgreSQL backend, a browser-based customer and dispatch portal, and JavaFX/mobile courier clients.
+Real-time GPS parcel tracking: Spring Boot + PostgreSQL backend, browser-based customer and dispatch portals, and a mobile courier app.
 
 ## Run
 Requires JDK 17+, Maven and PostgreSQL 16+. Install PostgreSQL directly on your computer (no Docker required), then start its service:
@@ -40,14 +40,6 @@ Open [http://localhost:8080](http://localhost:8080) and use **Create account** f
 
 From the dispatch workspace, an administrator or dispatcher can select **New ad hoc delivery** to build a parcel from item tiles, adjust its dimensions and weight, calculate a driving route and estimate, and select a provisioned courier. The parcel is created and assigned in one request, appears in the dispatch queue and is offered to the courier for acceptance. Ad hoc parcels are not linked to a customer account. This creates a parcel, not a separate scheduled pickup request.
 
-The parcel tracker and courier dashboards remain available as optional desktop clients. From `frontend`, choose one:
-```
-mvn javafx:run
-mvn javafx:run -Dfrontend.mainClass=com.parceltracker.CourierApp
-mvn javafx:run -Dfrontend.mainClass=com.parceltracker.DispatcherApp
-```
-Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override desktop client server addresses (defaults: `http://localhost:8080` and `ws://localhost:8080`; courier uses only the API URL).
-
 ## REST API
 | Method | Path | Description |
 |---|---|---|
@@ -80,14 +72,11 @@ Use `-Dapi.url=<http-url>` and `-Dws.url=<websocket-url>` to override desktop cl
 | GET | `/api/auth/me` | Verify Basic credentials; returns `{username, name, role}` |
 | GET | `/api/csrf` | Obtain a CSRF request token; send it in `X-XSRF-TOKEN` for POST/PUT/DELETE requests |
 
-Courier status transitions are `CREATED → ACCEPTED → PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED`; `FAILED` can be set from any active step. Existing `CREATED → PICKED_UP` assignments remain supported. A rejected request is unassigned and returns to the available `CREATED` pool. Completing delivery requires at least one signature, barcode or photo proof. Invalid transitions return 400 and a courier can only update parcels assigned to that courier ID. Courier endpoints require HTTP Basic authentication and only allow the authenticated courier to use their own courier ID. State-changing API requests also require the CSRF token from `GET /api/csrf`; the Java and mobile clients obtain and send it automatically. Courier passwords are BCrypt-hashed in PostgreSQL. The bootstrap courier account is created from `PARCEL_BOOTSTRAP_COURIER_ID` and `PARCEL_BOOTSTRAP_PASSWORD` environment variables at startup, and its password is reset to the configured value if it differs (restart the backend after changing it); use a password of at least 12 characters and provision subsequent accounts through a trusted operator. Admin credentials are configured with `PARCEL_ADMIN_USERNAME` and `PARCEL_ADMIN_PASSWORD`; both must be set, and the password must contain at least 12 characters. The browser dispatch workspace accepts admins and dispatchers; the desktop dispatcher still requires admin sign-in. Credentials are checked using BCrypt and API requests use HTTP Basic authentication. Customer parcel and pickup creation require customer or admin authentication, and new customer records are linked to the authenticated account. Customers can access only their own parcels and pickups. Admins and dispatchers can list and update parcels and assign couriers; deletion and direct location updates remain admin-only. Customer parcel creation discards client-supplied tracking numbers, status, courier, location and proof-of-delivery state. The WebSocket feed requires authentication; the `all` channel is available to admins and dispatchers, while parcel subscriptions also allow the owner or assigned courier. Browser portals poll for updates rather than subscribing to an unscoped live feed. Deploy behind HTTPS: Basic credentials are sent with each request. Parcel records and courier assignment data are stored in PostgreSQL.
+Courier status transitions are `CREATED → ACCEPTED → PICKED_UP → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED`; `FAILED` can be set from any active step. Existing `CREATED → PICKED_UP` assignments remain supported. A rejected request is unassigned and returns to the available `CREATED` pool. Completing delivery requires at least one signature, barcode or photo proof. Invalid transitions return 400 and a courier can only update parcels assigned to that courier ID. Courier endpoints require HTTP Basic authentication and only allow the authenticated courier to use their own courier ID. State-changing API requests also require the CSRF token from `GET /api/csrf`; the mobile client obtains and sends it automatically. Courier passwords are BCrypt-hashed in PostgreSQL. The bootstrap courier account is created from `PARCEL_BOOTSTRAP_COURIER_ID` and `PARCEL_BOOTSTRAP_PASSWORD` environment variables at startup, and its password is reset to the configured value if it differs (restart the backend after changing it); use a password of at least 12 characters and provision subsequent accounts through a trusted operator. Admin credentials are configured with `PARCEL_ADMIN_USERNAME` and `PARCEL_ADMIN_PASSWORD`; both must be set, and the password must contain at least 12 characters. The browser dispatch workspace accepts admins and dispatchers. Credentials are checked using BCrypt and API requests use HTTP Basic authentication. Customer parcel and pickup creation require customer or admin authentication, and new customer records are linked to the authenticated account. Customers can access only their own parcels and pickups. Admins and dispatchers can list and update parcels and assign couriers; deletion and direct location updates remain admin-only. Customer parcel creation discards client-supplied tracking numbers, status, courier, location and proof-of-delivery state. The WebSocket feed requires authentication; the `all` channel is available to admins and dispatchers, while parcel subscriptions also allow the owner or assigned courier. Browser portals poll for updates rather than subscribing to an unscoped live feed. Deploy behind HTTPS: Basic credentials are sent with each request. Parcel records and courier assignment data are stored in PostgreSQL.
 
 WebSocket `/ws/tracking/{parcelId}` pushes `{parcelId, trackingNumber, status, location}` on location updates and status changes (the location is `null` for a status-only event). Connections require HTTP Basic authentication; `all` is available to admins and dispatchers, while per-parcel subscriptions also allow the owner or assigned courier.
 
-## Frontend
-The tracker desktop client requires admin sign-in before it loads parcel data. It provides a parcel table with search, a location plot with route history, details, and live updates with automatic reconnect.
-
-### Browser customer and admin portals
+## Browser customer and admin portals
 The Spring Boot backend serves the website from `backend/src/main/resources/static/`; no separate frontend build or server is required. The site is split into separate pages that share `common.js`:
 
 | Page | Audience | Purpose |
@@ -136,20 +125,8 @@ The request endpoint responds identically for existing and unknown accounts. Res
 
 Customer orders are linked to the signed-in customer in the backend and load across browsers; demo support requests and courier ID suggestions still use local storage. Dispatch assignment and parcel-wide listing require admin or dispatcher authentication. Pricing, receipt, and support features are demos. Do not expose this portal or backend to the public internet without production payment/support integrations.
 
-### Courier Dashboard
-Open **Courier Dashboard** and enter the courier ID and password to load active deliveries. New requests can be accepted or rejected. Select a delivery to advance it through the available statuses, publish latitude/longitude, or record a drawn recipient signature, barcode, drop-off note and optional photo before completing delivery. Photo uploads are limited to 4 MB. When the backend is unavailable, decisions, status changes, GPS fixes and proof submissions are queued in `~/.parcel-tracker/courier-updates.json` and retried in order the next time deliveries load. If delivery coordinates and a current GPS fix are available, **Optimize & navigate** orders stops with a nearest-neighbor distance heuristic and opens Google Maps for turn-by-turn navigation. The map app, not this desktop client, supplies live directions. Delivery assignment is available through `PUT /api/parcels/{id}/courier`.
-
-### Mobile Courier App (iOS and Android)
+## Mobile Courier App (iOS and Android)
 The Flutter project in `mobile/` provides courier sign-in, active deliveries, accept/reject and status actions, turn-by-turn navigation handoff, foreground GPS updates, barcode/photo/signature proof capture, and an encrypted offline action queue. The API credentials and encryption key are stored using the platform secure-storage plugin. See [mobile/README.md](mobile/README.md) for setup, native permission declarations, TLS configuration, and build guidance.
-
-### Schedule Pickup
-Click **Schedule Pickup** in the top bar and sign in as a customer or admin to open the pickup form: contact name, phone, pickup address (street, city, postal code), parcel description, weight (kg), optional dimensions, pickup date, time window and notes. Fields are validated inline and Submit stays disabled until the form is valid. Submission runs in the background with a progress indicator; on success the pickup ID and status are shown and the form is cleared, on failure the server's validation errors or a connection error are displayed. Reset clears the form and Cancel closes it. The backend URL is taken from `-Dapi.url` (default `http://localhost:8080`).
-
-### Customer App (Non-production desktop demo)
-Choose **Customer App (Demo)** and sign in with a customer account created through the browser portal to create parcel orders with pickup/delivery addresses, optional destination coordinates, package size, weight, delivery speed, scheduled time window, route distance and a demo payment option. Orders are loaded from the authenticated account, not matched by a local profile. Pricing is a server-calculated estimate using the entered distance, weight and delivery speed; it is not a route lookup or binding quote. The window also offers a demo receipt, local-only rating and simulated support chat. Demo card/mobile wallet payments do not collect payment details or charge money. No push service, payment provider or support agent is connected.
-
-### Admin & Dispatcher Command Center (Non-production desktop demo)
-Open **Admin & Dispatcher** from the main window and sign in with the configured admin account to monitor active parcel locations on the live map, manually assign a selected parcel to a verified courier, or auto-dispatch new unassigned parcels to the currently least-loaded verified courier. The standalone dispatcher desktop client also requires admin sign-in. The fleet tab lets you save local demo courier records, attach local document files for review and mark document status. These driver records and document paths/review states remain in local Java Preferences; they are not backend fleet accounts. Estimated delivered value uses parcel price estimates, not collected revenue. The support tab lists and resolves support requests submitted from the Customer App demo; requests stay on this device and are not sent to a support agent. Stale-assignment escalations are shown separately from customer support requests. The map plots parcel GPS locations; it does not track a separate driver device location.
 
 ## Scheduled jobs
 Backend jobs live in `com.parceltracker.scheduler`. Each job is idempotent, logs `start`/`end` with candidate, processed and error counts, and isolates per-parcel errors.
