@@ -30,8 +30,7 @@
       <section id="builderView" class="view active-view" hidden>
         <div class="section-heading">
           <div><p class="eyebrow">NEW BOOKING</p><h2>Build your parcel.</h2></div>
-          <div class="dispatch-actions"><a class="button button-secondary" href="/address-book.html">Address book</a>
-          <button class="button button-quiet" id="refreshOrdersButton" type="button">↻ <span>Refresh orders</span></button></div>
+          <button class="button button-quiet" id="refreshOrdersButton" type="button">↻ <span>Refresh orders</span></button>
         </div>
 
         <div class="builder-layout">
@@ -54,7 +53,6 @@
                   <div class="field-grid">
                     <label>Contact name<input id="pickupName" autocomplete="name" maxlength="255" required></label>
                     <label>Email or phone<input id="pickupContact" autocomplete="email" maxlength="255" required></label>
-                    <label>Saved pickup address<select id="savedPickupAddress"><option value="">Choose a saved address</option></select></label>
                     <label>Pickup address<input id="pickupAddress" autocomplete="street-address" maxlength="255" required></label>
                   </div>
                 </div>
@@ -63,7 +61,6 @@
                   <p class="eyebrow">TO</p>
                   <div class="field-grid">
                     <label>Recipient name<input id="recipientName" maxlength="255" required></label>
-                    <label>Saved delivery address<select id="savedDeliveryAddress"><option value="">Choose a saved address</option></select></label>
                     <label>Delivery address<input id="deliveryAddress" maxlength="255" required></label>
                     <div class="route-distance">Route distance (km)
                       <output id="routeDistance" aria-live="polite">Not calculated</output>

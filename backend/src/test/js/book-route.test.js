@@ -14,7 +14,6 @@ class Element {
   }
   addEventListener(type, handler) { (this.listeners[type] ||= []).push(handler); }
   dispatch(type) { for (const handler of this.listeners[type] || []) handler({ preventDefault() {} }); }
-  dispatchEvent(event) { this.dispatch(event.type); }
   setAttribute() {}
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children; }
@@ -41,7 +40,6 @@ async function setup(routeRequest) {
     customerTracking: { initialize() {}, refresh: async () => {} },
     api: async (url, options) => {
       if (url === '/api/booking-route') return routeRequest(JSON.parse(options.body));
-      if (url === '/api/address-book') return [{ id: 'a1', label: 'Home', address: 'Saved address' }];
       if (url === '/api/parcels') {
         bookings.push(JSON.parse(options.body));
         return { trackingNumber: 'TRK-1', estimatedPrice: 10 };
@@ -51,7 +49,7 @@ async function setup(routeRequest) {
     drawMap: (...args) => maps.push(args)
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/book.js'), 'utf8'),
-    { document, PP, console, Event });
+    { document, PP, console });
   await new Promise(resolve => setImmediate(resolve));
   byId('pickupAddress').value = 'Pickup';
   byId('deliveryAddress').value = 'Destination';
@@ -91,18 +89,6 @@ test('ignores a pending route after the user edits an address', async () => {
   assert.equal(byId('routeDistance').textContent, 'Not calculated');
   assert.equal(maps.length, 0);
   assert.equal(byId('calculateRouteButton').disabled, false);
-});
-
-test('selecting a saved address invalidates a previously calculated route', async () => {
-  const { byId } = await setup(async () => response);
-  assert.equal(byId('savedDeliveryAddress').children[0].textContent, 'Home — Saved address');
-  byId('calculateRouteButton').dispatch('click');
-  await new Promise(resolve => setImmediate(resolve));
-  assert.equal(byId('routeDistance').textContent, '12.3 km');
-  byId('savedDeliveryAddress').value = 'Saved address';
-  byId('savedDeliveryAddress').dispatch('change');
-  assert.equal(byId('deliveryAddress').value, 'Saved address');
-  assert.equal(byId('routeDistance').textContent, 'Not calculated');
 });
 
 test('reports lookup errors without retaining an old distance', async () => {
