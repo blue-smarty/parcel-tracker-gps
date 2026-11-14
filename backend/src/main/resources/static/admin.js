@@ -1,7 +1,11 @@
 (() => {
   const { keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
     api, setMessage, detail, drawMap } = PP;
-  const state = { parcels: [], selectedDispatchId: new URLSearchParams(window.location.search).get('parcel') };
+  const state = {
+    parcels: [],
+    selectedDispatchId: new URLSearchParams(window.location.search).get('parcel'),
+    addressBook: { email: '', entries: [], editingId: null }
+  };
 
   function isActive(parcel) {
     return !terminalStatuses.has(String(parcel.status || '').toUpperCase());
@@ -163,6 +167,115 @@
     }));
   }
 
+  function staffAddressPath(id = '') {
+    const base = `/api/dispatch/customers/${encodeURIComponent(state.addressBook.email)}/addresses`;
+    return id ? `${base}/${encodeURIComponent(id)}` : base;
+  }
+
+  function renderStaffAddressBook() {
+    const host = byId('staffCustomerAddressList');
+    const entries = state.addressBook.entries;
+    if (!entries.length) {
+      host.innerHTML = '<div class="empty-state">No saved addresses for this customer.</div>';
+      return;
+    }
+    host.innerHTML = entries.map(entry => `
+      <article class="address-book-card">
+        <div><strong>${escapeHtml(entry.label)}</strong><span>${escapeHtml(entry.address)}</span>
+          <small>${escapeHtml(entry.contactName)} · ${escapeHtml(entry.contactPhone)}</small></div>
+        <div class="address-card-actions">
+          <button class="button button-secondary" type="button" data-edit-address="${escapeHtml(entry.id)}">Edit</button>
+          <button class="button button-quiet" type="button" data-delete-address="${escapeHtml(entry.id)}">Delete</button>
+        </div>
+      </article>`).join('');
+    host.querySelectorAll('[data-edit-address]').forEach(button => button.addEventListener('click', () => {
+      const entry = entries.find(item => item.id === button.dataset.editAddress);
+      if (!entry) return;
+      state.addressBook.editingId = entry.id;
+      byId('staffAddressLabel').value = entry.label;
+      byId('staffAddressContactName').value = entry.contactName;
+      byId('staffAddressContactPhone').value = entry.contactPhone;
+      byId('staffSavedAddress').value = entry.address;
+      byId('saveStaffAddressButton').textContent = 'Update address';
+      byId('cancelStaffAddressEditButton').hidden = false;
+    }));
+    host.querySelectorAll('[data-delete-address]').forEach(button => button.addEventListener('click', () => {
+      deleteStaffAddress(button.dataset.deleteAddress);
+    }));
+  }
+
+  async function loadStaffAddressBook(event) {
+    event?.preventDefault();
+    const email = byId('staffCustomerEmail').value.trim().toLowerCase();
+    if (!email) {
+      setMessage('staffAddressBookMessage', 'Enter the customer’s registered email.', 'error');
+      return;
+    }
+    byId('loadCustomerAddressesButton').disabled = true;
+    try {
+      state.addressBook.entries = await api(`/api/dispatch/customers/${encodeURIComponent(email)}/addresses`);
+      state.addressBook.email = email;
+      state.addressBook.editingId = null;
+      byId('staffAddressBookContent').hidden = false;
+      clearStaffAddressForm();
+      renderStaffAddressBook();
+      setMessage('staffAddressBookMessage', `Address book for ${email}.`);
+    } catch (error) {
+      setMessage('staffAddressBookMessage', `Could not load customer address book: ${error.message}`, 'error');
+    } finally {
+      byId('loadCustomerAddressesButton').disabled = false;
+    }
+  }
+
+  function clearStaffAddressForm() {
+    state.addressBook.editingId = null;
+    byId('staffAddressForm').reset();
+    byId('saveStaffAddressButton').textContent = 'Add address';
+    byId('cancelStaffAddressEditButton').hidden = true;
+  }
+
+  async function saveStaffAddress(event) {
+    event.preventDefault();
+    if (!state.addressBook.email) return;
+    const payload = {
+      label: byId('staffAddressLabel').value.trim(),
+      contactName: byId('staffAddressContactName').value.trim(),
+      contactPhone: byId('staffAddressContactPhone').value.trim(),
+      address: byId('staffSavedAddress').value.trim()
+    };
+    if (Object.values(payload).some(value => !value)) {
+      setMessage('staffAddressBookMessage', 'Complete every address field.', 'error');
+      return;
+    }
+    const id = state.addressBook.editingId;
+    try {
+      const saved = await api(staffAddressPath(id), {
+        method: id ? 'PUT' : 'POST',
+        body: JSON.stringify(payload)
+      });
+      state.addressBook.entries = id
+        ? state.addressBook.entries.map(entry => entry.id === id ? saved : entry)
+        : [...state.addressBook.entries, saved];
+      clearStaffAddressForm();
+      renderStaffAddressBook();
+      setMessage('staffAddressBookMessage', 'Customer address saved.', 'success');
+    } catch (error) {
+      setMessage('staffAddressBookMessage', `Could not save customer address: ${error.message}`, 'error');
+    }
+  }
+
+  async function deleteStaffAddress(id) {
+    if (!window.confirm('Delete this customer address?')) return;
+    try {
+      await api(staffAddressPath(id), { method: 'DELETE' });
+      state.addressBook.entries = state.addressBook.entries.filter(entry => entry.id !== id);
+      renderStaffAddressBook();
+      setMessage('staffAddressBookMessage', 'Customer address deleted.', 'success');
+    } catch (error) {
+      setMessage('staffAddressBookMessage', `Could not delete customer address: ${error.message}`, 'error');
+    }
+  }
+
   async function initialize() {
     const user = await PP.requireRole(['ADMIN', 'DISPATCHER']);
     if (!user) return;
@@ -175,6 +288,9 @@
     byId('dispatchFilter').addEventListener('change', renderDispatch);
     byId('assignButton').addEventListener('click', assignSelected);
     byId('autoDispatchButton').addEventListener('click', autoDispatch);
+    byId('staffAddressLookupForm').addEventListener('submit', loadStaffAddressBook);
+    byId('staffAddressForm').addEventListener('submit', saveStaffAddress);
+    byId('cancelStaffAddressEditButton').addEventListener('click', clearStaffAddressForm);
     const savedCourierIds = localStorage.getItem(keys.couriers);
     if (savedCourierIds) byId('courierIdsInput').value = savedCourierIds;
     await refreshDispatch();

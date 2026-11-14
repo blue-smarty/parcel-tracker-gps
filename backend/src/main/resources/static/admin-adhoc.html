@@ -47,7 +47,20 @@
             </section>
 
             <section class="panel builder-step">
-              <div class="step-title"><span class="step-number">3</span><div><h3>Pickup and delivery</h3></div></div>
+              <div class="step-title"><span class="step-number">3</span><div><h3>Use a customer address book</h3><p class="field-note">Enter the registered customer email to load saved contact and address details.</p></div></div>
+              <div class="address-lookup-form">
+                <label>Customer account email<input id="adhocCustomerEmail" type="email" autocomplete="email"></label>
+                <button id="loadSavedAddressesButton" class="button button-secondary" type="button">Load saved addresses</button>
+              </div>
+              <div id="adhocSavedAddressChoices" class="field-grid two" hidden>
+                <label>Use as pickup<select id="adhocPickupSavedAddress"><option value="">Choose a saved address</option></select></label>
+                <label>Use as delivery<select id="adhocDeliverySavedAddress"><option value="">Choose a saved address</option></select></label>
+              </div>
+              <p id="adhocAddressBookMessage" class="form-message" role="status"></p>
+            </section>
+
+            <section class="panel builder-step">
+              <div class="step-title"><span class="step-number">4</span><div><h3>Pickup and delivery</h3></div></div>
               <div class="route-grid">
                 <div class="route-stop">
                   <p class="eyebrow">FROM</p>
@@ -79,7 +92,7 @@
             </section>
 
             <section class="panel builder-step">
-              <div class="step-title"><span class="step-number">4</span><div><h3>When and how?</h3></div></div>
+              <div class="step-title"><span class="step-number">5</span><div><h3>When and how?</h3></div></div>
               <div class="choice-row" role="radiogroup" aria-label="Delivery speed">
                 <label class="choice"><input type="radio" name="speed" value="SCHEDULED" checked><span><strong>Scheduled</strong><small>Pick a date and time window</small></span></label>
                 <label class="choice"><input type="radio" name="speed" value="SAME_DAY"><span><strong>Same-day</strong><small>Priority handling at a premium</small></span></label>

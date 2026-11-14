@@ -51,6 +51,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/dispatch/customers/**").hasAnyRole("ADMIN", "DISPATCHER")
+                        .requestMatchers("/api/addresses/**").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/dispatch/couriers").hasAnyRole("ADMIN", "DISPATCHER")
                         .requestMatchers("/api/couriers/**").hasRole("COURIER")
                         .requestMatchers("/", "/index.html", "/login.html", "/forgot-password.html",

@@ -71,6 +71,27 @@
           <div id="supportList" class="support-list"><div class="empty-state">Support messages from this browser will appear here.</div></div>
           <p class="field-note">Requests stay in this browser; no support agent is connected.</p>
         </div>
+        <section class="panel address-book-panel staff-address-book">
+          <div class="panel-heading"><div><p class="eyebrow">CUSTOMER TOOLS</p><h3>Customer address book</h3></div></div>
+          <form id="staffAddressLookupForm" class="address-lookup-form">
+            <label>Customer account email<input id="staffCustomerEmail" type="email" autocomplete="email" required></label>
+            <button id="loadCustomerAddressesButton" class="button button-secondary" type="submit">Load address book</button>
+          </form>
+          <p id="staffAddressBookMessage" class="form-message" role="status">Search by the customer’s registered email.</p>
+          <div id="staffAddressBookContent" hidden>
+            <form id="staffAddressForm" class="address-book-form">
+              <label>Label<input id="staffAddressLabel" maxlength="80" placeholder="Home, work, warehouse" required></label>
+              <label>Contact name<input id="staffAddressContactName" maxlength="255" required></label>
+              <label>Phone or contact<input id="staffAddressContactPhone" maxlength="255" required></label>
+              <label class="address-field">Street address<input id="staffSavedAddress" maxlength="255" required></label>
+              <div class="address-book-actions">
+                <button id="saveStaffAddressButton" class="button button-primary" type="submit">Add address</button>
+                <button id="cancelStaffAddressEditButton" class="button button-quiet" type="button" hidden>Cancel edit</button>
+              </div>
+            </form>
+            <div id="staffCustomerAddressList" class="address-book-list"><div class="empty-state">No saved addresses.</div></div>
+          </div>
+        </section>
         <p class="demo-warning"><strong>Demo only.</strong> Support requests remain local to this browser. Use HTTPS when exposing credentials beyond localhost.</p>
         </div>
       </section>

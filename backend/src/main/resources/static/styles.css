@@ -86,6 +86,24 @@ h1 span { color: #83d2ca; }
 .coverage-area-row select { margin: 0; }
 .coverage-save { border-top: 1px solid var(--line); padding-top: 16px; }
 .coverage-save .form-message { margin: 0; }
+.address-book-panel { margin-bottom: 18px; padding: 20px; }
+.address-book-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.address-book-form label, .address-lookup-form label { min-width: 0; color: #536779; font-size: 11px; font-weight: 600; }
+.address-book-form .address-field { grid-column: span 2; }
+.address-book-actions { display: flex; gap: 7px; }
+.address-book-actions .button { white-space: nowrap; }
+.address-book-list { display: grid; gap: 8px; margin-top: 12px; }
+.address-book-card { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfd; }
+.address-book-card strong, .address-book-card span, .address-book-card small { display: block; overflow-wrap: anywhere; }
+.address-book-card strong { color: var(--navy); font-size: 12px; }
+.address-book-card span { margin-top: 4px; color: #536779; font-size: 11px; }
+.address-book-card small { margin-top: 4px; color: var(--muted); font-size: 10px; }
+.address-card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.address-card-actions .button { min-height: 31px; }
+.staff-address-book { margin-top: 18px; }
+.address-lookup-form { display: flex; align-items: end; gap: 10px; max-width: 620px; }
+.address-lookup-form label { flex: 1; }
+.staff-address-book .address-book-form { margin-top: 12px; }
 h2 { color: var(--navy); margin: 0; font-size: 23px; letter-spacing: -.65px; }
 h3 { margin: 0; font-size: 16px; letter-spacing: -.25px; }
 h4 { margin: 0 0 12px; font-size: 12px; }
@@ -388,5 +406,9 @@ footer b { color: var(--teal); padding: 0 3px; }
   .route-grid, .choice-row { grid-template-columns: 1fr; }
   .route-line { flex-direction: row; }
   .manifest-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .address-book-form { grid-template-columns: 1fr 1fr; }
+  .address-book-form .address-field { grid-column: span 2; }
+  .address-book-card, .address-lookup-form { align-items: stretch; flex-direction: column; }
+  .address-card-actions { justify-content: flex-start; }
 }
 a.button { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }

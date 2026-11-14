@@ -33,6 +33,22 @@
           <button class="button button-quiet" id="refreshOrdersButton" type="button">↻ <span>Refresh orders</span></button>
         </div>
 
+        <section class="panel address-book-panel">
+          <div class="panel-heading"><div><p class="eyebrow">YOUR SAVED DETAILS</p><h3>Address book</h3></div></div>
+          <form id="customerAddressForm" class="address-book-form">
+            <label>Label<input id="addressLabel" maxlength="80" placeholder="Home, work, warehouse" required></label>
+            <label>Contact name<input id="addressContactName" maxlength="255" required></label>
+            <label>Phone or contact<input id="addressContactPhone" maxlength="255" required></label>
+            <label class="address-field">Street address<input id="savedAddress" maxlength="255" autocomplete="street-address" required></label>
+            <div class="address-book-actions">
+              <button id="saveAddressButton" class="button button-primary" type="submit">Save address</button>
+              <button id="cancelAddressEditButton" class="button button-quiet" type="button" hidden>Cancel edit</button>
+            </div>
+          </form>
+          <p id="addressBookMessage" class="form-message" role="status"></p>
+          <div id="customerAddressList" class="address-book-list"><div class="empty-state">Loading your saved addresses…</div></div>
+        </section>
+
         <div class="builder-layout">
           <form id="builderForm" class="builder-steps" novalidate>
             <section class="panel builder-step">

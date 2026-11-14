@@ -15,6 +15,7 @@
   let pricing = { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75 };
   const lines = new Map();
   const route = { request: 0, distanceKm: null, straightLineDistanceKm: null, origin: '', destination: '' };
+  const addressBook = { entries: [], editingId: null };
   let user = null;
 
   const positive = value => Number.isFinite(value) && value > 0;
@@ -279,6 +280,121 @@
     updateSummary();
   }
 
+  function addressPayload() {
+    const payload = {
+      label: byId('addressLabel').value.trim(),
+      contactName: byId('addressContactName').value.trim(),
+      contactPhone: byId('addressContactPhone').value.trim(),
+      address: byId('savedAddress').value.trim()
+    };
+    if (Object.values(payload).some(value => !value)) throw new Error('Complete every address field.');
+    return payload;
+  }
+
+  function renderAddressBook() {
+    const host = byId('customerAddressList');
+    if (!addressBook.entries.length) {
+      host.innerHTML = '<div class="empty-state">No saved addresses yet. Add one to use it on a future booking.</div>';
+      return;
+    }
+    host.replaceChildren(...addressBook.entries.map(entry => {
+      const card = document.createElement('article');
+      card.className = 'address-book-card';
+      const details = document.createElement('div');
+      details.innerHTML = `<strong></strong><span></span><small></small>`;
+      details.querySelector('strong').textContent = entry.label;
+      details.querySelector('span').textContent = entry.address;
+      details.querySelector('small').textContent = `${entry.contactName} · ${entry.contactPhone}`;
+      const actions = document.createElement('div');
+      actions.className = 'address-card-actions';
+      for (const [label, action] of [['Use for pickup', 'pickup'], ['Use for delivery', 'delivery'], ['Edit', 'edit'], ['Delete', 'delete']]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = action === 'delete' ? 'button button-quiet' : 'button button-secondary';
+        button.textContent = label;
+        button.addEventListener('click', () => {
+          if (action === 'pickup') {
+            byId('pickupName').value = entry.contactName;
+            byId('pickupContact').value = entry.contactPhone;
+            byId('pickupAddress').value = entry.address;
+            invalidateRoute();
+          } else if (action === 'delivery') {
+            byId('recipientName').value = entry.contactName;
+            byId('deliveryAddress').value = entry.address;
+            invalidateRoute();
+          } else if (action === 'edit') {
+            addressBook.editingId = entry.id;
+            byId('addressLabel').value = entry.label;
+            byId('addressContactName').value = entry.contactName;
+            byId('addressContactPhone').value = entry.contactPhone;
+            byId('savedAddress').value = entry.address;
+            byId('saveAddressButton').textContent = 'Update address';
+            byId('cancelAddressEditButton').hidden = false;
+          } else {
+            deleteAddress(entry.id);
+          }
+        });
+        actions.append(button);
+      }
+      card.append(details, actions);
+      return card;
+    }));
+  }
+
+  async function loadAddresses() {
+    try {
+      addressBook.entries = await api('/api/addresses');
+      renderAddressBook();
+    } catch (error) {
+      setMessage('addressBookMessage', `Could not load saved addresses: ${error.message}`, 'error');
+    }
+  }
+
+  function clearAddressForm() {
+    addressBook.editingId = null;
+    byId('customerAddressForm').reset();
+    byId('saveAddressButton').textContent = 'Save address';
+    byId('cancelAddressEditButton').hidden = true;
+  }
+
+  async function saveAddress(event) {
+    event.preventDefault();
+    let payload;
+    try {
+      payload = addressPayload();
+    } catch (error) {
+      setMessage('addressBookMessage', error.message, 'error');
+      return;
+    }
+    const id = addressBook.editingId;
+    try {
+      const saved = await api(id ? `/api/addresses/${encodeURIComponent(id)}` : '/api/addresses', {
+        method: id ? 'PUT' : 'POST',
+        body: JSON.stringify(payload)
+      });
+      addressBook.entries = id
+        ? addressBook.entries.map(entry => entry.id === id ? saved : entry)
+        : [...addressBook.entries, saved];
+      clearAddressForm();
+      renderAddressBook();
+      setMessage('addressBookMessage', 'Address saved to your account.', 'success');
+    } catch (error) {
+      setMessage('addressBookMessage', `Could not save address: ${error.message}`, 'error');
+    }
+  }
+
+  async function deleteAddress(id) {
+    if (!window.confirm('Delete this saved address?')) return;
+    try {
+      await api(`/api/addresses/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      addressBook.entries = addressBook.entries.filter(entry => entry.id !== id);
+      renderAddressBook();
+      setMessage('addressBookMessage', 'Address deleted.', 'success');
+    } catch (error) {
+      setMessage('addressBookMessage', `Could not delete address: ${error.message}`, 'error');
+    }
+  }
+
   async function initialize() {
     user = await PP.requireRole('CUSTOMER');
     if (!user) return;
@@ -289,6 +405,8 @@
     byId('builderForm').addEventListener('input', updateSummary);
     byId('builderForm').addEventListener('change', updateSummary);
     byId('bookAnotherButton').addEventListener('click', reset);
+    byId('customerAddressForm').addEventListener('submit', saveAddress);
+    byId('cancelAddressEditButton').addEventListener('click', clearAddressForm);
     PP.setupAddressAutocomplete?.('pickupAddress');
     PP.setupAddressAutocomplete?.('deliveryAddress');
     byId('pickupName').value = user.name;
@@ -296,6 +414,7 @@
     renderTiles();
     updateSummary();
     byId('builderView').hidden = false;
+    await loadAddresses();
     byId('calculateRouteButton').addEventListener('click', calculateRoute);
     ['pickupAddress', 'deliveryAddress'].forEach(id => {
       byId(id).addEventListener('input', invalidateRoute);

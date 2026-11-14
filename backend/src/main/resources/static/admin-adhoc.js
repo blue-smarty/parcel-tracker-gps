@@ -11,6 +11,7 @@
   const sizeRank = { SMALL: 0, MEDIUM: 1, LARGE: 2 };
   const lines = new Map();
   const route = { request: 0, distanceKm: null, straightLineDistanceKm: null, origin: '', destination: '' };
+  const addressBook = { email: '', entries: [] };
   const speed = () => document.querySelector('input[name="speed"]:checked').value;
   const positive = value => Number.isFinite(value) && value > 0;
   let pricing = { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75 };
@@ -241,6 +242,52 @@
     }
   }
 
+  function populateSavedAddresses(select) {
+    select.replaceChildren(new Option('Choose a saved address', ''));
+    addressBook.entries.forEach(entry => select.add(new Option(`${entry.label} — ${entry.address}`, entry.id)));
+    select.disabled = addressBook.entries.length === 0;
+  }
+
+  async function loadSavedAddresses() {
+    const email = byId('adhocCustomerEmail').value.trim().toLowerCase();
+    if (!email) {
+      setMessage('adhocAddressBookMessage', 'Enter the customer’s registered email.', 'error');
+      return;
+    }
+    byId('loadSavedAddressesButton').disabled = true;
+    try {
+      addressBook.entries = await api(`/api/dispatch/customers/${encodeURIComponent(email)}/addresses`);
+      addressBook.email = email;
+      populateSavedAddresses(byId('adhocPickupSavedAddress'));
+      populateSavedAddresses(byId('adhocDeliverySavedAddress'));
+      byId('adhocSavedAddressChoices').hidden = false;
+      setMessage('adhocAddressBookMessage', addressBook.entries.length
+        ? `Loaded ${addressBook.entries.length} saved address(es).`
+        : 'This customer has no saved addresses yet.');
+    } catch (error) {
+      addressBook.email = '';
+      addressBook.entries = [];
+      byId('adhocSavedAddressChoices').hidden = true;
+      setMessage('adhocAddressBookMessage', `Could not load customer address book: ${error.message}`, 'error');
+    } finally {
+      byId('loadSavedAddressesButton').disabled = false;
+    }
+  }
+
+  function applySavedAddress(id, destination) {
+    const entry = addressBook.entries.find(item => item.id === id);
+    if (!entry || !addressBook.email) return;
+    if (destination === 'pickup') {
+      byId('adhocSender').value = entry.contactName;
+      byId('adhocContact').value = entry.contactPhone;
+      byId('adhocPickup').value = entry.address;
+    } else {
+      byId('adhocRecipient').value = entry.contactName;
+      byId('adhocDestination').value = entry.address;
+    }
+    invalidateRoute();
+  }
+
   async function createAdhoc(event) {
     event.preventDefault();
     const button = byId('adhocButton');
@@ -283,6 +330,16 @@
     byId('adhocForm').addEventListener('submit', createAdhoc);
     byId('adhocForm').addEventListener('change', updateSummary);
     byId('refreshCouriersButton').addEventListener('click', loadCouriers);
+    byId('loadSavedAddressesButton').addEventListener('click', loadSavedAddresses);
+    byId('adhocCustomerEmail').addEventListener('input', () => {
+      addressBook.email = '';
+      addressBook.entries = [];
+      byId('adhocSavedAddressChoices').hidden = true;
+    });
+    byId('adhocPickupSavedAddress').addEventListener('change', event =>
+      applySavedAddress(event.target.value, 'pickup'));
+    byId('adhocDeliverySavedAddress').addEventListener('change', event =>
+      applySavedAddress(event.target.value, 'delivery'));
     byId('calculateRouteButton').addEventListener('click', calculateRoute);
     ['adhocPickup', 'adhocDestination'].forEach(id => {
       byId(id).addEventListener('input', invalidateRoute);
