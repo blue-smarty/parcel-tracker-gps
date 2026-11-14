@@ -302,29 +302,6 @@
       byId(id).addEventListener('change', invalidateRoute);
     });
     try {
-      const addresses = await api('/api/address-book');
-      [['savedPickupAddress', 'pickupAddress'], ['savedDeliveryAddress', 'deliveryAddress']].forEach(([selectId, fieldId]) => {
-        const select = byId(selectId);
-        addresses.forEach(entry => {
-          const option = document.createElement('option');
-          option.value = entry.address;
-          option.textContent = `${entry.label} — ${entry.address}`;
-          select.append(option);
-        });
-        select.addEventListener('change', () => {
-          if (!select.value) return;
-          const field = byId(fieldId);
-          field.value = select.value;
-          field.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-        byId(fieldId).addEventListener('input', () => {
-          if (select.value !== byId(fieldId).value) select.value = '';
-        });
-      });
-    } catch (error) {
-      setMessage('builderMessage', `Could not load saved addresses: ${error.message}`, 'error');
-    }
-    try {
       pricing = await api('/api/pricing');
       updateSummary();
     } catch (error) {

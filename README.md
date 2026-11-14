@@ -127,8 +127,6 @@ The request endpoint responds identically for existing and unknown accounts. Res
 
 Customer orders are linked to the signed-in customer in the backend and load across browsers; demo support requests and courier ID suggestions still use local storage. Dispatch assignment and parcel-wide listing require admin or dispatcher authentication. Pricing, receipt, and support features are demos. Do not expose this portal or backend to the public internet without production payment/support integrations.
 
-Customers can add, edit and delete saved addresses in their address book and select them for pickup or delivery when booking. Addresses are stored with their account and available across browsers. Administrators and dispatchers can open and manage a customer's address book using the customer's account email; customers cannot access another customer's entries. Saved addresses still require the normal route calculation and service-area checks when booking.
-
 ## Mobile Courier App (iOS and Android)
 The Flutter project in `mobile/` provides courier sign-in, active deliveries, accept/reject and status actions, turn-by-turn navigation handoff, foreground GPS updates, barcode/photo/signature proof capture, and an encrypted offline action queue. The API credentials and encryption key are stored using the platform secure-storage plugin. See [mobile/README.md](mobile/README.md) for setup, native permission declarations, TLS configuration, and build guidance.
 

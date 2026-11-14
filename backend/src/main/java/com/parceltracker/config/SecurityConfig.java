@@ -59,13 +59,12 @@ public class SecurityConfig {
                                 "/book.html",
                                 "/styles.css", "/common.js", "/auth.js", "/password-reset.js", "/quote.js",
                                 "/customer.js", "/admin.js", "/admin-adhoc.js", "/admin-settings.js",
-                                "/admin-coverage.js", "/book.js", "/address-book.html", "/address-book.js")
+                                "/admin-coverage.js", "/book.js")
                                 .permitAll()
                         .requestMatchers("/api/branding", "/api/csrf").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pricing").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/booking-route").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/address-suggestions").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
-                        .requestMatchers("/api/address-book/**", "/api/address-book").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/password-reset",
                                 "/api/auth/password-reset/confirm").permitAll()
