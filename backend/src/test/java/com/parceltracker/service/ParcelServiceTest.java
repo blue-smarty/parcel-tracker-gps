@@ -9,14 +9,35 @@ import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.repository.ParcelRepository;
 import com.parceltracker.repository.PricingSettingsRepository;
 import org.junit.jupiter.api.Test;
+import java.util.Optional;
 
 class ParcelServiceTest {
     @Test
-    void createsAndAssignsInOneSaveAndResetsClientState() {
+    void notifiesBothCouriersWhenAssignmentChanges() {
         ParcelRepository repository = mock(ParcelRepository.class);
+        CourierPushService push = mock(CourierPushService.class);
+        Parcel parcel = new Parcel();
+        parcel.setCourierId("old");
+        when(repository.findById("parcel")).thenReturn(Optional.of(parcel));
         when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
         ParcelService service = new ParcelService(repository,
-                new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class));
+                new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class), push);
+
+        service.assignCourier("parcel", "new");
+        verify(push).deliveryChanged("old");
+        verify(push).deliveryChanged("new");
+        clearInvocations(push);
+        service.assignCourier("parcel", "new");
+        verifyNoInteractions(push);
+    }
+
+    @Test
+    void createsAndAssignsInOneSaveAndResetsClientState() {
+        ParcelRepository repository = mock(ParcelRepository.class);
+        CourierPushService push = mock(CourierPushService.class);
+        when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
+        ParcelService service = new ParcelService(repository,
+                new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class), push);
         Parcel parcel = new Parcel();
         parcel.setId("client-id");
         parcel.setTrackingNumber("client-tracking");
@@ -34,6 +55,7 @@ class ParcelServiceTest {
         assertEquals("courier-1", result.getCourierId());
         assertNull(result.getCustomerEmail());
         assertEquals("1 Main St", result.getPickupAddress());
+        verify(push).deliveryChanged("courier-1");
     }
 
     @Test
@@ -43,7 +65,7 @@ class ParcelServiceTest {
         when(area.requireDelivery(anyString(), anyString())).thenReturn("courier-2");
         when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
         ParcelService service = new ParcelService(repository,
-                new DemoPricingService(mock(PricingSettingsRepository.class)), area);
+                new DemoPricingService(mock(PricingSettingsRepository.class)), area, mock(CourierPushService.class));
         Parcel parcel = new Parcel();
         parcel.setPickupAddress("Pickup");
         parcel.setDestination("Destination");
@@ -60,7 +82,7 @@ class ParcelServiceTest {
         doThrow(new ServiceAreaException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "outside"))
                 .when(area).requireDelivery(anyString(), anyString());
         ParcelService service = new ParcelService(repository,
-                new DemoPricingService(mock(PricingSettingsRepository.class)), area);
+                new DemoPricingService(mock(PricingSettingsRepository.class)), area, mock(CourierPushService.class));
         Parcel parcel = new Parcel();
         parcel.setPickupAddress("Pickup");
         parcel.setDestination("Outside");

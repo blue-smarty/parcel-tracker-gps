@@ -16,7 +16,8 @@ import org.junit.jupiter.api.Test;
 class LocationServiceTest {
     private final ParcelRepository repo = mock(ParcelRepository.class);
     private final ParcelService parcels = new ParcelService(repo,
-            new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class));
+            new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class),
+            mock(CourierPushService.class));
     private final LocationService service = new LocationService(parcels);
 
     @Test

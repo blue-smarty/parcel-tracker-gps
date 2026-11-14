@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import com.parceltracker.repository.ParcelRepository;
@@ -16,25 +17,32 @@ public class ParcelService {
     private final ParcelRepository repository;
     private final DemoPricingService pricing;
     private final ServiceAreaService serviceArea;
+    private final CourierPushService push;
 
-    public ParcelService(ParcelRepository repository, DemoPricingService pricing, ServiceAreaService serviceArea) {
+    public ParcelService(ParcelRepository repository, DemoPricingService pricing, ServiceAreaService serviceArea,
+                         CourierPushService push) {
         this.repository = repository;
         this.pricing = pricing;
         this.serviceArea = serviceArea;
+        this.push = push;
     }
 
     public Parcel create(Parcel parcel, String customerEmail) {
         String courierId = serviceArea.requireDelivery(parcel.getPickupAddress(), parcel.getDestination());
         prepareNewParcel(parcel, customerEmail);
         parcel.setCourierId(courierId);
-        return repository.save(parcel);
+        Parcel saved = repository.save(parcel);
+        push.deliveryChanged(saved.getCourierId());
+        return saved;
     }
 
     public Parcel createAssigned(Parcel parcel, String courierId) {
         serviceArea.requireDelivery(parcel.getPickupAddress(), parcel.getDestination());
         prepareNewParcel(parcel, null);
         parcel.setCourierId(courierId);
-        return repository.save(parcel);
+        Parcel saved = repository.save(parcel);
+        push.deliveryChanged(saved.getCourierId());
+        return saved;
     }
 
     private void prepareNewParcel(Parcel parcel, String customerEmail) {
@@ -76,6 +84,7 @@ public class ParcelService {
 
     public Parcel update(String id, Parcel changes) {
         Parcel existing = get(id);
+        String oldCourier = existing.getCourierId();
         if (changes.getDestination() != null) serviceArea.requireDestination(changes.getDestination());
         if (changes.getSender() != null) existing.setSender(changes.getSender());
         if (changes.getRecipient() != null) existing.setRecipient(changes.getRecipient());
@@ -83,12 +92,16 @@ public class ParcelService {
         if (changes.getCourierId() != null) existing.setCourierId(changes.getCourierId());
         if (changes.getStatus() != null) existing.setStatus(changes.getStatus());
         existing.setUpdatedAt(Instant.now());
-        return repository.save(existing);
+        Parcel saved = repository.save(existing);
+        if (!Objects.equals(oldCourier, saved.getCourierId())) push.deliveryChanged(oldCourier);
+        push.deliveryChanged(saved.getCourierId());
+        return saved;
     }
 
     public void delete(String id) {
-        get(id);
+        Parcel existing = get(id);
         repository.deleteById(id);
+        push.deliveryChanged(existing.getCourierId());
     }
 
     public Parcel save(Parcel parcel) {
@@ -97,8 +110,14 @@ public class ParcelService {
 
     public Parcel assignCourier(String id, String courierId) {
         Parcel parcel = get(id);
+        String oldCourier = parcel.getCourierId();
         parcel.setCourierId(courierId);
         parcel.setUpdatedAt(Instant.now());
-        return repository.save(parcel);
+        Parcel saved = repository.save(parcel);
+        if (!Objects.equals(oldCourier, saved.getCourierId())) {
+            push.deliveryChanged(oldCourier);
+            push.deliveryChanged(saved.getCourierId());
+        }
+        return saved;
     }
 }

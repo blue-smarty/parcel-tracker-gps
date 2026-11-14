@@ -1,6 +1,6 @@
 # Parcel Tracker GPS
 
-Real-time GPS parcel tracking: Spring Boot + PostgreSQL backend, browser-based customer and dispatch portals, and a mobile courier app.
+Real-time GPS parcel tracking: Spring Boot + PostgreSQL backend, browser-based customer, courier and dispatch portals, and a mobile courier app.
 
 ## Run
 Requires JDK 17+, Maven and PostgreSQL 16+. Install PostgreSQL directly on your computer (no Docker required), then start its service:
@@ -62,6 +62,9 @@ Administrators can choose driving-route per-kilometre pricing or configure fixed
 | PUT, DELETE | `/api/admin/dispatchers/{username}/password`, `/api/admin/dispatchers/{username}` | Reset password or revoke dispatcher account (admin only) |
 | GET | `/api/admin/me` | Verify admin credentials |
 | GET | `/api/couriers/{courierId}/deliveries` | List that courier's active assigned deliveries |
+| GET | `/api/couriers/{courierId}/push-key` | Get the browser push public key (own courier account) |
+| POST | `/api/couriers/{courierId}/push-subscription`, `/api/couriers/{courierId}/push-unsubscribe` | Register or remove this browser's push subscription (own courier account) |
+| POST | `/api/admin/couriers/{courierId}/push-message` | Send `{message}` to a courier's subscribed browsers (admin only) |
 | PUT | `/api/couriers/{courierId}/deliveries/{parcelId}/decision` | Accept/reject a new assigned request with `{accepted}` |
 | PUT | `/api/couriers/{courierId}/deliveries/{parcelId}/status` | Advance status with `{status}` |
 | POST | `/api/couriers/{courierId}/deliveries/{parcelId}/location` | Publish an assigned parcel GPS fix `{latitude, longitude, timestamp?}` |
@@ -86,6 +89,7 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 | `/` | Everyone | Landing page with an account-free parcel quote calculator, plus links to sign in or register |
 | `/login.html` | Everyone | Sign in (customers and admins) or create a customer account; signed-in users are routed to their portal |
 | `/customer.html` | Customers | Parcel builder with item selection, route calculation, live price estimate, order tracking, demo receipt and support request |
+| `/courier.html` | Couriers | Assigned deliveries, delivery actions and browser notification opt-in |
 | `/book.html` | Customers | Redirects to the customer portal |
 | `/admin.html` | Admins | Configure delivery pricing and create, reset or revoke dispatcher accounts |
 | `/dispatch.html` | Admins and dispatchers | Parcel queue, fleet map, assignments, ad hoc deliveries and local support requests |
@@ -107,7 +111,19 @@ The council selector and settings validation use a bundled 2025 catalogue, so th
 
 The browser refreshes an expired CSRF token once when a write is rejected for that reason. If a save reports that the session is not authorized, sign out and sign back in with an administrator account; the browser must allow same-origin cookies.
 
-Customers register with name, email and a password of 12-72 characters (`POST /api/auth/register`); accounts are stored in the `customer_accounts` table with BCrypt hashes and authenticate with HTTP Basic like couriers, dispatchers and admins. `GET /api/auth/me` verifies credentials and returns `{username, name, role}`, where role is `CUSTOMER`, `ADMIN`, `DISPATCHER` or `COURIER`. Admins are configured with `PARCEL_ADMIN_USERNAME`/`PARCEL_ADMIN_PASSWORD` and can create, reset and revoke dispatcher accounts in the admin area. Dispatcher usernames use 3-40 letters, digits, dots, dashes or underscores and are stored lowercase; passwords require at least 12 characters and at most 72 UTF-8 bytes. Dispatchers sign in at the same login page and are routed to their separate workspace; they cannot access pricing or account management APIs. Courier accounts sign in with the mobile app, not the website. The browser keeps the credential in `sessionStorage` (cleared when the tab closes). Each portal page verifies the role and redirects to the right page otherwise.
+Customers register with name, email and a password of 12-72 characters (`POST /api/auth/register`); accounts are stored in the `customer_accounts` table with BCrypt hashes and authenticate with HTTP Basic like couriers, dispatchers and admins. `GET /api/auth/me` verifies credentials and returns `{username, name, role}`, where role is `CUSTOMER`, `ADMIN`, `DISPATCHER` or `COURIER`. Admins are configured with `PARCEL_ADMIN_USERNAME`/`PARCEL_ADMIN_PASSWORD` and can create, reset and revoke dispatcher accounts in the admin area. Dispatcher usernames use 3-40 letters, digits, dots, dashes or underscores and are stored lowercase; passwords require at least 12 characters and at most 72 UTF-8 bytes. Dispatchers sign in at the same login page and are routed to their separate workspace; they cannot access pricing or account management APIs. Couriers can sign in on the website or mobile app. The browser keeps the credential in `sessionStorage` (cleared when the tab closes). Each portal page verifies the role and redirects to the right page otherwise.
+
+### Courier browser notifications
+
+Browser push is optional and disabled until the backend is configured with a persistent VAPID key pair and contact subject. Generate a pair once on a trusted machine with Node.js:
+
+```bash
+node -e 'const {generateKeyPairSync}=require("crypto"); const k=generateKeyPairSync("ec",{namedCurve:"prime256v1"}).privateKey.export({format:"jwk"}); console.log("Public:",Buffer.concat([Buffer.from([4]),Buffer.from(k.x,"base64url"),Buffer.from(k.y,"base64url")]).toString("base64url")); console.log("Private:",k.d)'
+```
+
+Set `PARCEL_PUSH_PUBLIC_KEY` and `PARCEL_PUSH_PRIVATE_KEY` to those values, and `PARCEL_PUSH_SUBJECT` to an operator contact such as `mailto:operator@example.com`; restart the backend. Keep the private key secret and stable across restarts. If rotating the keys, couriers must enable notifications again. The backend needs outbound HTTPS access to browser push services. Supported endpoints are Google FCM, Mozilla and Apple web push.
+
+Couriers sign in to `/courier.html`, choose **Enable notifications**, and grant browser permission. HTTPS is required except on localhost. On iOS/iPadOS, add the website to the Home Screen and open it from there using a supported version of the OS. Admins can send a short message to one courier from **Admin settings**. New assignments and admin/dispatcher changes also trigger a generic notification; notification text can be visible on a lock screen, so avoid sensitive details. Notifications can arrive with the page closed, subject to browser and OS restrictions; providers retain them for up to 24 hours, and delivery is best effort, not guaranteed. The admin response reports provider acceptance, not delivery, and messages are not stored as an inbox. Signing out or choosing **Disable notifications** removes the subscription on that browser. A courier password reset removes all of that courier's server subscriptions; enable them again after signing in. The Flutter mobile app does not receive these browser notifications.
 
 Customer password recovery is disabled by default. To enable it, configure an SMTP server and a public HTTPS URL for the reset page before setting `PARCEL_PASSWORD_RESET_ENABLED=true`:
 

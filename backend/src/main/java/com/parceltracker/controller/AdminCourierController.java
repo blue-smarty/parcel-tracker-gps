@@ -3,6 +3,7 @@ package com.parceltracker.controller;
 import com.parceltracker.model.CourierAccount;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.DispatcherAccountRepository;
+import com.parceltracker.repository.CourierPushSubscriptionRepository;
 import java.util.Locale;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/admin/couriers")
@@ -32,12 +34,14 @@ public class AdminCourierController {
     private final CourierAccountRepository accounts;
     private final PasswordEncoder passwordEncoder;
     private final ObjectProvider<DispatcherAccountRepository> dispatchers;
+    private final CourierPushSubscriptionRepository pushSubscriptions;
 
     public AdminCourierController(CourierAccountRepository accounts, PasswordEncoder passwordEncoder,
-            ObjectProvider<DispatcherAccountRepository> dispatchers) {
+            ObjectProvider<DispatcherAccountRepository> dispatchers, CourierPushSubscriptionRepository pushSubscriptions) {
         this.accounts = accounts;
         this.passwordEncoder = passwordEncoder;
         this.dispatchers = dispatchers;
+        this.pushSubscriptions = pushSubscriptions;
     }
 
     @GetMapping
@@ -64,11 +68,13 @@ public class AdminCourierController {
     }
 
     @PutMapping("/{courierId}/password")
+    @Transactional
     public CourierSummary resetPassword(@PathVariable String courierId, @RequestBody PasswordRequest request) {
         if (!accounts.existsById(courierId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Courier not found");
         }
         checkPassword(request.password());
+        pushSubscriptions.deleteByCourierId(courierId);
         accounts.save(new CourierAccount(courierId, passwordEncoder.encode(request.password())));
         return new CourierSummary(courierId);
     }

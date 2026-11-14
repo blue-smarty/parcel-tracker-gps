@@ -3,6 +3,7 @@ package com.parceltracker.scheduler;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.repository.ParcelRepository;
+import com.parceltracker.service.CourierPushService;
 import java.time.Clock;
 import java.time.Instant;
 import org.slf4j.Logger;
@@ -21,11 +22,14 @@ public class StaleAssignedEscalationJob {
     private final ParcelRepository repository;
     private final SchedulerProperties properties;
     private final Clock clock;
+    private final CourierPushService push;
 
-    public StaleAssignedEscalationJob(ParcelRepository repository, SchedulerProperties properties, Clock clock) {
+    public StaleAssignedEscalationJob(ParcelRepository repository, SchedulerProperties properties, Clock clock,
+                                      CourierPushService push) {
         this.repository = repository;
         this.properties = properties;
         this.clock = clock;
+        this.push = push;
     }
 
     @Scheduled(cron = "${parcel.scheduler.stale-assigned.cron:0 */10 * * * *}")
@@ -48,12 +52,14 @@ public class StaleAssignedEscalationJob {
                 || parcel.getEscalatedAt() != null) {
             return false;
         }
+        String courierId = parcel.getCourierId();
         parcel.setEscalatedAt(now);
         if (properties.getStaleAssigned().isUnassign()) {
             parcel.setCourierId(null);
         }
         parcel.setUpdatedAt(now);
         repository.save(parcel);
+        push.deliveryChanged(courierId);
         return true;
     }
 }

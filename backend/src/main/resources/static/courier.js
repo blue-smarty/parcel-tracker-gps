@@ -111,7 +111,9 @@
     courierId = current.username;
     byId('accountName').textContent = current.name || current.username;
     byId('courierView').hidden = false;
-    byId('signOutButton').addEventListener('click', signOut);
+    byId('courierView').classList.add('active-view');
+    CourierPush.init(courierId);
+    byId('signOutButton').addEventListener('click', () => CourierPush.signOut(signOut));
     byId('refreshButton').addEventListener('click', () => load(false));
     byId('deliveryList').addEventListener('click', onClick);
     await load(false);
