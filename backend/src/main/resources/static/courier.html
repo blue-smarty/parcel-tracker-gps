@@ -7,6 +7,7 @@
   <title>ParcelPilot — Courier</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/common.js" defer></script>
+  <script src="/courier-push.js" defer></script>
   <script src="/courier.js" defer></script>
 </head>
 <body>
@@ -29,6 +30,13 @@
           <button class="button button-quiet" id="refreshButton" type="button">↻ <span>Refresh</span></button>
         </div>
         <p id="courierMessage" class="form-message" role="status"></p>
+        <div class="panel" style="padding:18px;margin-bottom:14px">
+          <strong>Delivery notifications</strong>
+          <p class="field-note">Enable notifications to receive assignments and messages even when this page is closed.</p>
+          <button id="enablePushButton" class="button button-secondary" type="button">Enable notifications</button>
+          <button id="disablePushButton" class="button button-quiet" type="button">Disable notifications</button>
+          <p id="pushMessage" class="form-message" role="status"></p>
+        </div>
         <div id="deliveryList"><div class="panel"><div class="empty-state">Loading deliveries…</div></div></div>
       </section>
     </main>

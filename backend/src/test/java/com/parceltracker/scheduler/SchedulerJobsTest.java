@@ -53,7 +53,7 @@ class SchedulerJobsTest {
     @Test
     void staleNoCandidatesIsNoop() {
         when(repository.findStaleAssigned(any(), any())).thenReturn(List.of());
-        assertEquals(0, new StaleAssignedEscalationJob(repository, properties, clock).execute());
+        assertEquals(0, new StaleAssignedEscalationJob(repository, properties, clock, mock(com.parceltracker.service.CourierPushService.class)).execute());
         verify(repository, never()).save(any());
     }
 
@@ -63,7 +63,7 @@ class SchedulerJobsTest {
         Parcel justYounger = parcel(ParcelStatus.CREATED, NOW.minus(Duration.ofHours(2)).plusSeconds(1));
         Parcel noTimestamps = parcel(ParcelStatus.CREATED, null);
         when(repository.findStaleAssigned(any(), any())).thenReturn(List.of(atBoundary, justYounger, noTimestamps));
-        StaleAssignedEscalationJob job = new StaleAssignedEscalationJob(repository, properties, clock);
+        StaleAssignedEscalationJob job = new StaleAssignedEscalationJob(repository, properties, clock, mock(com.parceltracker.service.CourierPushService.class));
 
         assertEquals(1, job.execute());
         assertEquals(NOW, atBoundary.getEscalatedAt());
@@ -80,7 +80,7 @@ class SchedulerJobsTest {
         Parcel good = parcel(ParcelStatus.CREATED, NOW.minus(Duration.ofHours(3)));
         when(repository.findStaleAssigned(any(), any())).thenReturn(List.of(bad, good));
         when(repository.save(bad)).thenThrow(new RuntimeException("boom"));
-        assertEquals(1, new StaleAssignedEscalationJob(repository, properties, clock).execute());
+        assertEquals(1, new StaleAssignedEscalationJob(repository, properties, clock, mock(com.parceltracker.service.CourierPushService.class)).execute());
         assertNull(good.getCourierId());
         assertNotNull(good.getEscalatedAt());
     }

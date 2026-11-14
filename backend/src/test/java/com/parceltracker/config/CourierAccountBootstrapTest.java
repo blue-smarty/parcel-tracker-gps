@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.parceltracker.model.CourierAccount;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.DispatcherAccountRepository;
+import com.parceltracker.repository.CourierPushSubscriptionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -16,13 +17,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 class CourierAccountBootstrapTest {
     private final CourierAccountRepository accounts = org.mockito.Mockito.mock(CourierAccountRepository.class);
     private final DispatcherAccountRepository dispatchers = org.mockito.Mockito.mock(DispatcherAccountRepository.class);
+    private final CourierPushSubscriptionRepository subscriptions = org.mockito.Mockito.mock(CourierPushSubscriptionRepository.class);
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @Test
     void bootstrapsHashedPasswordOnlyWhenAccountDoesNotExist() throws Exception {
         when(accounts.findById("courier-1")).thenReturn(java.util.Optional.empty());
 
-        new CourierAccountBootstrap(accounts, encoder, dispatchers, "courier-1", "strong-password-123")
+        new CourierAccountBootstrap(accounts, encoder, dispatchers, subscriptions, "courier-1", "strong-password-123")
                 .run(new DefaultApplicationArguments());
 
         var account = org.mockito.ArgumentCaptor.forClass(CourierAccount.class);
@@ -36,7 +38,7 @@ class CourierAccountBootstrapTest {
         when(accounts.findById("courier-1")).thenReturn(java.util.Optional.of(
                 new CourierAccount("courier-1", encoder.encode("strong-password-123"))));
 
-        new CourierAccountBootstrap(accounts, encoder, dispatchers, "courier-1", "strong-password-123")
+        new CourierAccountBootstrap(accounts, encoder, dispatchers, subscriptions, "courier-1", "strong-password-123")
                 .run(new DefaultApplicationArguments());
 
         verify(accounts, never()).save(org.mockito.ArgumentMatchers.any());
@@ -47,11 +49,12 @@ class CourierAccountBootstrapTest {
         when(accounts.findById("courier-1")).thenReturn(java.util.Optional.of(
                 new CourierAccount("courier-1", encoder.encode("old-password-123"))));
 
-        new CourierAccountBootstrap(accounts, encoder, dispatchers, "courier-1", "strong-password-123")
+        new CourierAccountBootstrap(accounts, encoder, dispatchers, subscriptions, "courier-1", "strong-password-123")
                 .run(new DefaultApplicationArguments());
 
         var account = org.mockito.ArgumentCaptor.forClass(CourierAccount.class);
         verify(accounts).save(account.capture());
+        verify(subscriptions).deleteByCourierId("courier-1");
         assertTrue(encoder.matches("strong-password-123", account.getValue().getPasswordHash()));
     }
 }

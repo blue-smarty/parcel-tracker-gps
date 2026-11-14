@@ -17,6 +17,7 @@ import com.parceltracker.model.BrandingSettings;
 import com.parceltracker.model.CourierAccount;
 import com.parceltracker.repository.BrandingRepository;
 import com.parceltracker.repository.CourierAccountRepository;
+import com.parceltracker.repository.CourierPushSubscriptionRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ class AdminManagementTest {
     @Autowired private MockMvc mvc;
     @MockitoBean private CourierAccountRepository accounts;
     @MockitoBean private BrandingRepository branding;
+    @MockitoBean private CourierPushSubscriptionRepository pushSubscriptions;
 
     @Test
     void adminCreatesCourier() throws Exception {
@@ -65,6 +67,7 @@ class AdminManagementTest {
                         .content("{\"password\":\"another-long-pass\"}"))
                 .andExpect(status().isOk());
         verify(accounts).save(any(CourierAccount.class));
+        verify(pushSubscriptions).deleteByCourierId("courier-7");
     }
 
     @Test

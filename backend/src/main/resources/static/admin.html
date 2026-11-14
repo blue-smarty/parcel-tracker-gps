@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/styles.css">
   <script src="/common.js" defer></script>
   <script src="/admin-settings.js" defer></script>
+  <script src="/admin-push.js" defer></script>
 </head>
 <body>
   <div class="shell">
@@ -70,6 +71,16 @@
             </form>
             <div id="dispatcherList" class="support-list"></div>
             <p id="dispatcherMessage" class="form-message" role="status" aria-live="polite"></p>
+          </section>
+          <section class="panel settings-panel" aria-labelledby="courierMessageTitle">
+            <div class="panel-heading"><div><p class="eyebrow">COURIER COMMUNICATION</p><h3 id="courierMessageTitle">Send a notification</h3></div></div>
+            <p class="field-note">Messages may appear on a lock screen. Avoid sensitive information.</p>
+            <form id="courierMessageForm" class="settings-form">
+              <label>Courier ID<input id="messageCourierId" maxlength="255" required></label>
+              <label>Message<textarea id="courierMessageText" maxlength="240" required></textarea></label>
+              <button class="button button-primary" type="submit">Send notification</button>
+            </form>
+            <p id="courierMessageStatus" class="form-message" role="status"></p>
           </section>
         </div>
       </section>
