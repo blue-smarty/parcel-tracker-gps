@@ -2,7 +2,6 @@ package com.parceltracker.controller;
 
 import com.parceltracker.model.BrandingSettings;
 import com.parceltracker.repository.BrandingRepository;
-import java.util.Base64;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
@@ -43,13 +42,7 @@ public class BrandingController {
             logo = null;
         } else {
             if (type == null || !LOGO_TYPES.contains(type)) bad("Logo must be a PNG or JPEG image");
-            byte[] bytes;
-            try {
-                bytes = Base64.getDecoder().decode(logo);
-            } catch (IllegalArgumentException e) {
-                throw badRequest("Logo is not valid base64");
-            }
-            if (bytes.length > MAX_LOGO_BYTES) bad("Logo must be 256 KB or smaller");
+            WebsiteBrandingController.validateImage(type, logo, MAX_LOGO_BYTES);
         }
         return repository.save(new BrandingSettings(name, request.getPrimaryColor(),
                 request.getAccentColor(), type, logo));
