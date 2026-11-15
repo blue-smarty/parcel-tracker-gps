@@ -92,6 +92,8 @@ class InstallTest(unittest.TestCase):
                     mock.patch.object(setup.shutil, "which", return_value="/usr/bin/test"), \
                     mock.patch.object(setup, "command", side_effect=command), \
                     mock.patch.object(setup.socket, "socket"), \
+                    mock.patch.object(setup.subprocess, "check_output",
+                                       return_value='"runner","S-1-5-21-1"'), \
                     mock.patch.object(setup.subprocess, "Popen", side_effect=launch), \
                     mock.patch.object(setup.urllib.request, "urlopen", return_value=response):
                 self.assertIn("Installation complete", setup.install(data))
