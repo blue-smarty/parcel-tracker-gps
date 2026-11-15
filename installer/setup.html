@@ -7,16 +7,23 @@
   <style>
     body { font: 16px system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; color: #172033; }
     label { display: block; margin-top: 1rem; font-weight: 600; }
-    input { display: block; box-sizing: border-box; width: 100%; padding: .6rem; margin-top: .3rem; }
+    input, select { display: block; box-sizing: border-box; width: 100%; padding: .6rem; margin-top: .3rem; }
     button { margin-top: 1.5rem; padding: .7rem 1rem; }
     #status { white-space: pre-wrap; overflow-wrap: anywhere; }
   </style>
 </head>
 <body>
   <h1>Parcel Tracker setup</h1>
-  <p>This installs the backend on this computer. Java 17+, Maven, PostgreSQL 16+, and Python 3 are required. The database role and database must not already exist.</p>
+  <p>Java 17+, Maven and Python 3 are required. The database role and database must not already exist.</p>
   <form id="setup">
     <label>Install directory <input name="install_dir" required></label>
+    <label>PostgreSQL setup
+      <select name="postgres_install" id="postgres-install">
+        <option value="existing">Use an existing PostgreSQL server</option>
+        <option value="install">Install PostgreSQL 16 on Ubuntu/Debian (requires sudo)</option>
+      </select>
+    </label>
+    <p id="postgres-install-help" hidden>For a new local installation only. Run <code>sudo -v</code> in the terminal before starting setup. Enter a new password below for the postgres administrator. Existing installations are not changed.</p>
     <label>PostgreSQL host <input name="pg_host" value="localhost" required></label>
     <label>PostgreSQL administrator <input name="pg_admin" value="postgres" required></label>
     <label>PostgreSQL administrator password <input name="pg_password" type="password" autocomplete="off"></label>
@@ -36,6 +43,11 @@
     const form = document.getElementById("setup");
     const status = document.getElementById("status");
     form.elements.install_dir.value = __DEFAULT_INSTALL_DIR__;
+    const installPostgres = document.getElementById("postgres-install");
+    installPostgres.addEventListener("change", () => {
+      document.getElementById("postgres-install-help").hidden = installPostgres.value !== "install";
+      form.elements.pg_password.required = installPostgres.value === "install";
+    });
     form.addEventListener("submit", async event => {
       event.preventDefault();
       const button = form.querySelector("button");

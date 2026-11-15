@@ -32,7 +32,7 @@ class SetupError(Exception):
 
 
 def validate(data):
-    fields = ("install_dir", "pg_host", "pg_admin", "pg_password", "db_name",
+    fields = ("install_dir", "postgres_install", "pg_host", "pg_admin", "pg_password", "db_name",
               "db_user", "admin_username", "admin_password", "courier_username",
               "courier_password", "tomtom_key")
     if not isinstance(data, dict) or set(data) != set(fields) or any(
@@ -59,11 +59,21 @@ def validate(data):
             raise SetupError("Passwords must contain 12-72 printable ASCII characters, including a non-space character.")
     if "\x00" in data["pg_password"] or "\x00" in data["tomtom_key"]:
         raise SetupError("Secrets cannot contain NUL characters.")
+    if data["postgres_install"] not in ("existing", "install"):
+        raise SetupError("Choose a valid PostgreSQL setup option.")
+    if data["postgres_install"] == "install":
+        if data["pg_host"] not in ("localhost", "127.0.0.1") or data["pg_admin"] != "postgres":
+            raise SetupError("Automatic PostgreSQL installation requires localhost and the postgres administrator.")
+        password = data["pg_password"]
+        if not 12 <= len(password) <= 72 or not all(" " <= c <= "~" for c in password) or not password.strip():
+            raise SetupError("The new PostgreSQL administrator password must contain 12-72 printable ASCII characters, including a non-space character.")
 
 
 def command(args, *, env=None, input_text=None, cwd=None):
     try:
-        result = subprocess.run(args, input=input_text, text=True, env=env, cwd=cwd,
+        result = subprocess.run(args, input=input_text,
+                                stdin=subprocess.DEVNULL if input_text is None else None,
+                                text=True, env=env, cwd=cwd,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=600)
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise SetupError("Could not run {}: {}".format(args[0], exc)) from exc
@@ -78,6 +88,9 @@ def command(args, *, env=None, input_text=None, cwd=None):
                 diagnostic = diagnostic.replace(password, "[redacted]")
             print("PostgreSQL command failed:\n{}".format(diagnostic), file=sys.stderr, flush=True)
             raise SetupError("PostgreSQL command failed. Check the setup terminal for details.")
+        if args[0] == "sudo" and "apt-get" in args:
+            print("PostgreSQL package installation failed:\n{}".format(result.stdout), file=sys.stderr, flush=True)
+            raise SetupError("PostgreSQL package installation failed. Check the setup terminal for details.")
         raise SetupError("{} failed. Check PostgreSQL connectivity and permissions, then retry.".format(args[0]))
     return result.stdout.strip()
 
@@ -98,9 +111,52 @@ def private_directory(path):
         path.chmod(0o700)
 
 
+def install_postgresql(password):
+    if not sys.platform.startswith("linux") or not all(
+            shutil.which(tool) for tool in ("sudo", "apt-get", "apt-cache", "dpkg-query")):
+        raise SetupError("Automatic PostgreSQL installation is supported only on Ubuntu/Debian with apt and sudo.")
+    try:
+        command(["sudo", "-n", "true"])
+    except SetupError as exc:
+        raise SetupError("Administrator approval is required: run sudo -v in the setup terminal, then retry.") from exc
+
+    packages = command(["dpkg-query", "-W", "-f=${binary:Package} ${db:Status-Abbrev}\\n"])
+    installed = any(re.match(r"^postgresql(?:-[0-9]+)?(?::[A-Za-z0-9_-]+)?\s+(?:[ih][A-Za-z?]|rc)", line)
+                    for line in packages.splitlines())
+    if (installed or Path("/etc/postgresql").exists()
+            or Path("/var/lib/postgresql").exists() or shutil.which("postgres")):
+        raise SetupError("An existing PostgreSQL installation or data directory was detected. Use the existing-server option; no password was changed.")
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", 5432))
+    except OSError as exc:
+        raise SetupError("Port 5432 is already in use; PostgreSQL was not installed.") from exc
+
+    policy = command(["apt-cache", "policy", "postgresql-16"])
+    if not re.search(r"^\s*Candidate:\s+(?!\(none\))\S+", policy, re.MULTILINE):
+        raise SetupError("PostgreSQL 16 is not available in the configured apt repositories. Install it separately, then use the existing-server option.")
+    try:
+        command(["sudo", "-n", "apt-get", "-y", "install", "postgresql-16", "postgresql-client-16"])
+        clusters = command(["pg_lsclusters", "--no-header"])
+        rows = [line.split() for line in clusters.splitlines() if line.strip()]
+        if len(rows) != 1 or len(rows[0]) < 4 or rows[0][:3] != ["16", "main", "5432"]:
+            raise SetupError("The expected new PostgreSQL 16 main cluster on port 5432 was not found.")
+        if rows[0][3] == "down":
+            command(["sudo", "-n", "pg_ctlcluster", "16", "main", "start"])
+        elif rows[0][3] != "online":
+            raise SetupError("The new PostgreSQL cluster is not online.")
+        # Send the password over stdin, never through a command-line argument.
+        escaped_password = password.replace("'", "''")
+        command(["sudo", "-n", "-u", "postgres", "psql", "-X", "-w", "-d", "postgres",
+                 "-v", "ON_ERROR_STOP=1"],
+                input_text="SET standard_conforming_strings = on;\nALTER ROLE postgres PASSWORD '{}';\n".format(escaped_password))
+    except (SetupError, OSError) as exc:
+        raise SetupError("PostgreSQL installation or password setup failed. Packages or a cluster may now exist; inspect them and use the existing-server option after fixing the problem. {}".format(exc)) from exc
+
+
 def install(data):
     validate(data)
-    for tool in ("java", "mvn", "psql"):
+    for tool in ("java", "mvn"):
         if not shutil.which(tool):
             raise SetupError("Missing required tool: {}".format(tool))
     version = command(["java", "-version"])
@@ -117,6 +173,11 @@ def install(data):
             probe.bind(("127.0.0.1", 8080))
     except OSError as exc:
         raise SetupError("Port 8080 is unavailable. Stop the existing service before installing.") from exc
+
+    if data["postgres_install"] == "install":
+        install_postgresql(data["pg_password"])
+    if not shutil.which("psql"):
+        raise SetupError("Missing required tool: psql")
 
     env = os.environ.copy()
     if data["pg_password"]:
