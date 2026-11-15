@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parcel Tracker setup</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; color: #172033; }
+    label { display: block; margin-top: 1rem; font-weight: 600; }
+    input { display: block; box-sizing: border-box; width: 100%; padding: .6rem; margin-top: .3rem; }
+    button { margin-top: 1.5rem; padding: .7rem 1rem; }
+    #status { white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <h1>Parcel Tracker setup</h1>
+  <p>This installs the backend on this computer. Java 17+, Maven, PostgreSQL 16+, and Python 3 are required. The database role and database must not already exist.</p>
+  <form id="setup">
+    <label>Install directory <input name="install_dir" required></label>
+    <label>PostgreSQL host <input name="pg_host" value="localhost" required></label>
+    <label>PostgreSQL administrator <input name="pg_admin" value="postgres" required></label>
+    <label>PostgreSQL administrator password <input name="pg_password" type="password" autocomplete="off"></label>
+    <label>New database name <input name="db_name" value="parceltracker" required></label>
+    <label>New database role <input name="db_user" value="parceltracker" required></label>
+    <label>Application admin username <input name="admin_username" value="admin" required></label>
+    <label>Application admin password <input name="admin_password" type="password" minlength="12" maxlength="72" required></label>
+    <label>Courier username <input name="courier_username" value="courier-001" required></label>
+    <label>Courier password <input name="courier_password" type="password" minlength="12" maxlength="72" required></label>
+    <label>TomTom API key (optional) <input name="tomtom_key" type="password" autocomplete="off"></label>
+    <button type="submit">Install and start</button>
+  </form>
+  <p id="status" role="status" aria-live="polite"></p>
+  <script>
+    const token = location.hash.slice(1);
+    history.replaceState(null, "", location.pathname);
+    const form = document.getElementById("setup");
+    const status = document.getElementById("status");
+    form.elements.install_dir.value = __DEFAULT_INSTALL_DIR__;
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = form.querySelector("button");
+      button.disabled = true;
+      status.textContent = "Installing and starting the backend. This can take several minutes; keep this page open.";
+      try {
+        const response = await fetch("/install", {
+          method: "POST",
+          headers: {"Content-Type": "application/json", "X-Setup-Token": token},
+          body: JSON.stringify(Object.fromEntries(new FormData(form)))
+        });
+        const result = await response.json();
+        status.textContent = result.message;
+        if (response.ok) {
+          form.reset();
+          form.hidden = true;
+          const link = document.createElement("a");
+          link.href = "http://localhost:8080";
+          link.textContent = "Open Parcel Tracker";
+          status.append(document.createElement("br"), link);
+        } else {
+          button.disabled = false;
+        }
+      } catch (error) {
+        status.textContent = "The setup server could not be reached. Check the terminal for details.";
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
