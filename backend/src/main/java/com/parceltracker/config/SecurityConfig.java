@@ -59,9 +59,12 @@ public class SecurityConfig {
                                 "/book.html",
                                 "/styles.css", "/common.js", "/auth.js", "/password-reset.js", "/quote.js",
                                 "/customer.js", "/admin.js", "/admin-adhoc.js", "/admin-settings.js",
-                                "/admin-coverage.js", "/admin-push.js", "/book.js", "/address-book.html", "/address-book.js")
+                                "/admin-coverage.js", "/admin-push.js", "/book.js", "/address-book.html", "/address-book.js",
+                                "/admin-branding.html", "/admin-branding.js", "/website-branding.js")
                                 .permitAll()
-                        .requestMatchers("/api/branding", "/api/csrf").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/branding", "/api/branding/website",
+                                "/api/branding/stylesheet", "/api/branding/images/*").permitAll()
+                        .requestMatchers("/api/csrf").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pricing").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/booking-route").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/address-suggestions").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
