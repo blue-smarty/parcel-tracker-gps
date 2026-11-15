@@ -17,6 +17,7 @@ spec.loader.exec_module(setup)
 def form(directory):
     return {
         "install_dir": str(directory),
+        "postgres_install": "existing",
         "pg_host": "localhost",
         "pg_admin": "postgres",
         "pg_password": "secret-password",
@@ -38,8 +39,17 @@ class ValidationTest(unittest.TestCase):
                              ("pg_host", "host/other"),
                              ("admin_password", "short"),
                              ("courier_username", "admin"),
+                             ("postgres_install", "invalid"),
                              ("install_dir", "relative/path"),
                              ("install_dir", str(setup.ROOT / "credentials"))):
+            with self.subTest(field=field), self.assertRaises(setup.SetupError):
+                setup.validate({**data, field: value})
+
+    def test_new_postgres_requires_local_default_admin_and_strong_password(self):
+        data = {**form(Path.home() / "parcel-test-install"), "postgres_install": "install"}
+        setup.validate(data)
+        for field, value in (("pg_host", "db.example.com"), ("pg_admin", "other"),
+                             ("pg_password", "short"), ("pg_password", "bad\npassword123")):
             with self.subTest(field=field), self.assertRaises(setup.SetupError):
                 setup.validate({**data, field: value})
 
@@ -138,6 +148,65 @@ class InstallTest(unittest.TestCase):
                 with self.assertRaisesRegex(setup.SetupError, "may have been created"):
                     setup.install(form(directory))
             self.assertTrue((directory / "config.json").is_file())
+
+
+class PostgresInstallTest(unittest.TestCase):
+    def run_installer(self, packages="", directories=False, clusters="16 main 5432 online postgres /data /log"):
+        calls = []
+
+        def fake_command(args, **kwargs):
+            calls.append((args, kwargs))
+            if args[0] == "dpkg-query":
+                return packages
+            if args[0] == "apt-cache":
+                return "postgresql-16:\n  Candidate: 16.4-1\n"
+            if args[0] == "pg_lsclusters":
+                return clusters
+            return ""
+
+        with mock.patch.object(setup.sys, "platform", "linux"), \
+                mock.patch.object(setup.shutil, "which", side_effect=lambda name: None if name == "postgres" else "/usr/bin/" + name), \
+                mock.patch.object(setup.Path, "exists", return_value=directories), \
+                mock.patch.object(setup.socket, "socket"), \
+                mock.patch.object(setup, "command", side_effect=fake_command):
+            setup.install_postgresql("safe'password123")
+        return calls
+
+    def test_installs_and_sets_password_over_stdin(self):
+        calls = self.run_installer()
+        self.assertIn(["sudo", "-n", "apt-get", "-y", "install", "postgresql-16", "postgresql-client-16"],
+                      [args for args, _ in calls])
+        args, kwargs = calls[-1]
+        self.assertEqual(["sudo", "-n", "-u", "postgres", "psql"], args[:5])
+        self.assertNotIn("safe'password123", str(args))
+        self.assertIn("safe''password123", kwargs["input_text"])
+
+    def test_does_not_change_existing_installations(self):
+        for packages, directories in (("postgresql-16 ii ", False),
+                                      ("postgresql-16 iF ", False),
+                                      ("postgresql-16 rc ", False),
+                                      ("", True)):
+            with self.subTest(packages=packages, directories=directories), \
+                    self.assertRaisesRegex(setup.SetupError, "existing PostgreSQL"):
+                self.run_installer(packages, directories)
+
+    def test_unexpected_cluster_does_not_set_password(self):
+        with self.assertRaisesRegex(setup.SetupError, "expected new PostgreSQL"):
+            self.run_installer(clusters="16 other 5433 online postgres /data /log")
+
+    def test_sudo_approval_is_required_before_installing(self):
+        calls = []
+
+        def fake_command(args, **kwargs):
+            calls.append(args)
+            raise setup.SetupError("sudo denied")
+
+        with mock.patch.object(setup.sys, "platform", "linux"), \
+                mock.patch.object(setup.shutil, "which", return_value="/usr/bin/test"), \
+                mock.patch.object(setup, "command", side_effect=fake_command):
+            with self.assertRaisesRegex(setup.SetupError, "sudo -v"):
+                setup.install_postgresql("safe-password123")
+        self.assertEqual([["sudo", "-n", "true"]], calls)
 
 
 class ServerTest(unittest.TestCase):
