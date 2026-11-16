@@ -17,7 +17,8 @@ window.CourierPush = (() => {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('Notification permission was not granted. Check your browser settings.');
     const { publicKey } = await api(path('push-key'));
-    const registration = await navigator.serviceWorker.register('/courier-sw.js');
+    await navigator.serviceWorker.register('/courier-sw.js');
+    const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
     const applicationServerKey = decodeKey(publicKey);
     if (subscription && subscription.options.applicationServerKey) {

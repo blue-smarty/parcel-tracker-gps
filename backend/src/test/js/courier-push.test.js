@@ -10,7 +10,11 @@ test('enables a subscription and removes it when signing out', async () => {
   const handlers = {};
   const requests = [];
   let unsubscribed = false;
-  const subscription = {
+  let serviceWorkerReady = false;
+  let subscription = null;
+  let resolveReady;
+  const ready = new Promise(resolve => { resolveReady = resolve; });
+  const createdSubscription = {
     endpoint: 'https://fcm.googleapis.com/fcm/send/test',
     options: {},
     toJSON: () => ({ endpoint: 'https://fcm.googleapis.com/fcm/send/test', keys: { p256dh: 'key', auth: 'auth' } }),
@@ -18,14 +22,23 @@ test('enables a subscription and removes it when signing out', async () => {
   };
   const registration = { pushManager: {
     getSubscription: async () => subscription,
-    subscribe: async () => subscription
+    subscribe: async () => {
+      assert.equal(serviceWorkerReady, true);
+      subscription = createdSubscription;
+      return subscription;
+    }
   } };
   const window = { isSecureContext: true, PushManager: {}, Notification: {} };
   const context = {
     window, Notification: { requestPermission: async () => 'granted' }, Uint8Array,
     atob: value => Buffer.from(value, 'base64').toString('binary'),
     navigator: { serviceWorker: {
-      register: async () => registration, getRegistration: async () => registration
+      register: async () => {
+        setTimeout(() => { serviceWorkerReady = true; resolveReady(registration); }, 0);
+        return registration;
+      },
+      ready,
+      getRegistration: async () => registration
     } },
     PP: {
       byId: id => ({ addEventListener: (_name, fn) => { handlers[id] = fn; } }),
