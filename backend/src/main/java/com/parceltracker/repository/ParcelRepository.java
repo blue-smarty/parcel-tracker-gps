@@ -20,6 +20,9 @@ public interface ParcelRepository extends JpaRepository<Parcel, String> {
             + "and (p.updatedAt <= :cutoff or (p.updatedAt is null and p.createdAt <= :cutoff))")
     List<Parcel> findStaleAssigned(@Param("status") ParcelStatus status, @Param("cutoff") Instant cutoff);
 
+    List<Parcel> findByCreatedAtGreaterThanEqualAndCreatedAtLessThanAndStatusNotAndEstimatedPriceNotNullOrderByCreatedAtAsc(
+            Instant from, Instant to, ParcelStatus status);
+
     List<Parcel> findByStatusIn(Collection<ParcelStatus> statuses);
 
     @Query("select p from Parcel p where p.status = :status and p.finalizedAt is null "
