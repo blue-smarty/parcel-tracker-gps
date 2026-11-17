@@ -14,6 +14,7 @@ import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.model.CustomerAccount;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.CustomerAccountRepository;
+import com.parceltracker.service.CustomerCardService;
 import com.parceltracker.service.PasswordResetService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,7 @@ class AuthControllerTest {
     @MockitoBean private CourierAccountRepository couriers;
     @MockitoBean private CustomerAccountRepository customers;
     @MockitoBean private PasswordResetService passwordResets;
+    @MockitoBean private CustomerCardService customerCards;
 
     private static final String BODY = "{\"name\":\"Ada\",\"email\":\"Ada@Example.com\",\"password\":\"correct horse battery\"}";
 

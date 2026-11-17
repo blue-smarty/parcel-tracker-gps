@@ -6,6 +6,7 @@ import com.parceltracker.dto.RegistrationRequest;
 import com.parceltracker.model.CustomerAccount;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.CustomerAccountRepository;
+import com.parceltracker.service.CustomerCardService;
 import com.parceltracker.service.PasswordResetService;
 import jakarta.validation.Valid;
 import java.util.LinkedHashMap;
@@ -32,17 +33,20 @@ public class AuthController {
     private final CourierAccountRepository couriers;
     private final PasswordEncoder encoder;
     private final PasswordResetService passwordResets;
+    private final CustomerCardService customerCards;
     private final String adminUsername;
     private final boolean passwordResetEnabled;
 
     public AuthController(CustomerAccountRepository customers, CourierAccountRepository couriers,
                           PasswordEncoder encoder, PasswordResetService passwordResets,
+                          CustomerCardService customerCards,
                           @Value("${parcel.auth.admin-username:}") String adminUsername,
                           @Value("${parcel.auth.password-reset.enabled:false}") boolean passwordResetEnabled) {
         this.customers = customers;
         this.couriers = couriers;
         this.encoder = encoder;
         this.passwordResets = passwordResets;
+        this.customerCards = customerCards;
         this.adminUsername = adminUsername;
         this.passwordResetEnabled = passwordResetEnabled;
     }
@@ -81,6 +85,7 @@ public class AuthController {
         }
         CustomerAccount account = customers.save(
                 new CustomerAccount(email, request.name().trim(), encoder.encode(request.password())));
+        customerCards.createCard(account, request.phone());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("username", account.getEmail(), "name", account.getDisplayName(), "role", "CUSTOMER"));
     }

@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/dispatch/couriers").hasAnyRole("ADMIN", "DISPATCHER")
+                        .requestMatchers(HttpMethod.GET, "/api/dispatch/customers/*/card").hasAnyRole("ADMIN", "DISPATCHER")
                         .requestMatchers("/api/couriers/**").hasRole("COURIER")
                         .requestMatchers("/", "/index.html", "/login.html", "/forgot-password.html",
                                 "/customer.html", "/admin.html", "/dispatch.html", "/admin-adhoc.html", "/admin-settings.html",

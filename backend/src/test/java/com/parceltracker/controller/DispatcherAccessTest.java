@@ -20,6 +20,7 @@ import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.CustomerAccountRepository;
 import com.parceltracker.repository.DispatcherAccountRepository;
 import com.parceltracker.service.ParcelService;
+import com.parceltracker.service.CustomerCardService;
 import com.parceltracker.service.PasswordResetService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,7 @@ class DispatcherAccessTest {
     @MockitoBean private DispatcherAccountRepository dispatchers;
     @MockitoBean private ParcelService parcels;
     @MockitoBean private PasswordResetService resets;
+    @MockitoBean private CustomerCardService customerCards;
 
     @Test
     void dispatcherAuthenticatesAndGetsOperationalAccessOnly() throws Exception {
