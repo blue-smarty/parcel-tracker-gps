@@ -40,6 +40,9 @@
         <span class="count-pill">${escapeHtml(statusText(status))}</span></div>
       ${detail('Pickup', parcel.pickupAddress)}${detail('Destination', parcel.destination)}
       ${detail('Contact', parcel.customerContact)}${detail('Package', parcel.packageSize)}
+      ${detail('Service', PP.serviceLevelName(parcel.deliverySpeed) || 'Standard')}
+      ${detail('Target', parcel.targetDeadline ? new Date(parcel.targetDeadline).toLocaleString()
+        : parcel.targetStart === 'PICKUP' ? `${parcel.targetMinutes} minutes after pickup` : 'None')}
       <div class="assignment-controls" style="margin-top:12px;flex-wrap:wrap">${actions}</div>
     </div>`;
   }

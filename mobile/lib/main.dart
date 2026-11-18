@@ -352,6 +352,13 @@ class _CourierHomeState extends State<CourierHome> with WidgetsBindingObserver {
             Text('${parcel['trackingNumber'] ?? id} · $status',
                 style: Theme.of(context).textTheme.titleMedium),
             Text('To ${parcel['recipient'] ?? 'recipient'}'),
+            if (const {'GENERAL', 'EXPRESS', 'DIRECT'}.contains(parcel['deliverySpeed']))
+              Text('Service: ${parcel['deliverySpeed']}'),
+            if (parcel['targetDeadline'] != null)
+              Text('Target: ${DateTime.tryParse('${parcel['targetDeadline']}')?.toLocal() ?? parcel['targetDeadline']}'),
+            if (parcel['targetDeadline'] == null && parcel['targetStart'] == 'PICKUP'
+                && parcel['targetMinutes'] != null)
+              Text('Target: ${parcel['targetMinutes']} minutes after pickup'),
             if (parcel['pickupAddress'] != null && '${parcel['pickupAddress']}'.trim().isNotEmpty)
               Text('Pickup: ${parcel['pickupAddress']}'),
             if (parcel['customerContact'] != null && '${parcel['customerContact']}'.trim().isNotEmpty)

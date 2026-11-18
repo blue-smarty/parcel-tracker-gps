@@ -84,7 +84,11 @@
               <div class="choice-row" role="radiogroup" aria-label="Delivery speed">
                 <label class="choice"><input type="radio" name="speed" value="SCHEDULED" checked><span><strong>Scheduled</strong><small>Pick a date and time window</small></span></label>
                 <label class="choice"><input type="radio" name="speed" value="SAME_DAY"><span><strong>Same-day</strong><small>Priority handling at a premium</small></span></label>
+                <label class="choice"><input type="radio" name="speed" value="GENERAL"><span><strong>General</strong><small id="generalTarget">On-demand target unavailable</small></span></label>
+                <label class="choice"><input type="radio" name="speed" value="EXPRESS"><span><strong>Express</strong><small id="expressTarget">On-demand target unavailable</small></span></label>
+                <label class="choice"><input type="radio" name="speed" value="DIRECT"><span><strong>Direct</strong><small>Highest dispatch priority</small></span></label>
               </div>
+              <p class="field-note">Targets are not guarantees. Direct does not reserve a courier or guarantee an exclusive route.</p>
               <div id="scheduleFields" class="field-grid two">
                 <label>Delivery date<input id="scheduleDate" type="date"></label>
                 <label>Time window<select id="scheduleWindow"><option value="">Choose a window</option><option>08:00-10:00</option><option>10:00-12:00</option><option>12:00-14:00</option><option>14:00-16:00</option><option>16:00-18:00</option></select></label>

@@ -9,6 +9,7 @@ import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.repository.ParcelRepository;
 import com.parceltracker.repository.PricingSettingsRepository;
+import com.parceltracker.repository.ServiceLevelSettingsRepository;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ class LocationServiceTest {
     private final ParcelRepository repo = mock(ParcelRepository.class);
     private final ParcelService parcels = new ParcelService(repo,
             new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class),
-            mock(CourierPushService.class));
+            mock(CourierPushService.class), mock(ServiceLevelSettingsRepository.class));
     private final LocationService service = new LocationService(parcels);
 
     @Test

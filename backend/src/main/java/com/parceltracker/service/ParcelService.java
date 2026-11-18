@@ -3,6 +3,8 @@ package com.parceltracker.service;
 import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
+import com.parceltracker.model.ServiceLevelSettings;
+import com.parceltracker.repository.ServiceLevelSettingsRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,13 +20,15 @@ public class ParcelService {
     private final DemoPricingService pricing;
     private final ServiceAreaService serviceArea;
     private final CourierPushService push;
+    private final ServiceLevelSettingsRepository serviceLevels;
 
     public ParcelService(ParcelRepository repository, DemoPricingService pricing, ServiceAreaService serviceArea,
-                         CourierPushService push) {
+                         CourierPushService push, ServiceLevelSettingsRepository serviceLevels) {
         this.repository = repository;
         this.pricing = pricing;
         this.serviceArea = serviceArea;
         this.push = push;
+        this.serviceLevels = serviceLevels;
     }
 
     public Parcel create(Parcel parcel, String customerEmail) {
@@ -58,6 +62,20 @@ public class ParcelService {
         parcel.setLocationInactive(false);
         parcel.setFinalizedAt(null);
         parcel.setProofOfDelivery(null);
+        parcel.setTargetMinutes(null);
+        parcel.setTargetStart(null);
+        parcel.setTargetDeadline(null);
+        if ("GENERAL".equals(parcel.getDeliverySpeed()) || "EXPRESS".equals(parcel.getDeliverySpeed())) {
+            ServiceLevelSettings settings = serviceLevels.findById(ServiceLevelSettings.SINGLETON_ID)
+                    .orElseGet(ServiceLevelSettings::new);
+            int minutes = "GENERAL".equals(parcel.getDeliverySpeed())
+                    ? settings.getGeneralMinutes() : settings.getExpressMinutes();
+            parcel.setTargetMinutes(minutes);
+            parcel.setTargetStart(settings.getTargetStart());
+            if ("BOOKING".equals(settings.getTargetStart())) {
+                parcel.setTargetDeadline(now.plusSeconds(minutes * 60L));
+            }
+        }
         if (parcel.getDistanceKm() != null && parcel.getWeightKg() != null
                 && parcel.getDeliverySpeed() != null) {
             parcel.setEstimatedPrice(pricing.estimate(parcel.getDistanceKm(), parcel.getWeightKg(),
@@ -90,8 +108,12 @@ public class ParcelService {
         if (changes.getRecipient() != null) existing.setRecipient(changes.getRecipient());
         if (changes.getDestination() != null) existing.setDestination(changes.getDestination());
         if (changes.getCourierId() != null) existing.setCourierId(changes.getCourierId());
-        if (changes.getStatus() != null) existing.setStatus(changes.getStatus());
-        existing.setUpdatedAt(Instant.now());
+        Instant now = Instant.now();
+        if (changes.getStatus() != null) {
+            if (changes.getStatus() == ParcelStatus.PICKED_UP) existing.startPickupTarget(now);
+            existing.setStatus(changes.getStatus());
+        }
+        existing.setUpdatedAt(now);
         Parcel saved = repository.save(existing);
         if (!Objects.equals(oldCourier, saved.getCourierId())) push.deliveryChanged(oldCourier);
         push.deliveryChanged(saved.getCourierId());

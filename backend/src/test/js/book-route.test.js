@@ -21,7 +21,7 @@ class Element {
   querySelector() { return new Element(); }
 }
 
-async function setup(routeRequest) {
+async function setup(routeRequest, speed = 'SAME_DAY') {
   const elements = new Map();
   const byId = id => {
     if (!elements.has(id)) elements.set(id, new Element());
@@ -30,12 +30,12 @@ async function setup(routeRequest) {
   const document = {
     getElementById: byId,
     createElement: () => new Element(),
-    querySelector: selector => selector.includes('speed') ? { value: 'SAME_DAY' } : new Element()
+    querySelector: selector => selector.includes('speed') ? { value: speed } : new Element()
   };
   const maps = [];
   const bookings = [];
   const PP = {
-    byId, money: String, estimatePrice: () => 10,
+    byId, money: String, estimatePrice: () => 10, serviceLevelName: String, showServiceTargets() {},
     setMessage: (id, message) => { byId(id).textContent = message; }, signOut() {},
     requireRole: async () => ({ name: 'Customer', username: 'customer' }),
     customerTracking: { initialize() {}, refresh: async () => {} },
@@ -135,4 +135,17 @@ test('requires a current calculated route before submitting a booking', async ()
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(bookings.length, 1);
   assert.match(byId('builderMessage').textContent, /current addresses/);
+});
+
+test('books an on-demand service without scheduled delivery fields', async () => {
+  const { byId, bookings } = await setup(async () => response, 'EXPRESS');
+  byId('itemTiles').children[0].children[0].dispatch('click');
+  byId('recipientName').value = 'Recipient';
+  byId('calculateRouteButton').dispatch('click');
+  await new Promise(resolve => setImmediate(resolve));
+  byId('builderForm').dispatch('submit');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(bookings[0].deliverySpeed, 'EXPRESS');
+  assert.equal(bookings[0].scheduledDate, null);
+  assert.equal(bookings[0].scheduledWindow, null);
 });

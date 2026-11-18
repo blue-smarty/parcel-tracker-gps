@@ -29,6 +29,20 @@ class CourierServiceTest {
     }
 
     @Test
+    void showsHigherPriorityOnDemandJobsFirst() {
+        Parcel general = parcel(ParcelStatus.CREATED);
+        general.setDeliverySpeed("GENERAL");
+        Parcel direct = parcel(ParcelStatus.CREATED);
+        direct.setDeliverySpeed("DIRECT");
+        Parcel express = parcel(ParcelStatus.CREATED);
+        express.setDeliverySpeed("EXPRESS");
+        when(repository.findByCourierIdAndStatusNotIn(eq("courier-1"), any()))
+                .thenReturn(List.of(general, direct, express));
+
+        assertEquals(List.of(direct, express, general), service.getActiveDeliveries("courier-1"));
+    }
+
+    @Test
     void updatesAnAllowedStatusAndPublishesTrackingEvent() {
         Parcel parcel = parcel(ParcelStatus.CREATED);
         when(repository.findById("parcel-1")).thenReturn(Optional.of(parcel));
@@ -39,6 +53,19 @@ class CourierServiceTest {
         assertEquals(ParcelStatus.PICKED_UP, updated.getStatus());
         assertNotNull(updated.getUpdatedAt());
         verify(locations).publishStatusUpdate(updated);
+    }
+
+    @Test
+    void pickupStartsTheSavedTargetClock() {
+        Parcel parcel = parcel(ParcelStatus.ACCEPTED);
+        parcel.setTargetStart("PICKUP");
+        parcel.setTargetMinutes(90);
+        when(repository.findById("parcel-1")).thenReturn(Optional.of(parcel));
+        when(repository.save(any(Parcel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.updateStatus("courier-1", "parcel-1", ParcelStatus.PICKED_UP);
+
+        assertEquals(parcel.getUpdatedAt().plusSeconds(90 * 60L), parcel.getTargetDeadline());
     }
 
     @Test

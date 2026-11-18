@@ -121,7 +121,7 @@
     byId('ticketWeight').textContent = valid ? kg(weight) : '—';
     byId('ticketDistance').textContent = positive(distance)
       ? `${distance} km route · ${Math.round((route.straightLineDistanceKm || 0) * 100) / 100} km straight-line` : '—';
-    byId('ticketSpeed').textContent = speed() === 'SAME_DAY' ? 'Same-day' : 'Scheduled';
+    byId('ticketSpeed').textContent = PP.serviceLevelName(speed());
     byId('ticketPrice').textContent = valid && positive(distance) && pricing
       ? money(estimatePrice(pricing, distance, weight, speed(), route.straightLineDistanceKm)) : '$—';
     const scheduled = speed() === 'SCHEDULED';
@@ -329,6 +329,11 @@
       updateSummary();
     } catch (error) {
       setMessage('builderMessage', `Could not load current pricing: ${error.message}`, 'error');
+    }
+    try {
+      PP.showServiceTargets(await api('/api/service-levels'));
+    } catch (error) {
+      setMessage('builderMessage', `Could not load service targets: ${error.message}`, 'error');
     }
   }
 

@@ -78,8 +78,17 @@ public class Parcel {
     private Double weightKg;
 
     @Column(name = "delivery_speed")
-    @Pattern(regexp = "SAME_DAY|SCHEDULED")
+    @Pattern(regexp = "SAME_DAY|SCHEDULED|GENERAL|EXPRESS|DIRECT")
     private String deliverySpeed;
+
+    @Column(name = "target_minutes")
+    private Integer targetMinutes;
+
+    @Column(name = "target_start")
+    private String targetStart;
+
+    @Column(name = "target_deadline")
+    private Instant targetDeadline;
 
     @Column(name = "scheduled_date")
     private LocalDate scheduledDate;
@@ -173,6 +182,18 @@ public class Parcel {
     public void setWeightKg(Double weightKg) { this.weightKg = weightKg; }
     public String getDeliverySpeed() { return deliverySpeed; }
     public void setDeliverySpeed(String deliverySpeed) { this.deliverySpeed = deliverySpeed; }
+    public Integer getTargetMinutes() { return targetMinutes; }
+    public void setTargetMinutes(Integer targetMinutes) { this.targetMinutes = targetMinutes; }
+    public String getTargetStart() { return targetStart; }
+    public void setTargetStart(String targetStart) { this.targetStart = targetStart; }
+    public Instant getTargetDeadline() { return targetDeadline; }
+    public void setTargetDeadline(Instant targetDeadline) { this.targetDeadline = targetDeadline; }
+
+    public void startPickupTarget(Instant now) {
+        if ("PICKUP".equals(targetStart) && targetMinutes != null && targetDeadline == null) {
+            targetDeadline = now.plusSeconds(targetMinutes * 60L);
+        }
+    }
     public LocalDate getScheduledDate() { return scheduledDate; }
     public void setScheduledDate(LocalDate scheduledDate) { this.scheduledDate = scheduledDate; }
     public String getScheduledWindow() { return scheduledWindow; }

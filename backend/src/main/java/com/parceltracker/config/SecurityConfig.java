@@ -65,7 +65,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/branding", "/api/branding/website",
                                 "/api/branding/stylesheet", "/api/branding/images/*").permitAll()
                         .requestMatchers("/api/csrf").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/pricing").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/pricing", "/api/service-levels").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/booking-route").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/address-suggestions").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")
                         .requestMatchers("/api/address-book/**", "/api/address-book").hasAnyRole("ADMIN", "CUSTOMER", "DISPATCHER")

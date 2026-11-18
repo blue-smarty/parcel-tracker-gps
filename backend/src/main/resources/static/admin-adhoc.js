@@ -106,7 +106,7 @@
     const selectedSpeed = speed();
     byId('ticketWeight').textContent = valid ? `${(Math.round(weight * 100) / 100).toLocaleString()} kg` : '—';
     byId('ticketDistance').textContent = positive(distance) ? `${distance} km` : '—';
-    byId('ticketSpeed').textContent = selectedSpeed === 'SAME_DAY' ? 'Same-day' : 'Scheduled';
+    byId('ticketSpeed').textContent = PP.serviceLevelName(selectedSpeed);
     const amount = valid && positive(distance) && route.straightLineDistanceKm != null
       ? estimatePrice(pricing, distance, weight, selectedSpeed, route.straightLineDistanceKm)
       : null;
@@ -300,6 +300,9 @@
         updateSummary();
       }).catch(error => {
         setMessage('adhocMessage', `Could not load current pricing: ${error.message}`, 'error');
+      }),
+      api('/api/service-levels').then(PP.showServiceTargets).catch(error => {
+        setMessage('adhocMessage', `Could not load service targets: ${error.message}`, 'error');
       })
     ]);
   }

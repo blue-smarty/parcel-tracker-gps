@@ -66,6 +66,9 @@
       detail('PICKUP', parcel.pickupAddress),
       detail('DELIVERY', parcel.destination),
       detail('COURIER', parcel.courierId),
+      detail('SERVICE', PP.serviceLevelName(parcel.deliverySpeed) || 'Standard'),
+      detail('TARGET', parcel.targetDeadline ? new Date(parcel.targetDeadline).toLocaleString()
+        : parcel.targetStart === 'PICKUP' ? `${parcel.targetMinutes} minutes after pickup` : 'None'),
       detail('ESTIMATED PRICE', money(parcel.estimatedPrice))
     ].join('');
     drawMap(byId('customerMap'), [parcel], parcel.id, parcel.locationHistory || []);
