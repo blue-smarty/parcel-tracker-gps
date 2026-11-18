@@ -6,6 +6,7 @@ import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.model.DeliveryProof;
 import com.parceltracker.repository.ParcelRepository;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -26,7 +27,19 @@ public class CourierService {
 
     public List<Parcel> getActiveDeliveries(String courierId) {
         requireCourierId(courierId);
-        return repository.findByCourierIdAndStatusNotIn(courierId, TERMINAL_STATUSES);
+        return repository.findByCourierIdAndStatusNotIn(courierId, TERMINAL_STATUSES).stream()
+                .sorted(Comparator.comparingInt(CourierService::priority).reversed()
+                        .thenComparing(Parcel::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+    }
+
+    private static int priority(Parcel parcel) {
+        return switch (parcel.getDeliverySpeed() == null ? "" : parcel.getDeliverySpeed()) {
+            case "DIRECT" -> 3;
+            case "EXPRESS" -> 2;
+            case "GENERAL" -> 1;
+            default -> 0;
+        };
     }
 
     public Parcel updateStatus(String courierId, String parcelId, ParcelStatus nextStatus) {
@@ -38,8 +51,10 @@ public class CourierService {
             throw new IllegalStateException("Invalid delivery status transition from " + parcel.getStatus()
                     + " to " + nextStatus);
         }
+        Instant now = Instant.now();
+        if (nextStatus == ParcelStatus.PICKED_UP) parcel.startPickupTarget(now);
         parcel.setStatus(nextStatus);
-        parcel.setUpdatedAt(Instant.now());
+        parcel.setUpdatedAt(now);
         Parcel saved = repository.save(parcel);
         locationService.publishStatusUpdate(saved);
         return saved;

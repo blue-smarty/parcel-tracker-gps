@@ -7,6 +7,15 @@
     return !terminalStatuses.has(String(parcel.status || '').toUpperCase());
   }
 
+  function priority(parcel) {
+    return ({ DIRECT: 3, EXPRESS: 2, GENERAL: 1 })[parcel.deliverySpeed] || 0;
+  }
+
+  function ordered(parcels) {
+    return [...parcels].sort((a, b) => priority(b) - priority(a)
+      || String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+  }
+
   async function refreshDispatch() {
     try {
       state.parcels = await api('/api/parcels');
@@ -22,10 +31,10 @@
 
   function filteredParcels() {
     const filter = byId('dispatchFilter').value;
-    if (filter === 'ALL') return state.parcels;
-    if (filter === 'UNASSIGNED') return state.parcels.filter(parcel =>
-      String(parcel.status).toUpperCase() === 'CREATED' && !parcel.courierId);
-    return state.parcels.filter(isActive);
+    if (filter === 'ALL') return ordered(state.parcels);
+    if (filter === 'UNASSIGNED') return ordered(state.parcels.filter(parcel =>
+      String(parcel.status).toUpperCase() === 'CREATED' && !parcel.courierId));
+    return ordered(state.parcels.filter(isActive));
   }
 
   function renderDispatch() {
@@ -44,11 +53,11 @@
     } else {
       tbody.innerHTML = rows.map(parcel => `
         <tr data-parcel-id="${escapeHtml(parcel.id)}" class="${parcel.id === state.selectedDispatchId ? 'selected-row' : ''}">
-          <td><strong>${escapeHtml(parcel.trackingNumber)}</strong></td>
+          <td><strong>${escapeHtml(parcel.trackingNumber)}</strong><br><small>${escapeHtml(PP.serviceLevelName(parcel.deliverySpeed) || 'Standard')}</small></td>
           <td>${escapeHtml(parcel.recipient)}</td>
           <td><span class="row-status status-${escapeHtml(String(parcel.status || '').toLowerCase())}">${escapeHtml(statusText(parcel.status))}</span></td>
           <td class="courier-cell">${escapeHtml(parcel.courierId || 'Unassigned')}</td>
-          <td>${parcel.escalatedAt ? '<span title="Stale assignment">⚑</span>' : ''}</td>
+          <td>${parcel.escalatedAt ? '<span title="Stale assignment">⚑</span>' : ''}${isActive(parcel) && parcel.targetDeadline && Date.parse(parcel.targetDeadline) < Date.now() ? '<span title="Delivery target overdue"> Overdue</span>' : ''}</td>
         </tr>`).join('');
     }
     tbody.querySelectorAll('[data-parcel-id]').forEach(row =>
@@ -75,6 +84,9 @@
     host.innerHTML = `<div class="tracking-details">
       ${detail('TRACKING', parcel.trackingNumber)}
       ${detail('STATUS', statusText(parcel.status))}
+      ${detail('SERVICE', PP.serviceLevelName(parcel.deliverySpeed) || 'Standard')}
+      ${detail('TARGET', parcel.targetDeadline ? new Date(parcel.targetDeadline).toLocaleString()
+        : parcel.targetStart === 'PICKUP' ? `${parcel.targetMinutes} minutes after pickup` : 'None')}
       ${detail('RECIPIENT', parcel.recipient)}
       ${detail('COURIER', parcel.courierId)}
       ${detail('PICKUP', parcel.pickupAddress)}
@@ -110,7 +122,7 @@
       return;
     }
     localStorage.setItem(keys.couriers, courierIds.join(', '));
-    const unassigned = state.parcels.filter(parcel => parcel.status === 'CREATED' && !parcel.courierId);
+    const unassigned = ordered(state.parcels.filter(parcel => parcel.status === 'CREATED' && !parcel.courierId));
     if (!unassigned.length) {
       setMessage('dispatchMessage', 'There are no unassigned new parcels.', 'error');
       return;

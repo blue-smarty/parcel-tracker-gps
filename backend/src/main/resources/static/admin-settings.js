@@ -3,6 +3,42 @@
   const fields = ['baseFee', 'perKmRate', 'perKgRate', 'sameDayMultiplier'];
   let radiusBands = [];
 
+  function applyServiceLevels(settings) {
+    ['generalMinutes', 'expressMinutes', 'targetStart'].forEach(field => { byId(field).value = settings[field]; });
+  }
+
+  async function loadServiceLevels() {
+    try {
+      applyServiceLevels(await api('/api/service-levels'));
+      setMessage('serviceLevelsMessage', 'Current service levels loaded.');
+    } catch (error) {
+      setMessage('serviceLevelsMessage', `Could not load service levels: ${error.message}`, 'error');
+    }
+  }
+
+  async function saveServiceLevels(event) {
+    event.preventDefault();
+    const button = byId('saveServiceLevelsButton');
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      const settings = await api('/api/admin/service-levels', {
+        method: 'PUT',
+        body: JSON.stringify({
+          generalMinutes: Number(byId('generalMinutes').value),
+          expressMinutes: Number(byId('expressMinutes').value),
+          targetStart: byId('targetStart').value
+        })
+      });
+      applyServiceLevels(settings);
+      setMessage('serviceLevelsMessage', 'Service levels saved for new bookings.', 'success');
+    } catch (error) {
+      setMessage('serviceLevelsMessage', `Could not save service levels: ${error.message}`, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function renderRadiusBands() {
     const list = byId('radiusBandsList');
     list.replaceChildren();
@@ -212,6 +248,8 @@
     byId('accountName').textContent = user.name;
     byId('signOutButton').addEventListener('click', PP.signOut);
     byId('pricingForm').addEventListener('submit', savePricing);
+    byId('serviceLevelsForm').addEventListener('submit', saveServiceLevels);
+    byId('reloadServiceLevelsButton').addEventListener('click', loadServiceLevels);
     byId('pricingMode').addEventListener('change', updatePricingMode);
     byId('addRadiusBandButton').addEventListener('click', () => {
       if (radiusBands.length >= 20) {
@@ -233,7 +271,7 @@
     fields.forEach(field => byId(field).addEventListener('input', renderPreview));
     byId('settingsView').hidden = false;
     byId('settingsView').classList.add('active-view');
-    await Promise.all([loadPricing(), loadDispatchers()]);
+    await Promise.all([loadPricing(), loadDispatchers(), loadServiceLevels()]);
   }
 
   initialize();

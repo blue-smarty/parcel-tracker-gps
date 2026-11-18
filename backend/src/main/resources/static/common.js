@@ -431,9 +431,20 @@ window.PP = (() => {
     return Math.round((pricing.baseFee + distanceCharge + weightKg * pricing.perKgRate) * multiplier * 100) / 100;
   }
 
+  function serviceLevelName(speed) {
+    return ({ SCHEDULED: 'Scheduled', SAME_DAY: 'Same-day', GENERAL: 'General',
+      EXPRESS: 'Express', DIRECT: 'Direct' })[speed] || speed;
+  }
+
+  function showServiceTargets(settings) {
+    const start = settings.targetStart === 'PICKUP' ? 'pickup' : 'booking';
+    byId('generalTarget').textContent = `${settings.generalMinutes} minute target from ${start}`;
+    byId('expressTarget').textContent = `${settings.expressMinutes} minute target from ${start}`;
+  }
+
   return {
     keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
     session, basicAuthorization, signOut, requireRole, api, setMessage, detail, setupAddressAutocomplete, drawMap,
-    estimatePrice
+    estimatePrice, serviceLevelName, showServiceTargets
   };
 })();

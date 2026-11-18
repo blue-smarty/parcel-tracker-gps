@@ -97,7 +97,7 @@ The Spring Boot backend serves the website from `backend/src/main/resources/stat
 | `/customer.html` | Customers | Parcel builder with item selection, route calculation, live price estimate, order tracking, demo receipt and support request |
 | `/courier.html` | Couriers | Assigned deliveries, delivery actions and browser notification opt-in |
 | `/book.html` | Customers | Redirects to the customer portal |
-| `/admin.html` | Admins | Configure delivery pricing and create, reset or revoke dispatcher accounts |
+| `/admin.html` | Admins | Configure delivery pricing and service levels, and manage dispatcher accounts |
 | `/dispatch.html` | Admins and dispatchers | Parcel queue, fleet map, assignments, ad hoc deliveries and local support requests |
 | `/admin-settings.html` | Admins | Redirects to the admin area |
 
@@ -108,6 +108,10 @@ The homepage quote calculator accepts origin, destination and parcel weight and 
 **Driving route:** set `TOMTOM_API_KEY` to a TomTom API key with access to the Search and Routing APIs (do not commit it), then restart the backend. In the parcel builder at `/customer.html` or the admin ad hoc delivery page, enter both addresses and select **Calculate driving route** to display the distance, driving time and route. Addresses are sent to TomTom for geocoding and routing; verify the matched route before booking. A successful route lookup is required to book through the parcel builder. The key stays on the server. Booking prices are demo estimates based on the calculated distance.
 
 Administrators can update delivery estimate rates from **Admin settings** in the dispatch and ad hoc delivery pages. The saved rates are used for customer previews and newly created parcels; previously saved parcel estimates do not change. Defaults remain a $5 base fee, $1.20 per kilometer, $0.50 per kilogram and a 1.75 same-day multiplier.
+
+**On-demand service levels:** General and Express default to delivery targets of 240 and 120 minutes, respectively. Administrators can change these targets and choose whether the clock starts when the booking is created or when the courier marks it picked up. The choice and duration are saved with each new booking, so later settings changes do not change its target. Direct has no time target and has the highest queue priority, followed by Express and General. These options use the standard demo estimate rate. Existing scheduled and same-day bookings remain available.
+
+Dispatch displays an overdue indicator for active deliveries with a passed target; the queue and browser auto-dispatch process on-demand jobs in priority order, and assigned jobs are returned to couriers in that order. Coverage-area assignment and manual assignment can bypass the queue. Targets are not guarantees, and there is no automatic feasibility or courier availability check, dedicated overdue notification, or enforcement of an exclusive direct route. Dispatchers must manage these operationally.
 
 Administrators can open **Website branding** from the admin area to change the business name, colors, font and logo, edit the complete website stylesheet, and upload PNG or JPEG images for use in CSS. Logos are limited to 256 KB and library images to 1 MB, with dimensions up to 4096 × 4096 pixels. Use the image URLs shown in the library as absolute paths in CSS; deleting an image breaks references to it. Changes are stored in PostgreSQL and appear on page refresh. The branding editor uses the built-in stylesheet so it can recover from broken custom CSS; open `/admin-branding.html` directly if site navigation is unusable, and load and save the default CSS. Only trusted administrators should edit CSS: it can load external resources and affect every website visitor. Branding covers the browser site, not the mobile app or browser push notifications.
 

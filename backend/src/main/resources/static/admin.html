@@ -32,6 +32,23 @@
           </div>
         </div>
         <div class="settings-grid">
+          <section class="panel settings-panel" aria-labelledby="serviceLevelsTitle">
+            <div class="panel-heading"><div><p class="eyebrow">ON-DEMAND DELIVERY</p><h3 id="serviceLevelsTitle">Service levels</h3></div></div>
+            <p class="field-note">Targets apply to new bookings only and are not guarantees. Direct has highest dispatch priority but does not reserve a courier or enforce a direct route.</p>
+            <form id="serviceLevelsForm" class="settings-form">
+              <label>General target (minutes)<input id="generalMinutes" type="number" min="1" max="10080" step="1" required></label>
+              <label>Express target (minutes)<input id="expressMinutes" type="number" min="1" max="10080" step="1" required></label>
+              <label>Start target clock
+                <select id="targetStart"><option value="BOOKING">When booking is created</option><option value="PICKUP">When courier marks pickup</option></select>
+              </label>
+              <p class="field-note">Express must be no longer than General. On-demand services use the standard estimate rate.</p>
+              <div class="settings-actions">
+                <button id="saveServiceLevelsButton" class="button button-primary" type="submit">Save service levels</button>
+                <button id="reloadServiceLevelsButton" class="button button-quiet" type="button">Discard changes</button>
+              </div>
+              <p id="serviceLevelsMessage" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </section>
           <section class="panel settings-panel" aria-labelledby="pricingTitle">
             <div class="panel-heading"><div><p class="eyebrow">DELIVERY PRICING</p><h3 id="pricingTitle">Estimate rates</h3></div></div>
             <p class="field-note">These rates determine estimates for new parcels. Existing parcel estimates are not changed.</p>

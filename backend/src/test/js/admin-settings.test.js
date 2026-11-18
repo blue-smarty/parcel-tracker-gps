@@ -44,6 +44,10 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
         if (failSave) throw new Error('Rejected');
         return JSON.parse(options.body);
       }
+      if (route === '/api/service-levels') {
+        return { generalMinutes: 240, expressMinutes: 120, targetStart: 'BOOKING' };
+      }
+      if (route === '/api/admin/service-levels') return JSON.parse(options.body);
       if (route === '/api/admin/dispatchers') return [];
       throw new Error(`Unexpected request ${route}`);
     }
@@ -60,6 +64,21 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
   await new Promise(resolve => setImmediate(resolve));
   return { byId, requests, messages };
 }
+
+test('loads and saves configurable delivery targets and clock start', async () => {
+  const { byId, requests, messages } = await setup();
+  assert.equal(byId('generalMinutes').value, 240);
+  assert.equal(byId('expressMinutes').value, 120);
+  byId('generalMinutes').value = '300';
+  byId('expressMinutes').value = '90';
+  byId('targetStart').value = 'PICKUP';
+  await byId('serviceLevelsForm').listeners.submit({ preventDefault() {} });
+  const request = requests.find(item => item.route === '/api/admin/service-levels');
+  assert.deepEqual(JSON.parse(request.options.body), {
+    generalMinutes: 300, expressMinutes: 90, targetStart: 'PICKUP'
+  });
+  assert.match(messages.serviceLevelsMessage.message, /saved/);
+});
 
 test('loads current pricing and previews sample estimates', async () => {
   const { byId, messages } = await setup();

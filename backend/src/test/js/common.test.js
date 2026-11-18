@@ -137,3 +137,15 @@ test('calculates a fixed radius band charge while preserving weight and speed pr
   assert.equal(context.window.PP.estimatePrice(pricing, 20, 2, 'SCHEDULED', 12), 14);
   assert.equal(context.window.PP.estimatePrice(pricing, 20, 2, 'SAME_DAY', 4), 15.75);
 });
+
+test('shows configured on-demand targets and clock start', () => {
+  const elements = { generalTarget: {}, expressTarget: {} };
+  const context = {
+    window: {}, document: { getElementById: id => elements[id] },
+    sessionStorage: {}, localStorage: {}
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/common.js'), 'utf8'), context);
+  context.window.PP.showServiceTargets({ generalMinutes: 300, expressMinutes: 90, targetStart: 'PICKUP' });
+  assert.equal(elements.generalTarget.textContent, '300 minute target from pickup');
+  assert.equal(elements.expressTarget.textContent, '90 minute target from pickup');
+});
