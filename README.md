@@ -48,6 +48,12 @@ From the dispatch workspace, an administrator or dispatcher can select **New ad 
 
 Administrators can choose driving-route per-kilometre pricing or configure fixed distance charges for straight-line pickup-to-delivery bands. Radius estimates use geocoded pickup and delivery addresses; the last band applies to all longer trips. Base, weight and same-day charges continue to apply. Payments remain simulated and no charge is collected.
 
+**Credit applications:** In the admin area, open **Credit applications** and enter an existing customer's account email to create a link. Copy and share it securely; it is displayed only once, expires after seven days and can only be used by that signed-in customer. Creating a replacement invalidates the previous link. The customer supplies business name, contact details and a requested limit; an administrator must approve or reject it. Administrators may revoke an approval and invite the customer again. Approval and revocation events record the actor and time in `credit_account_events`; submitted applications retain their review history in `credit_applications`.
+
+Dispatch displays the linked customer's **current** approved-credit status separately from the booking's chosen demo payment option. An unlinked ad hoc delivery has no customer classification. No approved credit does not establish that an account is cash/card. The requested limit is not an approved limit: there is no credit-limit enforcement, invoicing, payment processing or credit assessment.
+
+Use HTTPS outside localhost and protect the database and backups, including encryption at rest and restricted access. Customer account email addresses are not verified; independently confirm account ownership before inviting or approving a customer. Application details are stored in PostgreSQL and accessible to administrators; dispatchers see only the classification. Invitation tokens are random, stored only as hashes, and removed on submission or replacement. Do not collect card or bank details in the application. Review your retention and privacy obligations before production use.
+
 ## REST API
 | Method | Path | Description |
 |---|---|---|
@@ -64,6 +70,11 @@ Administrators can choose driving-route per-kilometre pricing or configure fixed
 | PUT | `/api/parcels/{id}/courier` | Assign a provisioned courier with `{courierId}` (admin or dispatcher) |
 | GET | `/api/dispatch/couriers` | List courier IDs for dispatch (admin or dispatcher) |
 | GET, POST | `/api/admin/dispatchers` | List or create dispatcher accounts (admin only) |
+| POST | `/api/admin/credit/invitations` | Create a single-use credit application invitation for an existing customer (admin only) |
+| GET | `/api/admin/credit/applications`, `/api/admin/credit/accounts` | List credit applications or approved customer emails (admin only) |
+| POST | `/api/admin/credit/applications/{id}/review`, `/api/admin/credit/accounts/revoke` | Approve/reject an application or revoke an approved classification (admin only) |
+| POST | `/api/credit/applications` | Submit an invitation and application for the authenticated customer |
+| GET | `/api/dispatch/parcels/{id}/account-type` | Read a linked customer's current credit classification (admin or dispatcher) |
 | GET, PUT | `/api/admin/service-area` | Read or change the Melbourne metro delivery restriction (admin only) |
 | PUT, DELETE | `/api/admin/dispatchers/{username}/password`, `/api/admin/dispatchers/{username}` | Reset password or revoke dispatcher account (admin only) |
 | GET | `/api/admin/me` | Verify admin credentials |

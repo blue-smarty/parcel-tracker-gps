@@ -22,6 +22,9 @@ public class CustomerAccount {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "credit_approved", nullable = false)
+    private boolean creditApproved;
+
     public CustomerAccount() {
     }
 
@@ -49,5 +52,13 @@ public class CustomerAccount {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public boolean isCreditApproved() {
+        return creditApproved;
+    }
+
+    public void setCreditApproved(boolean creditApproved) {
+        this.creditApproved = creditApproved;
     }
 }

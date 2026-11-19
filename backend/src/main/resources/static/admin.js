@@ -91,9 +91,29 @@
       ${detail('COURIER', parcel.courierId)}
       ${detail('PICKUP', parcel.pickupAddress)}
       ${detail('SENDER CONTACT', parcel.customerContact)}
+      ${detail('BOOKING PAYMENT OPTION', statusText(parcel.paymentMethod))}
+      <div class="detail-pair"><span>CURRENT CUSTOMER ACCOUNT</span><strong id="parcelAccountType">Loading…</strong></div>
       ${detail('CURRENT LOCATION', location ? `${location.latitude}, ${location.longitude}` : 'Awaiting GPS')}
       ${detail('DESTINATION', parcel.destination)}
     </div>`;
+    loadAccountType(parcel.id);
+  }
+
+  async function loadAccountType(id) {
+    try {
+      const result = await api(`/api/dispatch/parcels/${encodeURIComponent(id)}/account-type`);
+      if (state.selectedDispatchId !== id) return;
+      const field = byId('parcelAccountType');
+      if (field) field.textContent = ({
+        CREDIT: 'Approved credit account',
+        NO_CREDIT: 'No approved credit account',
+        UNLINKED: 'No customer account linked'
+      })[result.accountType] || 'Unknown';
+    } catch (error) {
+      if (state.selectedDispatchId !== id) return;
+      const field = byId('parcelAccountType');
+      if (field) field.textContent = `Unavailable: ${error.message}`;
+    }
   }
 
   async function assignSelected() {
