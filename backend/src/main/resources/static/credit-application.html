@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Credit application</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/common.js" defer></script>
+  <script src="/credit-application.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar"><a class="brand" href="/">ParcelPilot</a></header>
+    <main>
+      <section class="view active-view">
+        <div class="section-heading"><div><p class="eyebrow">INVITED CUSTOMERS</p><h2>Credit application</h2></div></div>
+        <div class="panel settings-panel">
+          <p class="field-note">Sign in with the customer account the invitation was sent to. Your application will be reviewed by an administrator. Do not enter payment card or banking details.</p>
+          <p class="field-note">Use a secure HTTPS connection outside localhost. The invitation is single-use and expires after seven days.</p>
+          <form id="loginForm" class="settings-form">
+            <label>Account email<input id="email" type="email" autocomplete="username" maxlength="255" required></label>
+            <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+            <button class="button button-primary" type="submit">Sign in</button>
+          </form>
+          <form id="applicationForm" class="settings-form" hidden>
+            <p id="signedIn"></p>
+            <label>Business name<input id="businessName" maxlength="255" required></label>
+            <label>Contact name<input id="contactName" maxlength="255" required></label>
+            <label>Contact email<input id="contactEmail" type="email" maxlength="255" required></label>
+            <label>Contact phone<input id="contactPhone" type="tel" maxlength="40" required></label>
+            <label>Requested credit limit ($)<input id="requestedLimit" type="number" min="0.01" max="9999999999.99" step="0.01" required></label>
+            <button id="submitButton" class="button button-primary" type="submit">Submit application</button>
+            <button id="changeAccount" class="button button-quiet" type="button">Use a different account</button>
+          </form>
+          <p id="message" class="form-message" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/dispatch/couriers").hasAnyRole("ADMIN", "DISPATCHER")
+                        .requestMatchers(HttpMethod.GET, "/api/dispatch/parcels/*/account-type").hasAnyRole("ADMIN", "DISPATCHER")
+                        .requestMatchers(HttpMethod.POST, "/api/credit/applications").hasRole("CUSTOMER")
                         .requestMatchers("/api/couriers/**").hasRole("COURIER")
                         .requestMatchers("/", "/index.html", "/login.html", "/forgot-password.html",
                                 "/customer.html", "/admin.html", "/dispatch.html", "/admin-adhoc.html", "/admin-settings.html",
@@ -60,7 +62,8 @@ public class SecurityConfig {
                                 "/styles.css", "/common.js", "/auth.js", "/password-reset.js", "/quote.js",
                                 "/customer.js", "/admin.js", "/admin-adhoc.js", "/admin-settings.js",
                                 "/admin-coverage.js", "/admin-push.js", "/book.js", "/address-book.html", "/address-book.js",
-                                "/admin-branding.html", "/admin-branding.js", "/website-branding.js")
+                                "/admin-branding.html", "/admin-branding.js", "/website-branding.js",
+                                "/admin-credit.html", "/admin-credit.js", "/credit-application.html", "/credit-application.js")
                                 .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/branding", "/api/branding/website",
                                 "/api/branding/stylesheet", "/api/branding/images/*").permitAll()
