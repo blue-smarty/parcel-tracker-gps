@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.Authentication;
+import com.parceltracker.service.ConfigurationHistoryService;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 public class SmtpSettingsController {
@@ -33,9 +36,11 @@ public class SmtpSettingsController {
             @NotNull Boolean authentication) { }
 
     private final SmtpSettingsService service;
+    private final ConfigurationHistoryService history;
 
-    public SmtpSettingsController(SmtpSettingsService service) {
+    public SmtpSettingsController(SmtpSettingsService service, ConfigurationHistoryService history) {
         this.service = service;
+        this.history = history;
     }
 
     @GetMapping("/api/admin/smtp")
@@ -44,16 +49,21 @@ public class SmtpSettingsController {
     }
 
     @DeleteMapping("/api/admin/smtp")
-    public ResponseEntity<Void> clear() {
+    @Transactional
+    public ResponseEntity<Void> clear(Authentication authentication) {
+        SmtpSettings before = history.snapshot(service.get().orElse(null), SmtpSettings.class);
         service.clear();
+        if (before != null) history.record("SMTP", before, null, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/api/admin/smtp")
-    public SmtpSettings update(@Valid @RequestBody Request request) {
+    @Transactional
+    public SmtpSettings update(@Valid @RequestBody Request request, Authentication authentication) {
         if (request.authentication() && (request.username().isBlank() || "NONE".equals(request.security()))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SMTP authentication requires a username and TLS.");
         }
+        SmtpSettings before = history.snapshot(service.get().orElse(null), SmtpSettings.class);
         SmtpSettings settings = service.get().orElseGet(SmtpSettings::new);
         settings.setHost(request.host().trim());
         settings.setPort(request.port());
@@ -62,7 +72,9 @@ public class SmtpSettingsController {
         settings.setSecurity(request.security());
         settings.setAuthentication(request.authentication());
         try {
-            return service.save(settings);
+            SmtpSettings saved = service.save(settings);
+            history.record("SMTP", before, saved, authentication.getName());
+            return saved;
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
         }

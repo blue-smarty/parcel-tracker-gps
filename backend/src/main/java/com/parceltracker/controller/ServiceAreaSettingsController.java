@@ -6,6 +6,7 @@ import com.parceltracker.repository.ServiceAreaSettingsRepository;
 import com.parceltracker.service.AustralianCouncilLookup;
 import com.parceltracker.service.CoveragePolygon;
 import com.parceltracker.service.ServiceAreaException;
+import com.parceltracker.service.ConfigurationHistoryService;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -33,14 +34,17 @@ public class ServiceAreaSettingsController {
     private final AustralianCouncilLookup councilLookup;
     private final CourierAccountRepository couriers;
     private final ObjectMapper mapper;
+    private final ConfigurationHistoryService history;
 
     public ServiceAreaSettingsController(ServiceAreaSettingsRepository repository, JdbcTemplate jdbc,
-            AustralianCouncilLookup councilLookup, CourierAccountRepository couriers, ObjectMapper mapper) {
+            AustralianCouncilLookup councilLookup, CourierAccountRepository couriers, ObjectMapper mapper,
+            ConfigurationHistoryService history) {
         this.repository = repository;
         this.jdbc = jdbc;
         this.councilLookup = councilLookup;
         this.couriers = couriers;
         this.mapper = mapper;
+        this.history = history;
     }
 
     @GetMapping("/api/admin/service-area")
@@ -59,6 +63,7 @@ public class ServiceAreaSettingsController {
     public ServiceAreaSettings update(@RequestBody Request request, Authentication authentication) {
         ServiceAreaSettings settings = repository.findForUpdate()
                 .orElseThrow(() -> new IllegalStateException("Service area settings are missing"));
+        ServiceAreaSettings before = history.snapshot(settings, ServiceAreaSettings.class);
         String mode = request.coverageMode();
         if (mode == null && request.melbourneMetroOnly() != null) {
             mode = request.melbourneMetroOnly() ? "MELBOURNE" : "UNRESTRICTED";
@@ -98,6 +103,7 @@ public class ServiceAreaSettingsController {
             settings.setPolygons(polygons);
             settings.setPolygonCouriers(polygonCouriers);
             repository.save(settings);
+            history.record("SERVICE_AREA", before, settings, authentication.getName());
             try {
                 jdbc.update("INSERT INTO service_area_audit (changed_at, changed_by, melbourne_metro_only, coverage_settings) "
                                 + "VALUES (?, ?, ?, CAST(? AS jsonb))",

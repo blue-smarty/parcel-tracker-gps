@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' } } = {}) {
+async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' }, historyChanges = [] } = {}) {
   const elements = new Map();
   function byId(id) {
     if (!elements.has(id)) elements.set(id, {
@@ -57,6 +57,17 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
       }
       if (route === '/api/admin/service-levels') return JSON.parse(options.body);
       if (route === '/api/admin/smtp') return options?.method === 'PUT' ? JSON.parse(options.body) : null;
+      if (route === '/api/admin/operational-settings' && options?.method === 'PUT') return JSON.parse(options.body);
+      if (route === '/api/admin/operational-settings') return {
+        maxItemsPerBooking: 200, maxPackageLines: 10, maxQuantityPerItem: 20,
+        maxItemWeightKg: 10000, maxDimensionCm: 10000, bookingCutoff: '17:00',
+        timeZone: 'Australia/Melbourne', maxScheduleDaysAhead: 30,
+        deliveryWindows: ['08:00-10:00', '10:00-12:00'],
+        staleAssignmentEnabled: true, staleAssignmentMinutes: 120, unassignStaleAssignments: false
+      };
+      if (route === '/api/admin/courier-capacity') return [];
+      if (route === '/api/admin/configuration-history') return historyChanges;
+      if (route.startsWith('/api/admin/configuration-history/') && options?.method === 'POST') return {};
       if (route === '/api/admin/dispatchers') return [];
       throw new Error(`Unexpected request ${route}`);
     }
@@ -179,4 +190,35 @@ test('creates a dispatcher through the admin-only endpoint', async () => {
   assert.deepEqual(JSON.parse(request.options.body), { username: 'dispatch1', password: 'strong-password' });
   assert.equal(byId('dispatcherPassword').value, '');
   assert.match(messages.dispatcherMessage.message, /created/);
+});
+
+test('loads and saves operational package, scheduling, and stale-assignment limits', async () => {
+  const { byId, requests, messages } = await setup();
+  assert.equal(byId('maxItemsPerBooking').value, 200);
+  byId('maxItemsPerBooking').value = '120';
+  byId('bookingCutoff').value = '16:30';
+  byId('timeZone').value = 'Australia/Sydney';
+  byId('deliveryWindows').value = '09:00-11:00, 13:00-15:00';
+  byId('staleAssignmentEnabled').checked = false;
+  await byId('operationalForm').listeners.submit({ preventDefault() {} });
+  const request = requests.find(item => item.route === '/api/admin/operational-settings'
+    && item.options?.method === 'PUT');
+  const body = JSON.parse(request.options.body);
+  assert.equal(body.maxItemsPerBooking, 120);
+  assert.equal(body.bookingCutoff, '16:30');
+  assert.equal(body.timeZone, 'Australia/Sydney');
+  assert.deepEqual(body.deliveryWindows, ['09:00-11:00', '13:00-15:00']);
+  assert.equal(body.staleAssignmentEnabled, false);
+  assert.match(messages.operationalMessage.message, /saved/);
+});
+
+test('allows restoring a configuration change whose prior state was unset', async () => {
+  const { byId, requests } = await setup({ historyChanges: [{
+    id: 8, category: 'SMTP', changedBy: 'Admin', changedAt: '2026-11-20T00:00:00Z', before: null, after: {}
+  }] });
+  const button = byId('configurationHistoryList').children[0].children[1];
+  assert.notEqual(button.disabled, true);
+  await button.listeners.click();
+  assert.equal(requests.some(item => item.route === '/api/admin/configuration-history/8/restore'
+    && item.options?.method === 'POST'), true);
 });

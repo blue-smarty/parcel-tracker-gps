@@ -104,6 +104,41 @@
               <p id="smtpMessage" class="form-message" role="status" aria-live="polite"></p>
             </form>
           </section>
+          <section class="panel settings-panel" aria-labelledby="operationsTitle">
+            <div class="panel-heading"><div><p class="eyebrow">BOOKING RULES</p><h3 id="operationsTitle">Operational limits</h3></div></div>
+            <p class="field-note">Limits are checked by the server for customer and admin bookings. Scheduled booking windows use the selected timezone.</p>
+            <form id="operationalForm" class="settings-form">
+              <label>Maximum item quantity per booking<input id="maxItemsPerBooking" type="number" min="1" max="1000" required></label>
+              <label>Maximum package lines<input id="maxPackageLines" type="number" min="1" max="100" required></label>
+              <label>Maximum quantity per item line<input id="maxQuantityPerItem" type="number" min="1" max="1000" required></label>
+              <label>Maximum weight per item (kg)<input id="maxItemWeightKg" type="number" min="0.1" max="1000000" step="0.1" required></label>
+              <label>Maximum item dimension (cm)<input id="maxDimensionCm" type="number" min="0.1" max="1000000" step="0.1" required></label>
+              <label>Same-day booking cutoff<input id="bookingCutoff" type="time" required></label>
+              <label>Scheduling timezone<input id="timeZone" maxlength="64" required placeholder="Australia/Melbourne"></label>
+              <label>Maximum days ahead<input id="maxScheduleDaysAhead" type="number" min="1" max="365" required></label>
+              <label>Available delivery windows (comma-separated HH:mm-HH:mm)<input id="deliveryWindows" required></label>
+              <label><input id="staleAssignmentEnabled" type="checkbox"> Escalate unaccepted courier assignments</label>
+              <label>Assignment timeout (minutes)<input id="staleAssignmentMinutes" type="number" min="1" max="10080" required></label>
+              <label><input id="unassignStaleAssignments" type="checkbox"> Unassign courier after timeout</label>
+              <div class="settings-actions">
+                <button id="saveOperationalButton" class="button button-primary" type="submit">Save operational limits</button>
+                <button id="reloadOperationalButton" class="button button-quiet" type="button">Discard changes</button>
+              </div>
+              <p id="operationalMessage" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+          <section class="panel settings-panel" aria-labelledby="courierCapacityTitle">
+            <div class="panel-heading"><div><p class="eyebrow">FLEET</p><h3 id="courierCapacityTitle">Courier vehicles and capacity</h3></div></div>
+            <p class="field-note">Configured limits are enforced when deliveries are assigned. Existing couriers without a profile remain uncapped until configured.</p>
+            <div id="courierCapacityList" class="support-list"></div>
+            <p id="courierCapacityMessage" class="form-message" role="status" aria-live="polite"></p>
+          </section>
+          <section class="panel settings-panel" aria-labelledby="configurationHistoryTitle">
+            <div class="panel-heading"><div><p class="eyebrow">CHANGE CONTROL</p><h3 id="configurationHistoryTitle">Configuration history</h3></div></div>
+            <p class="field-note">Review the last 100 pricing, email, service-level, service-area, branding, operational-limit, and fleet-capacity changes. Restoring a change creates a new history entry.</p>
+            <div id="configurationHistoryList" class="support-list"></div>
+            <p id="configurationHistoryMessage" class="form-message" role="status" aria-live="polite"></p>
+          </section>
           <section class="panel settings-panel" aria-labelledby="dispatchersTitle">
             <div class="panel-heading"><div><p class="eyebrow">ACCESS</p><h3 id="dispatchersTitle">Dispatcher accounts</h3></div></div>
             <p class="field-note">Dispatchers can manage deliveries and assignments, but cannot change admin settings.</p>

@@ -8,6 +8,8 @@ import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.repository.ParcelRepository;
+import com.parceltracker.repository.CourierAccountRepository;
+import com.parceltracker.repository.OperationalSettingsRepository;
 import com.parceltracker.repository.PricingSettingsRepository;
 import com.parceltracker.repository.ServiceLevelSettingsRepository;
 import java.util.Optional;
@@ -18,7 +20,8 @@ class LocationServiceTest {
     private final ParcelRepository repo = mock(ParcelRepository.class);
     private final ParcelService parcels = new ParcelService(repo,
             new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class),
-            mock(CourierPushService.class), mock(ServiceLevelSettingsRepository.class));
+            mock(CourierPushService.class), mock(ServiceLevelSettingsRepository.class),
+            mock(CourierAccountRepository.class), new OperationalSettingsService(mock(OperationalSettingsRepository.class)));
     private final LocationService service = new LocationService(parcels);
 
     @Test

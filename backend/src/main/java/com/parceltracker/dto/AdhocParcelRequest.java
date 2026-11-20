@@ -23,11 +23,11 @@ public record AdhocParcelRequest(
         @Positive Double lengthCm,
         @Positive Double heightCm,
         @Positive Double weightKg,
-        @Valid @Size(max = 10) List<@NotNull ParcelItem> items,
+        @Valid @Size(max = 100) List<@NotNull ParcelItem> items,
         @Positive Double distanceKm,
         @DecimalMin("0.0") Double straightLineDistanceKm,
         @Pattern(regexp = "SAME_DAY|SCHEDULED|GENERAL|EXPRESS|DIRECT") String deliverySpeed,
         LocalDate scheduledDate,
-        @Pattern(regexp = "08:00-10:00|10:00-12:00|12:00-14:00|14:00-16:00|16:00-18:00") String scheduledWindow,
+        @Size(max = 32) String scheduledWindow,
         @Pattern(regexp = "DEMO_CARD|DEMO_MOBILE_WALLET|CASH_ON_DELIVERY") String paymentMethod) {
 }

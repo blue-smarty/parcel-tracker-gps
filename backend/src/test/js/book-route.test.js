@@ -44,6 +44,11 @@ async function setup(routeRequest, speed = 'SAME_DAY') {
     api: async (url, options) => {
       if (url === '/api/booking-route') return routeRequest(JSON.parse(options.body));
       if (url === '/api/address-book') return [{ id: 'a1', label: 'Home', address: 'Saved address' }];
+      if (url === '/api/operational-settings') return {
+        maxItemsPerBooking: 200, maxPackageLines: 10, maxQuantityPerItem: 20,
+        maxItemWeightKg: 10000, maxDimensionCm: 10000, timeZone: 'Australia/Melbourne',
+        maxScheduleDaysAhead: 30, bookingCutoff: '17:00', deliveryWindows: ['08:00-10:00', '10:00-12:00']
+      };
       if (url === '/api/parcels') {
         bookings.push(JSON.parse(options.body));
         return { trackingNumber: 'TRK-1', estimatedPrice: 10 };
@@ -72,6 +77,7 @@ test('calculates the route, updates distance and clears it when an address chang
     assert.equal(request.destination, 'Destination');
     return response;
   });
+
   byId('calculateRouteButton').dispatch('click');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(byId('routeDistance').textContent, '12.3 km');
@@ -151,4 +157,19 @@ test('books an on-demand service without scheduled delivery fields', async () =>
   assert.equal(bookings[0].deliverySpeed, 'EXPRESS');
   assert.equal(Object.hasOwn(bookings[0], 'scheduledDate'), false);
   assert.equal(Object.hasOwn(bookings[0], 'scheduledWindow'), false);
+});
+
+test('includes selected scheduled delivery date and window in a customer booking', async () => {
+  const { byId, bookings } = await setup(async () => response);
+  byId('itemTiles').children[0].children[0].dispatch('click');
+  byId('recipientName').value = 'Recipient';
+  byId('calculateRouteButton').dispatch('click');
+  await new Promise(resolve => setImmediate(resolve));
+  byId('bookingTiming').value = 'SCHEDULED';
+  byId('scheduledDate').value = '2026-11-25';
+  byId('scheduledWindow').value = '10:00-12:00';
+  byId('builderForm').dispatch('submit');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(bookings[0].scheduledDate, '2026-11-25');
+  assert.equal(bookings[0].scheduledWindow, '10:00-12:00');
 });

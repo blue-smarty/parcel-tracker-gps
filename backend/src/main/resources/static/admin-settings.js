@@ -32,6 +32,7 @@
       });
       applyServiceLevels(settings);
       setMessage('serviceLevelsMessage', 'Service levels saved for new bookings.', 'success');
+      await loadConfigurationHistory();
     } catch (error) {
       setMessage('serviceLevelsMessage', `Could not save service levels: ${error.message}`, 'error');
     } finally {
@@ -160,6 +161,7 @@
       });
       applySettings(settings);
       setMessage('pricingMessage', 'Pricing saved. New parcel estimates will use these rates.', 'success');
+      await loadConfigurationHistory();
     } catch (error) {
       setMessage('pricingMessage', `Could not save pricing: ${error.message}`, 'error');
     } finally {
@@ -236,6 +238,7 @@
       }) });
       applySmtp(settings);
       setMessage('smtpMessage', 'SMTP settings saved.', 'success');
+      await loadConfigurationHistory();
     } catch (error) {
       setMessage('smtpMessage', `Could not save SMTP settings: ${error.message}`, 'error');
     } finally {
@@ -251,10 +254,179 @@
       await api('/api/admin/smtp', { method: 'DELETE' });
       applySmtp(null);
       setMessage('smtpMessage', 'Saved SMTP settings removed; using deployment settings.', 'success');
+      await loadConfigurationHistory();
     } catch (error) {
       setMessage('smtpMessage', `Could not remove SMTP settings: ${error.message}`, 'error');
     } finally {
       button.disabled = false;
+    }
+  }
+
+  function applyOperational(settings) {
+    ['maxItemsPerBooking', 'maxPackageLines', 'maxQuantityPerItem', 'maxItemWeightKg',
+      'maxDimensionCm', 'maxScheduleDaysAhead', 'staleAssignmentMinutes'].forEach(field => {
+      byId(field).value = settings[field];
+    });
+    byId('bookingCutoff').value = String(settings.bookingCutoff).slice(0, 5);
+    byId('timeZone').value = settings.timeZone;
+    byId('deliveryWindows').value = settings.deliveryWindows.join(', ');
+    byId('staleAssignmentEnabled').checked = settings.staleAssignmentEnabled;
+    byId('unassignStaleAssignments').checked = settings.unassignStaleAssignments;
+  }
+
+  async function loadOperational() {
+    try {
+      applyOperational(await api('/api/admin/operational-settings'));
+      setMessage('operationalMessage', 'Current operational limits loaded.');
+    } catch (error) {
+      setMessage('operationalMessage', `Could not load operational limits: ${error.message}`, 'error');
+    }
+  }
+
+  async function saveOperational(event) {
+    event.preventDefault();
+    const button = byId('saveOperationalButton');
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      const settings = await api('/api/admin/operational-settings', { method: 'PUT', body: JSON.stringify({
+        maxItemsPerBooking: Number(byId('maxItemsPerBooking').value),
+        maxPackageLines: Number(byId('maxPackageLines').value),
+        maxQuantityPerItem: Number(byId('maxQuantityPerItem').value),
+        maxItemWeightKg: Number(byId('maxItemWeightKg').value),
+        maxDimensionCm: Number(byId('maxDimensionCm').value),
+        bookingCutoff: byId('bookingCutoff').value,
+        timeZone: byId('timeZone').value.trim(),
+        maxScheduleDaysAhead: Number(byId('maxScheduleDaysAhead').value),
+        deliveryWindows: byId('deliveryWindows').value.split(',').map(value => value.trim()).filter(Boolean),
+        staleAssignmentEnabled: byId('staleAssignmentEnabled').checked,
+        staleAssignmentMinutes: Number(byId('staleAssignmentMinutes').value),
+        unassignStaleAssignments: byId('unassignStaleAssignments').checked
+      }) });
+      applyOperational(settings);
+      setMessage('operationalMessage', 'Operational limits saved.', 'success');
+      await loadConfigurationHistory();
+    } catch (error) {
+      setMessage('operationalMessage', `Could not save operational limits: ${error.message}`, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function saveCourierCapacity(courier, row) {
+    const save = row.querySelector('button');
+    save.disabled = true;
+    try {
+      await api(`/api/admin/courier-capacity/${encodeURIComponent(courier.courierId)}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          vehicleType: row.querySelector('select').value,
+          maxActiveParcels: Number(row.querySelector('[name="maxActiveParcels"]').value),
+          maxPayloadWeightKg: Number(row.querySelector('[name="maxPayloadWeightKg"]').value)
+        })
+      });
+      setMessage('courierCapacityMessage', `Vehicle and capacity saved for ${courier.courierId}.`, 'success');
+      await loadCourierCapacity();
+      await loadConfigurationHistory();
+    } catch (error) {
+      setMessage('courierCapacityMessage', `Could not save courier capacity: ${error.message}`, 'error');
+    } finally {
+      save.disabled = false;
+    }
+  }
+
+  async function loadCourierCapacity() {
+    try {
+      const couriers = await api('/api/admin/courier-capacity');
+      const list = byId('courierCapacityList');
+      list.replaceChildren();
+      if (!couriers.length) {
+        list.textContent = 'No courier accounts yet.';
+        return;
+      }
+      couriers.forEach(courier => {
+        const row = document.createElement('div');
+        row.className = 'support-item';
+        const name = document.createElement('strong');
+        name.textContent = courier.courierId;
+        const vehicle = document.createElement('select');
+        vehicle.setAttribute('aria-label', `Vehicle type for ${courier.courierId}`);
+        [['MOTORCYCLE', 'Motorcycle'], ['CAR', 'Car'], ['VAN', 'Van'], ['TRUCK', 'Truck']].forEach(([value, label]) => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = label;
+          vehicle.append(option);
+        });
+        vehicle.value = courier.vehicleType || 'MOTORCYCLE';
+        const parcels = document.createElement('input');
+        parcels.type = 'number';
+        parcels.name = 'maxActiveParcels';
+        parcels.min = '1';
+        parcels.max = '100';
+        parcels.required = true;
+        parcels.placeholder = 'Active parcel limit';
+        parcels.value = courier.maxActiveParcels ?? '';
+        const weight = document.createElement('input');
+        weight.type = 'number';
+        weight.name = 'maxPayloadWeightKg';
+        weight.min = '0.1';
+        weight.max = '1000000';
+        weight.step = '0.1';
+        weight.required = true;
+        weight.placeholder = 'Payload limit (kg)';
+        weight.value = courier.maxPayloadWeightKg ?? '';
+        const save = document.createElement('button');
+        save.type = 'button';
+        save.className = 'button button-quiet';
+        save.textContent = 'Save capacity';
+        save.addEventListener('click', () => saveCourierCapacity(courier, row));
+        row.append(name, vehicle, parcels, weight, save);
+        list.append(row);
+      });
+      setMessage('courierCapacityMessage', '');
+    } catch (error) {
+      setMessage('courierCapacityMessage', `Could not load courier capacities: ${error.message}`, 'error');
+    }
+  }
+
+  async function loadConfigurationHistory() {
+    try {
+      const changes = await api('/api/admin/configuration-history');
+      const list = byId('configurationHistoryList');
+      list.replaceChildren();
+      if (!changes.length) {
+        list.textContent = 'No configuration changes have been recorded.';
+        return;
+      }
+      changes.forEach(change => {
+        const row = document.createElement('div');
+        row.className = 'support-item';
+        const description = document.createElement('span');
+        description.textContent = `${change.category.replaceAll('_', ' ')} · ${change.changedBy} · ${new Date(change.changedAt).toLocaleString()}`;
+        const restore = document.createElement('button');
+        restore.type = 'button';
+        restore.className = 'button button-quiet';
+        restore.textContent = 'Restore previous';
+        restore.title = change.before == null ? 'Restore the state before this change (no saved settings).' : '';
+        restore.addEventListener('click', async () => {
+          if (!window.confirm(`Restore the configuration from before this ${change.category.toLowerCase()} change?`)) return;
+          restore.disabled = true;
+          try {
+            await api(`/api/admin/configuration-history/${change.id}/restore`, { method: 'POST', body: '{}' });
+            setMessage('configurationHistoryMessage', 'Previous configuration restored.', 'success');
+            await Promise.all([loadConfigurationHistory(), loadOperational(), loadPricing(), loadServiceLevels(),
+              loadSmtp(), loadCourierCapacity()]);
+          } catch (error) {
+            setMessage('configurationHistoryMessage', `Could not restore configuration: ${error.message}`, 'error');
+            restore.disabled = false;
+          }
+        });
+        row.append(description, restore);
+        list.append(row);
+      });
+      setMessage('configurationHistoryMessage', `Showing ${changes.length} recent configuration changes.`);
+    } catch (error) {
+      setMessage('configurationHistoryMessage', `Could not load configuration history: ${error.message}`, 'error');
     }
   }
 
@@ -327,6 +499,8 @@
     });
     byId('reloadPricingButton').addEventListener('click', loadPricing);
     byId('dispatcherForm').addEventListener('submit', createDispatcher);
+    byId('operationalForm').addEventListener('submit', saveOperational);
+    byId('reloadOperationalButton').addEventListener('click', loadOperational);
     byId('smtpForm').addEventListener('submit', saveSmtp);
     byId('reloadSmtpButton').addEventListener('click', loadSmtp);
     byId('clearSmtpButton').addEventListener('click', clearSmtp);
@@ -335,7 +509,8 @@
     fields.forEach(field => byId(field).addEventListener('input', renderPreview));
     byId('settingsView').hidden = false;
     byId('settingsView').classList.add('active-view');
-    await Promise.all([loadPricing(), loadDispatchers(), loadServiceLevels(), loadSmtp()]);
+    await Promise.all([loadPricing(), loadDispatchers(), loadServiceLevels(), loadSmtp(),
+      loadOperational(), loadCourierCapacity(), loadConfigurationHistory()]);
   }
 
   initialize();

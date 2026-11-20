@@ -15,6 +15,7 @@ import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.model.PricingSettings;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.PricingSettingsRepository;
+import com.parceltracker.service.ConfigurationHistoryService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,7 @@ class PricingControllerTest {
     @Autowired private MockMvc mvc;
     @MockitoBean private CourierAccountRepository courierAccounts;
     @MockitoBean private PricingSettingsRepository pricingSettings;
+    @MockitoBean private ConfigurationHistoryService history;
 
     @Test
     @WithAnonymousUser

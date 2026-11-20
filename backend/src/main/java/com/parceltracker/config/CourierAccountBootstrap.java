@@ -49,6 +49,9 @@ public class CourierAccountBootstrap implements ApplicationRunner {
         var existing = accounts.findById(courierId);
         if (existing.isPresent() && passwordEncoder.matches(password, existing.get().getPasswordHash())) return;
         if (existing.isPresent()) pushSubscriptions.deleteByCourierId(courierId);
-        accounts.save(new CourierAccount(courierId, passwordEncoder.encode(password)));
+        CourierAccount account = existing.orElseGet(() -> new CourierAccount());
+        account.setCourierId(courierId);
+        account.setPasswordHash(passwordEncoder.encode(password));
+        accounts.save(account);
     }
 }

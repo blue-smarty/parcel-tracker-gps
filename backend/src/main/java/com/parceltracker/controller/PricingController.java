@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.Authentication;
+import com.parceltracker.service.ConfigurationHistoryService;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 public class PricingController {
@@ -19,9 +22,11 @@ public class PricingController {
             String weightMode, Double cubicDivisor) { }
 
     private final PricingSettingsRepository repository;
+    private final ConfigurationHistoryService history;
 
-    public PricingController(PricingSettingsRepository repository) {
+    public PricingController(PricingSettingsRepository repository, ConfigurationHistoryService history) {
         this.repository = repository;
+        this.history = history;
     }
 
     @GetMapping("/api/pricing")
@@ -30,7 +35,8 @@ public class PricingController {
     }
 
     @PutMapping("/api/admin/pricing")
-    public PricingSettings update(@RequestBody PricingRequest request) {
+    @Transactional
+    public PricingSettings update(@RequestBody PricingRequest request, Authentication authentication) {
         validate("Base fee", request.baseFee(), 0, MAX_RATE);
         validate("Per-kilometer rate", request.perKmRate(), 0, MAX_RATE);
         validate("Per-kilogram rate", request.perKgRate(), 0, MAX_RATE);
@@ -42,6 +48,8 @@ public class PricingController {
         List<PricingSettings.RadiusBand> radiusBands = request.radiusBands() == null
                 ? List.of() : request.radiusBands();
         validateRadiusBands(pricingMode, radiusBands);
+        PricingSettings before = history.snapshot(
+                repository.findById(PricingSettings.SINGLETON_ID).orElse(null), PricingSettings.class);
         PricingSettings settings = repository.findById(PricingSettings.SINGLETON_ID)
                 .orElseGet(PricingSettings::defaults);
         String weightMode = request.weightMode() == null ? settings.getWeightMode() : request.weightMode();
@@ -58,7 +66,9 @@ public class PricingController {
         settings.setRadiusBands(radiusBands);
         settings.setWeightMode(weightMode);
         settings.setCubicDivisor(cubicDivisor);
-        return repository.save(settings);
+        PricingSettings saved = repository.save(settings);
+        history.record("PRICING", before, saved, authentication.getName());
+        return saved;
     }
 
     private static void validateRadiusBands(String pricingMode, List<PricingSettings.RadiusBand> bands) {

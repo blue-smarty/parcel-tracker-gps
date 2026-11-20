@@ -47,7 +47,14 @@ async function setup(api = async () => {}) {
   };
   const PP = {
     byId,
-    api,
+    api: async (url, options) => {
+      const result = await api(url, options);
+      if (url === '/api/operational-settings' && result === undefined) {
+        return { maxItemsPerBooking: 200, maxPackageLines: 10, maxQuantityPerItem: 20,
+          maxItemWeightKg: 10000, maxDimensionCm: 10000 };
+      }
+      return result;
+    },
     money: value => `$${value.toFixed(2)}`,
     chargeableWeight: (pricing, items) => items.reduce((sum, item) => sum + item.weight * item.quantity, 0),
     estimatePrice(pricing, distance, weight, speed, radiusDistance) {
@@ -84,6 +91,10 @@ test('calculates a route and quote from the public homepage form', async () => {
         points: [{ latitude: 51.5, longitude: -0.1 }, { latitude: 51.6, longitude: -0.2 }]
       };
     }
+    if (url === '/api/operational-settings') return {
+      maxItemsPerBooking: 200, maxPackageLines: 10, maxQuantityPerItem: 20,
+      maxItemWeightKg: 10000, maxDimensionCm: 10000
+    };
     return { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5 };
   });
   byId('quoteOrigin').value = 'Pickup';
@@ -92,7 +103,8 @@ test('calculates a route and quote from the public homepage form', async () => {
 
   await byId('quoteForm').dispatch('submit');
 
-  assert.deepEqual(requests.sort(), ['/api/booking-route', '/api/pricing']);
+  assert.deepEqual(requests.sort(), ['/api/booking-route', '/api/operational-settings',
+    '/api/operational-settings', '/api/pricing']);
   assert.equal(byId('quoteDistance').textContent, '12.3 km');
   assert.equal(byId('quoteRadiusDistance').textContent, '11 km');
   assert.equal(byId('quoteWeight').textContent, '5 kg');
@@ -110,6 +122,10 @@ test('uses the straight-line distance band in radius pricing mode', async () => 
         points: [{ latitude: -37.8, longitude: 144.9 }, { latitude: -37.9, longitude: 145 }]
       };
     }
+    if (url === '/api/operational-settings') return {
+      maxItemsPerBooking: 200, maxPackageLines: 10, maxQuantityPerItem: 20,
+      maxItemWeightKg: 10000, maxDimensionCm: 10000
+    };
     return {
       baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75,
       pricingMode: 'RADIUS',
@@ -126,14 +142,15 @@ test('uses the straight-line distance band in radius pricing mode', async () => 
 });
 
 test('rejects incomplete parcel details without calling quote APIs', async () => {
-  let calls = 0;
-  const { byId } = await setup(async () => { calls++; });
+  const calls = [];
+  const { byId } = await setup(async url => { calls.push(url); });
   byId('quoteOrigin').value = 'Pickup';
   byId('quoteDestination').value = 'Destination';
 
   await byId('quoteForm').dispatch('submit');
 
-  assert.equal(calls, 0);
+  assert.equal(calls.includes('/api/booking-route'), false);
+  assert.equal(calls.includes('/api/pricing'), false);
   assert.match(byId('quoteMessage').textContent, /weight and dimensions/);
 });
 

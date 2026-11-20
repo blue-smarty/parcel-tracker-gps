@@ -15,6 +15,7 @@ import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.model.SmtpSettings;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.service.SmtpSettingsService;
+import com.parceltracker.service.ConfigurationHistoryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -29,6 +30,7 @@ class SmtpSettingsControllerTest {
     @Autowired private MockMvc mvc;
     @MockitoBean private SmtpSettingsService smtp;
     @MockitoBean private CourierAccountRepository couriers;
+    @MockitoBean private ConfigurationHistoryService history;
     private static final String REQUEST = """
             {"host":"smtp.example.com","port":587,"username":"mailer","fromAddress":"mail@example.com",
              "security":"STARTTLS","authentication":true}

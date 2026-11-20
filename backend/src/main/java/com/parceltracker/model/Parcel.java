@@ -79,7 +79,7 @@ public class Parcel {
     private Double weightKg;
 
     @Valid
-    @Size(max = 10)
+    @Size(max = 100)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "items", columnDefinition = "jsonb")
     private List<@jakarta.validation.constraints.NotNull ParcelItem> items;

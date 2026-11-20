@@ -11,7 +11,9 @@
     { id: 'oversized', name: 'Oversized', hint: 'Pallets, plants, bulky goods', size: 'LARGE', weight: 30, dims: [120, 80, 80], icon: '🛋️' }
   ];
   const sizeRank = { SMALL: 0, MEDIUM: 1, LARGE: 2 };
-  const maxQuantity = 20;
+  let maxQuantity = 20;
+  let operational = { maxItemsPerBooking: 200, maxPackageLines: 10, maxQuantityPerItem: 20,
+    maxItemWeightKg: 10000, maxDimensionCm: 10000 };
   let pricing = null;
   const lines = new Map();
   const route = { request: 0, distanceKm: null, straightLineDistanceKm: null, origin: '', destination: '' };
@@ -24,7 +26,13 @@
   function addItem(id, change) {
     const item = catalog.find(entry => entry.id === id);
     const line = lines.get(id) || { id, quantity: 0, weight: item.weight, length: item.dims[0], width: item.dims[1], height: item.dims[2] };
-    line.quantity = Math.min(maxQuantity, Math.max(0, line.quantity + change));
+    const total = [...lines.values()].reduce((sum, entry) => sum + entry.quantity, 0);
+    if (change > 0 && (total >= operational.maxItemsPerBooking
+        || (!lines.has(id) && lines.size >= operational.maxPackageLines))) {
+      setMessage('builderMessage', 'The booking has reached the configured item limit.', 'error');
+      return;
+    }
+    line.quantity = Math.min(maxQuantity, operational.maxQuantityPerItem, Math.max(0, line.quantity + change));
     if (line.quantity === 0) lines.delete(id);
     else lines.set(id, line);
     renderTiles();
@@ -71,6 +79,7 @@
     input.type = 'number';
     input.min = step;
     input.step = step;
+    input.max = String(key === 'weight' ? operational.maxItemWeightKg : operational.maxDimensionCm);
     input.required = true;
     input.value = line[key];
     input.addEventListener('input', () => {
@@ -106,7 +115,8 @@
     const all = [...lines.values()];
     const weight = all.reduce((sum, line) => sum + line.quantity * line.weight, 0);
     const valid = all.length > 0 && all.every(line =>
-      [line.weight, line.length, line.width, line.height].every(value => positive(value) && value <= 10000));
+      positive(line.weight) && line.weight <= operational.maxItemWeightKg
+      && [line.length, line.width, line.height].every(value => positive(value) && value <= operational.maxDimensionCm));
     return { all, weight, valid };
   }
 
@@ -144,6 +154,10 @@
       destination: byId('deliveryAddress').value.trim()
     };
     if (Object.values(fields).some(value => !value)) throw new Error('Complete the pickup and delivery details.');
+    const scheduled = byId('bookingTiming').value === 'SCHEDULED';
+    if (scheduled && (!byId('scheduledDate').value || !byId('scheduledWindow').value)) {
+      throw new Error('Choose a delivery date and available window.');
+    }
     // Items are combined into one parcel: widest footprint, stacked height, largest size class.
     return {
       ...fields,
@@ -157,6 +171,10 @@
       distanceKm: distance,
       straightLineDistanceKm: route.straightLineDistanceKm,
       deliverySpeed: speed(),
+      ...(scheduled ? {
+        scheduledDate: byId('scheduledDate').value,
+        scheduledWindow: byId('scheduledWindow').value
+      } : {}),
       paymentMethod: byId('paymentChoice').value
     };
   }
@@ -280,6 +298,9 @@
     byId('builderForm').addEventListener('submit', submit);
     byId('builderForm').addEventListener('input', updateSummary);
     byId('builderForm').addEventListener('change', updateSummary);
+    byId('bookingTiming').addEventListener('change', () => {
+      byId('bookingScheduleFields').hidden = byId('bookingTiming').value !== 'SCHEDULED';
+    });
     byId('bookAnotherButton').addEventListener('click', reset);
     PP.setupAddressAutocomplete?.('pickupAddress');
     PP.setupAddressAutocomplete?.('deliveryAddress');
@@ -321,6 +342,30 @@
       updateSummary();
     } catch (error) {
       setMessage('builderMessage', `Could not load current pricing: ${error.message}`, 'error');
+    }
+    try {
+      operational = await api('/api/operational-settings');
+      maxQuantity = operational.maxQuantityPerItem;
+      const zone = operational.timeZone;
+      const parts = new Intl.DateTimeFormat('en', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' })
+        .formatToParts(new Date()).reduce((value, part) => (value[part.type] = part.value, value), {});
+      const today = `${parts.year}-${parts.month}-${parts.day}`;
+      const latest = new Date(`${today}T12:00:00Z`);
+      latest.setUTCDate(latest.getUTCDate() + operational.maxScheduleDaysAhead);
+      byId('scheduledDate').min = today;
+      byId('scheduledDate').max = latest.toISOString().slice(0, 10);
+      byId('scheduledWindow').replaceChildren(...operational.deliveryWindows.map(window => {
+        const option = document.createElement('option');
+        option.value = window;
+        option.textContent = window;
+        return option;
+      }));
+      byId('bookingScheduleNote').textContent =
+        `Same-day cutoff ${String(operational.bookingCutoff).slice(0, 5)} · ${zone}`;
+      renderManifest();
+      updateSummary();
+    } catch (error) {
+      setMessage('builderMessage', `Could not load booking limits and delivery windows: ${error.message}`, 'error');
     }
     try {
       PP.showServiceTargets(await api('/api/service-levels'));

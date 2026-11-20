@@ -1,6 +1,8 @@
 (() => {
   const { byId, api, money, setMessage, estimatePrice } = PP;
-  const maxPackages = 10;
+  let maxPackages = 10;
+  let limits = { maxPackageLines: 10, maxItemsPerBooking: 200, maxQuantityPerItem: 20,
+    maxItemWeightKg: 10000, maxDimensionCm: 10000 };
   const types = ['Carton/box', 'Documents', 'Satchel', 'Pallet', 'Other'];
   let routeRequest = 0;
 
@@ -40,14 +42,14 @@
     }
     typeLabel.append(type);
 
-    const quantity = numberField('Quantity', 'quantity', 1, 20, '1');
+    const quantity = numberField('Quantity', 'quantity', 1, limits.maxQuantityPerItem, '1');
     quantity.querySelector('input').value = '1';
     row.append(
       typeLabel,
-      numberField('Weight (kg) *', 'weight', 0.1, 10000),
-      numberField('Length (cm) *', 'length', 0.1, 10000),
-      numberField('Width (cm) *', 'width', 0.1, 10000),
-      numberField('Height (cm) *', 'height', 0.1, 10000),
+      numberField('Weight (kg) *', 'weight', 0.1, limits.maxItemWeightKg),
+      numberField('Length (cm) *', 'length', 0.1, limits.maxDimensionCm),
+      numberField('Width (cm) *', 'width', 0.1, limits.maxDimensionCm),
+      numberField('Height (cm) *', 'height', 0.1, limits.maxDimensionCm),
       quantity
     );
     if (host.children.length > 0) {
@@ -72,6 +74,21 @@
     byId('calculateQuote').disabled = false;
   }
 
+  async function loadLimits() {
+    try {
+      limits = await api('/api/operational-settings');
+      maxPackages = limits.maxPackageLines;
+      [...byId('quotePackages').children].forEach(row => {
+        row.querySelectorAll('input').forEach(input => {
+          input.max = String(input.name === 'quantity' ? limits.maxQuantityPerItem
+            : input.name === 'weight' ? limits.maxItemWeightKg : limits.maxDimensionCm);
+        });
+      });
+    } catch (error) {
+      setMessage('quoteMessage', `Could not load current booking limits: ${error.message}`, 'error');
+    }
+  }
+
   function packageItems() {
     const rows = [...byId('quotePackages').children];
     if (!rows.length) throw new Error('Add at least one package item.');
@@ -79,12 +96,13 @@
     for (const row of rows) {
       const values = Object.fromEntries([...row.querySelectorAll('input')].map(input => [input.name, Number(input.value)]));
       for (const field of ['weight', 'length', 'width', 'height', 'quantity']) {
-        if (!Number.isFinite(values[field]) || values[field] <= 0) {
+        const maximum = field === 'quantity' ? limits.maxQuantityPerItem
+          : field === 'weight' ? limits.maxItemWeightKg : limits.maxDimensionCm;
+        if (!Number.isFinite(values[field]) || values[field] <= 0 || values[field] > maximum) {
           throw new Error('Enter a quantity, weight and dimensions greater than zero for each item.');
         }
       }
-      if (!Number.isInteger(values.quantity) || values.quantity > 20 || values.weight > 10000 || values.length > 10000
-          || values.width > 10000 || values.height > 10000) {
+      if (!Number.isInteger(values.quantity)) {
         throw new Error('Check the quantity, weight and dimensions for each item.');
       }
       items.push(values);
@@ -114,9 +132,10 @@
     byId('quoteResult').hidden = true;
     setMessage('quoteMessage', 'Calculating your quote…');
     try {
-      const [route, currentPricing] = await Promise.all([
+      const [route, currentPricing, currentLimits] = await Promise.all([
         api('/api/booking-route', { method: 'POST', body: JSON.stringify({ origin, destination }) }),
-        api('/api/pricing')
+        api('/api/pricing'),
+        api('/api/operational-settings')
       ]);
       if (requestId !== routeRequest) return;
       if (!Number.isFinite(route.distanceMeters) || route.distanceMeters < 0
@@ -130,6 +149,12 @@
         throw new Error('Current pricing is unavailable.');
       }
       const weight = PP.chargeableWeight(currentPricing, items);
+      limits = currentLimits;
+      maxPackages = limits.maxPackageLines;
+      if (items.length > currentLimits.maxPackageLines
+          || items.reduce((sum, item) => sum + item.quantity, 0) > currentLimits.maxItemsPerBooking) {
+        throw new Error('The package count exceeds current booking limits.');
+      }
       const distance = Math.max(0.1, Math.round(route.distanceMeters / 100) / 10);
       const price = estimatePrice(currentPricing, distance, weight, 'SCHEDULED', route.straightLineDistanceKm);
       byId('quoteDistance').textContent = `${distance} km`;
@@ -158,4 +183,5 @@
   byId('quotePackages').addEventListener('input', invalidateQuote);
   byId('quotePackages').addEventListener('change', invalidateQuote);
   addPackage();
+  loadLimits();
 })();

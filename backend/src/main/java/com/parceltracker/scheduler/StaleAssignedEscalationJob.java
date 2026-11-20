@@ -4,11 +4,12 @@ import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
 import com.parceltracker.repository.ParcelRepository;
 import com.parceltracker.service.CourierPushService;
+import com.parceltracker.service.OperationalSettingsService;
 import java.time.Clock;
 import java.time.Instant;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -23,13 +24,15 @@ public class StaleAssignedEscalationJob {
     private final SchedulerProperties properties;
     private final Clock clock;
     private final CourierPushService push;
+    private final OperationalSettingsService operationalSettings;
 
     public StaleAssignedEscalationJob(ParcelRepository repository, SchedulerProperties properties, Clock clock,
-                                      CourierPushService push) {
+                                      CourierPushService push, OperationalSettingsService operationalSettings) {
         this.repository = repository;
         this.properties = properties;
         this.clock = clock;
         this.push = push;
+        this.operationalSettings = operationalSettings;
     }
 
     @Scheduled(cron = "${parcel.scheduler.stale-assigned.cron:0 */10 * * * *}")
@@ -38,13 +41,16 @@ public class StaleAssignedEscalationJob {
     }
 
     int execute() {
+        var operational = operationalSettings.get();
+        if (!properties.getStaleAssigned().isEnabled() || !operational.isStaleAssignmentEnabled()) return 0;
         Instant now = clock.instant();
-        Instant cutoff = now.minus(properties.getStaleAssigned().getThreshold());
+        Instant cutoff = now.minusSeconds(operational.getStaleAssignmentMinutes() * 60L);
         return JobRunner.run(log, "stale-assigned-escalation",
-                repository.findStaleAssigned(ParcelStatus.CREATED, cutoff), parcel -> escalate(parcel, cutoff, now));
+                repository.findStaleAssigned(ParcelStatus.CREATED, cutoff),
+                parcel -> escalate(parcel, cutoff, now, operational.isUnassignStaleAssignments()));
     }
 
-    private boolean escalate(Parcel parcel, Instant cutoff, Instant now) {
+    private boolean escalate(Parcel parcel, Instant cutoff, Instant now, boolean unassign) {
         Instant reference = parcel.getUpdatedAt() != null ? parcel.getUpdatedAt() : parcel.getCreatedAt();
         if (reference == null || reference.isAfter(cutoff)
                 || parcel.getStatus() != ParcelStatus.CREATED
@@ -54,7 +60,7 @@ public class StaleAssignedEscalationJob {
         }
         String courierId = parcel.getCourierId();
         parcel.setEscalatedAt(now);
-        if (properties.getStaleAssigned().isUnassign()) {
+        if (unassign) {
             parcel.setCourierId(null);
         }
         parcel.setUpdatedAt(now);
