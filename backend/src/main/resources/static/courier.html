@@ -38,6 +38,15 @@
           <button id="disablePushButton" class="button button-quiet" type="button">Disable notifications</button>
           <p id="pushMessage" class="form-message" role="status"></p>
         </div>
+        <div class="panel" style="padding:18px;margin-bottom:14px">
+          <div class="panel-heading">
+            <div><p class="eyebrow">NEXT STOPS</p><h3>Suggested route</h3></div>
+            <button id="optimizeRouteButton" class="button button-secondary" type="button">Optimize route</button>
+          </div>
+          <p class="field-note">Approximate route prioritizes fewer late deliveries, then distance along fast driving routes. Pickup precedes delivery. Estimates include five minutes per stop and may change with traffic; service priority is not considered.</p>
+          <p id="routeMessage" class="form-message" role="status" aria-live="polite"></p>
+          <ol id="routeStops"></ol>
+        </div>
         <div id="deliveryList"><div class="panel"><div class="empty-state">Loading deliveries…</div></div></div>
       </section>
     </main>

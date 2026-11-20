@@ -86,17 +86,12 @@
             <section class="panel builder-step">
               <div class="step-title"><span class="step-number">4</span><div><h3>When and how?</h3></div></div>
               <div class="choice-row" role="radiogroup" aria-label="Delivery speed">
-                <label class="choice"><input type="radio" name="speed" value="SCHEDULED" checked><span><strong>Scheduled</strong><small>Pick a date and time window</small></span></label>
                 <label class="choice"><input type="radio" name="speed" value="SAME_DAY"><span><strong>Same-day</strong><small>Priority handling at a premium</small></span></label>
-                <label class="choice"><input type="radio" name="speed" value="GENERAL"><span><strong>General</strong><small id="generalTarget">On-demand target unavailable</small></span></label>
+                <label class="choice"><input type="radio" name="speed" value="GENERAL" checked><span><strong>General</strong><small id="generalTarget">On-demand target unavailable</small></span></label>
                 <label class="choice"><input type="radio" name="speed" value="EXPRESS"><span><strong>Express</strong><small id="expressTarget">On-demand target unavailable</small></span></label>
                 <label class="choice"><input type="radio" name="speed" value="DIRECT"><span><strong>Direct</strong><small>Highest dispatch priority</small></span></label>
               </div>
               <p class="field-note">On-demand times are targets, not guarantees. Direct does not reserve a courier or guarantee an exclusive route.</p>
-              <div id="scheduleFields" class="field-grid two">
-                <label>Delivery date<input id="scheduleDate" type="date"></label>
-                <label>Time window<select id="scheduleWindow"><option value="">Choose a window</option><option>08:00-10:00</option><option>10:00-12:00</option><option>12:00-14:00</option><option>14:00-16:00</option><option>16:00-18:00</option></select></label>
-              </div>
               <label class="payment-field">Payment (demo)
                 <select id="paymentChoice"><option value="DEMO_CARD">Demo card</option><option value="DEMO_MOBILE_WALLET">Demo mobile wallet</option><option value="CASH_ON_DELIVERY">Cash on delivery</option></select>
               </label>
@@ -109,7 +104,7 @@
             <dl class="ticket-stats">
               <div><dt>Total weight</dt><dd id="ticketWeight">—</dd></div>
               <div><dt>Distance</dt><dd id="ticketDistance">—</dd></div>
-              <div><dt>Speed</dt><dd id="ticketSpeed">Scheduled</dd></div>
+              <div><dt>Speed</dt><dd id="ticketSpeed">General</dd></div>
             </dl>
             <div class="ticket-total"><span>Estimated price</span><strong id="ticketPrice">$—</strong></div>
             <p class="field-note">Demo estimate only. It is not a quote and no payment is collected.</p>

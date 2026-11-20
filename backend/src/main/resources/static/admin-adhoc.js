@@ -111,10 +111,6 @@
       ? estimatePrice(pricing, distance, weight, selectedSpeed, route.straightLineDistanceKm)
       : null;
     byId('ticketPrice').textContent = amount === null ? '$—' : money(Math.round(amount * 100) / 100);
-    const scheduled = selectedSpeed === 'SCHEDULED';
-    byId('scheduleFields').hidden = !scheduled;
-    byId('scheduleDate').required = scheduled;
-    byId('scheduleWindow').required = scheduled;
   }
 
   function setRouteSummary(message, kind = '') {
@@ -209,16 +205,11 @@
       distanceKm: route.distanceKm,
       straightLineDistanceKm: route.straightLineDistanceKm,
       deliverySpeed: speed(),
-      paymentMethod: byId('paymentChoice').value,
-      scheduledDate: speed() === 'SCHEDULED' ? byId('scheduleDate').value : null,
-      scheduledWindow: speed() === 'SCHEDULED' ? byId('scheduleWindow').value : null
+      paymentMethod: byId('paymentChoice').value
     };
     if (!fields.sender || !fields.customerContact || !fields.pickupAddress || !fields.recipient
         || !fields.destination || !fields.courierId) {
       throw new Error('Complete the sender, recipient, address, and courier details.');
-    }
-    if (speed() === 'SCHEDULED' && (!fields.scheduledDate || !fields.scheduledWindow)) {
-      throw new Error('Choose a delivery date and time window.');
     }
     return fields;
   }

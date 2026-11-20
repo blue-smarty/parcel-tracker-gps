@@ -124,10 +124,6 @@
     byId('ticketSpeed').textContent = PP.serviceLevelName(speed());
     byId('ticketPrice').textContent = valid && positive(distance) && pricing
       ? money(estimatePrice(pricing, distance, weight, speed(), route.straightLineDistanceKm)) : '$—';
-    const scheduled = speed() === 'SCHEDULED';
-    byId('scheduleFields').hidden = !scheduled;
-    byId('scheduleDate').required = scheduled;
-    byId('scheduleWindow').required = scheduled;
   }
 
   function buildPayload() {
@@ -147,10 +143,6 @@
       destination: byId('deliveryAddress').value.trim()
     };
     if (Object.values(fields).some(value => !value)) throw new Error('Complete the pickup and delivery details.');
-    const scheduled = speed() === 'SCHEDULED';
-    if (scheduled && (!byId('scheduleDate').value || !byId('scheduleWindow').value)) {
-      throw new Error('Choose a delivery date and time window.');
-    }
     // Items are combined into one parcel: widest footprint, stacked height, largest size class.
     return {
       ...fields,
@@ -163,9 +155,7 @@
       distanceKm: distance,
       straightLineDistanceKm: route.straightLineDistanceKm,
       deliverySpeed: speed(),
-      paymentMethod: byId('paymentChoice').value,
-      scheduledDate: scheduled ? byId('scheduleDate').value : null,
-      scheduledWindow: scheduled ? byId('scheduleWindow').value : null
+      paymentMethod: byId('paymentChoice').value
     };
   }
 

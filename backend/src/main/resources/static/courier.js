@@ -10,6 +10,8 @@
   let courierId;
   let deliveries = [];
   let busy = false;
+  let routeKey = null;
+  let routeRequest = 0;
 
   const base = () => `/api/couriers/${encodeURIComponent(courierId)}`;
   const deliveryUrl = (id, suffix) => `${base()}/deliveries/${encodeURIComponent(id)}${suffix}`;
@@ -53,11 +55,57 @@
       : '<div class="panel"><div class="empty-state">No active deliveries assigned to you.</div></div>';
   }
 
+  function stopsKey(parcels) {
+    return JSON.stringify(parcels.flatMap(parcel => {
+      const pickup = parcel.status === 'CREATED' || parcel.status === 'ACCEPTED';
+      const target = [parcel.targetDeadline ?? null, parcel.targetStart ?? null, parcel.targetMinutes ?? null];
+      return [
+        ...(pickup ? [[parcel.id, 'PICKUP', parcel.pickupAddress?.trim() ?? null, ...target]] : []),
+        [parcel.id, 'DELIVERY', parcel.destination?.trim() ?? null, ...target]
+      ];
+    }).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
+  }
+
+  async function optimizeRoute(force = false) {
+    const key = stopsKey(deliveries);
+    if (!force && key === routeKey) return;
+    routeKey = key;
+    const request = ++routeRequest;
+    byId('routeStops').innerHTML = '';
+    if (!deliveries.length) {
+      setMessage('routeMessage', 'No active deliveries to route.');
+      return;
+    }
+    if (deliveries.length > 9) {
+      setMessage('routeMessage', 'Route optimization supports up to 9 active deliveries.', 'error');
+      return;
+    }
+    setMessage('routeMessage', 'Calculating suggested route…');
+    try {
+      const location = await position();
+      if (request !== routeRequest) return;
+      const result = await api(`${base()}/route`, {
+        method: 'POST', body: JSON.stringify({ latitude: location.latitude, longitude: location.longitude })
+      });
+      if (request !== routeRequest) return;
+      const actual = JSON.stringify(result.stops.map(stop => [stop.parcelId, stop.type, stop.address,
+        stop.targetDeadline ?? null, stop.targetStart ?? null, stop.targetMinutes ?? null])
+        .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
+      if (actual !== key) throw new Error('Deliveries changed while calculating. Refresh and try again.');
+      byId('routeStops').innerHTML = result.stops.map(stop =>
+        `<li><strong>${escapeHtml(stop.type === 'PICKUP' ? 'Pickup' : 'Delivery')} · ${escapeHtml(text(stop.trackingNumber))}</strong> — ${escapeHtml(text(stop.address))} · estimated completion ${escapeHtml(new Date(stop.estimatedArrival).toLocaleString())}${stop.late ? ' · estimated late' : ''}</li>`).join('');
+      setMessage('routeMessage', `Suggested distance: ${(result.distanceMeters / 1000).toFixed(1)} km · ${result.estimatedLateDeliveries} estimated late. Estimates are not guarantees.`, 'success');
+    } catch (error) {
+      if (request === routeRequest) setMessage('routeMessage', `Could not optimize route: ${error.message}`, 'error');
+    }
+  }
+
   async function load(quiet) {
     if (busy) return;
     try {
       deliveries = await api(`${base()}/deliveries`);
       render();
+      optimizeRoute();
       if (!quiet) setMessage('courierMessage', '');
     } catch (error) {
       setMessage('courierMessage', error.message, 'error');
@@ -70,7 +118,7 @@
       navigator.geolocation.getCurrentPosition(
         p => resolve({ latitude: p.coords.latitude, longitude: p.coords.longitude, timestamp: new Date().toISOString() }),
         () => reject(new Error('Could not read your location. Check browser permissions.')),
-        { enableHighAccuracy: true, timeout: 10000 });
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
     });
   }
 
@@ -118,6 +166,7 @@
     CourierPush.init(courierId);
     byId('signOutButton').addEventListener('click', () => CourierPush.signOut(signOut));
     byId('refreshButton').addEventListener('click', () => load(false));
+    byId('optimizeRouteButton').addEventListener('click', () => optimizeRoute(true));
     byId('deliveryList').addEventListener('click', onClick);
     await load(false);
     setInterval(() => load(true), 30000);

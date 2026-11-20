@@ -146,6 +146,6 @@ test('books an on-demand service without scheduled delivery fields', async () =>
   byId('builderForm').dispatch('submit');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(bookings[0].deliverySpeed, 'EXPRESS');
-  assert.equal(bookings[0].scheduledDate, null);
-  assert.equal(bookings[0].scheduledWindow, null);
+  assert.equal(Object.hasOwn(bookings[0], 'scheduledDate'), false);
+  assert.equal(Object.hasOwn(bookings[0], 'scheduledWindow'), false);
 });
