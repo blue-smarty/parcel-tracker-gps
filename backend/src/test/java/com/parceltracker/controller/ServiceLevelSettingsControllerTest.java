@@ -13,6 +13,7 @@ import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.model.ServiceLevelSettings;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.ServiceLevelSettingsRepository;
+import com.parceltracker.service.ConfigurationHistoryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -27,6 +28,7 @@ class ServiceLevelSettingsControllerTest {
     @Autowired private MockMvc mvc;
     @MockitoBean private CourierAccountRepository couriers;
     @MockitoBean private ServiceLevelSettingsRepository settings;
+    @MockitoBean private ConfigurationHistoryService history;
 
     @Test
     void defaultsArePublicAndOnlyAdminsCanChangeValidSettings() throws Exception {

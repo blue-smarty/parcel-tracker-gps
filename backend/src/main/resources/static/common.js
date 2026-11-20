@@ -413,6 +413,19 @@ window.PP = (() => {
     }
   }
 
+  function chargeableWeight(pricing, items) {
+    const mode = pricing.weightMode || 'ACTUAL';
+    if (!['ACTUAL', 'CUBIC', 'GREATER'].includes(mode)) throw new Error('Invalid weight pricing mode.');
+    if (mode !== 'ACTUAL' && (!Number.isFinite(pricing.cubicDivisor) || pricing.cubicDivisor <= 0)) {
+      throw new Error('Invalid cubic divisor.');
+    }
+    return items.reduce((total, item) => {
+      const cubic = item.length * item.width * item.height / pricing.cubicDivisor;
+      const weight = mode === 'ACTUAL' ? item.weight : mode === 'CUBIC' ? cubic : Math.max(item.weight, cubic);
+      return total + weight * item.quantity;
+    }, 0);
+  }
+
   function estimatePrice(pricing, routeDistanceKm, weightKg, deliverySpeed, straightLineDistanceKm) {
     let distanceCharge = routeDistanceKm * pricing.perKmRate;
     if (pricing.pricingMode === 'RADIUS') {
@@ -445,6 +458,6 @@ window.PP = (() => {
   return {
     keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
     session, basicAuthorization, signOut, requireRole, api, setMessage, detail, setupAddressAutocomplete, drawMap,
-    estimatePrice, serviceLevelName, showServiceTargets
+    chargeableWeight, estimatePrice, serviceLevelName, showServiceTargets
   };
 })();

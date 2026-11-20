@@ -12,6 +12,7 @@ import com.parceltracker.model.ServiceAreaSettings;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.ServiceAreaSettingsRepository;
 import com.parceltracker.service.AustralianCouncilLookup;
+import com.parceltracker.service.ConfigurationHistoryService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,7 @@ class ServiceAreaSettingsControllerTest {
     @MockitoBean private CourierAccountRepository couriers;
     @MockitoBean private JdbcTemplate jdbc;
     @MockitoBean private AustralianCouncilLookup councilLookup;
+    @MockitoBean private ConfigurationHistoryService history;
 
     @Test
     void onlyAdminCanChangeSettingWithCsrf() throws Exception {

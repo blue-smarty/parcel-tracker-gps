@@ -75,7 +75,9 @@ public class AdminCourierController {
         }
         checkPassword(request.password());
         pushSubscriptions.deleteByCourierId(courierId);
-        accounts.save(new CourierAccount(courierId, passwordEncoder.encode(request.password())));
+        CourierAccount courier = accounts.findById(courierId).orElseThrow();
+        courier.setPasswordHash(passwordEncoder.encode(request.password()));
+        accounts.save(courier);
         return new CourierSummary(courierId);
     }
 

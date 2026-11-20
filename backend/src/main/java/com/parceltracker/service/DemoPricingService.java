@@ -1,9 +1,11 @@
 package com.parceltracker.service;
 
 import com.parceltracker.model.PricingSettings;
+import com.parceltracker.model.ParcelItem;
 import com.parceltracker.repository.PricingSettingsRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,6 +26,29 @@ public class DemoPricingService {
         PricingSettings settings = settingsRepository.findById(PricingSettings.SINGLETON_ID)
                 .orElseGet(PricingSettings::defaults);
         return estimate(settings, distanceKm, weightKg, deliverySpeed, straightLineDistanceKm);
+    }
+
+    public Double estimateParcel(Double distanceKm, Double weightKg, String deliverySpeed,
+            Double straightLineDistanceKm, List<ParcelItem> items) {
+        PricingSettings settings = settingsRepository.findById(PricingSettings.SINGLETON_ID)
+                .orElseGet(PricingSettings::defaults);
+        if (!"ACTUAL".equals(settings.getWeightMode()) && (items == null || items.isEmpty())) {
+            throw new IllegalArgumentException("Individual item weights and dimensions are required for this pricing mode.");
+        }
+        if (distanceKm == null || deliverySpeed == null || (weightKg == null && (items == null || items.isEmpty()))) {
+            return null;
+        }
+        double chargeable = items == null || items.isEmpty() ? weightKg : items.stream().mapToDouble(item -> {
+            double cubic = item.length() * item.width() * item.height() / settings.getCubicDivisor();
+            double each = switch (settings.getWeightMode()) {
+                case "ACTUAL" -> item.weight();
+                case "CUBIC" -> cubic;
+                case "GREATER" -> Math.max(item.weight(), cubic);
+                default -> throw new IllegalStateException("Unsupported weight pricing mode.");
+            };
+            return each * item.quantity();
+        }).sum();
+        return estimate(settings, distanceKm, chargeable, deliverySpeed, straightLineDistanceKm);
     }
 
     private static double estimate(PricingSettings settings, double distanceKm, double weightKg,

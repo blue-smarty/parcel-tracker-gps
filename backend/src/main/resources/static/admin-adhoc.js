@@ -11,14 +11,22 @@
   const sizeRank = { SMALL: 0, MEDIUM: 1, LARGE: 2 };
   const lines = new Map();
   const route = { request: 0, distanceKm: null, straightLineDistanceKm: null, origin: '', destination: '' };
+  let operational = null;
   const speed = () => document.querySelector('input[name="speed"]:checked').value;
   const positive = value => Number.isFinite(value) && value > 0;
-  let pricing = { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75 };
+  let pricing = null;
 
   function addItem(id, change) {
     const item = catalog.find(entry => entry.id === id);
     const line = lines.get(id) || { id, quantity: 0, weight: item.weight, length: item.dims[0], width: item.dims[1], height: item.dims[2] };
-    line.quantity = Math.min(20, Math.max(0, line.quantity + change));
+    const limits = operational || { maxPackageLines: 10, maxItemsPerBooking: 200, maxQuantityPerItem: 20 };
+    const total = [...lines.values()].reduce((sum, entry) => sum + entry.quantity, 0);
+    if (change > 0 && (total >= limits.maxItemsPerBooking
+        || (!lines.has(id) && lines.size >= limits.maxPackageLines))) {
+      setMessage('adhocMessage', 'The booking has reached the configured item limit.', 'error');
+      return;
+    }
+    line.quantity = Math.min(limits.maxQuantityPerItem, Math.max(0, line.quantity + change));
     if (line.quantity) lines.set(id, line);
     else lines.delete(id);
     renderTiles();
@@ -74,6 +82,8 @@
         input.type = 'number';
         input.min = '0.1';
         input.step = '0.1';
+        const limits = operational || { maxItemWeightKg: 10000, maxDimensionCm: 10000 };
+        input.max = String(key === 'weight' ? limits.maxItemWeightKg : limits.maxDimensionCm);
         input.required = true;
         input.value = line[key];
         input.addEventListener('input', () => {
@@ -91,7 +101,10 @@
   function totals() {
     const all = [...lines.values()];
     const weight = all.reduce((sum, line) => sum + line.quantity * line.weight, 0);
-    const valid = all.length > 0 && all.every(line => [line.weight, line.length, line.width, line.height].every(positive));
+    const valid = all.length > 0 && all.every(line =>
+      positive(line.weight) && line.weight <= (operational?.maxItemWeightKg || 10000)
+      && [line.length, line.width, line.height].every(value =>
+        positive(value) && value <= (operational?.maxDimensionCm || 10000)));
     return { all, weight, valid };
   }
 
@@ -107,8 +120,8 @@
     byId('ticketWeight').textContent = valid ? `${(Math.round(weight * 100) / 100).toLocaleString()} kg` : '—';
     byId('ticketDistance').textContent = positive(distance) ? `${distance} km` : '—';
     byId('ticketSpeed').textContent = PP.serviceLevelName(selectedSpeed);
-    const amount = valid && positive(distance) && route.straightLineDistanceKm != null
-      ? estimatePrice(pricing, distance, weight, selectedSpeed, route.straightLineDistanceKm)
+    const amount = valid && pricing && positive(distance) && route.straightLineDistanceKm != null
+      ? estimatePrice(pricing, distance, PP.chargeableWeight(pricing, all), selectedSpeed, route.straightLineDistanceKm)
       : null;
     byId('ticketPrice').textContent = amount === null ? '$—' : money(Math.round(amount * 100) / 100);
   }
@@ -183,11 +196,19 @@
   function buildPayload() {
     const { all, weight, valid } = totals();
     if (!all.length) throw new Error('Choose at least one item to send.');
-    if (!valid) throw new Error('Enter a weight and size greater than zero for each item.');
+    if (!valid) throw new Error('Enter a valid weight and dimensions within the configured limits for each item.');
+    if (operational && (all.length > operational.maxPackageLines
+        || all.reduce((sum, line) => sum + line.quantity, 0) > operational.maxItemsPerBooking)) {
+      throw new Error('This booking exceeds the configured item limits.');
+    }
     const origin = byId('adhocPickup').value.trim();
     const destination = byId('adhocDestination').value.trim();
     if (!positive(route.distanceKm) || route.origin !== origin || route.destination !== destination) {
       throw new Error('Calculate the driving route for the current addresses before assigning.');
+    }
+    const scheduled = byId('adhocTiming').value === 'SCHEDULED';
+    if (scheduled && (!byId('adhocScheduledDate').value || !byId('adhocScheduledWindow').value)) {
+      throw new Error('Choose a delivery date and available window.');
     }
     const fields = {
       sender: byId('adhocSender').value.trim(),
@@ -202,11 +223,16 @@
       lengthCm: Math.max(...all.map(line => line.length)),
       heightCm: all.reduce((sum, line) => sum + line.quantity * line.height, 0),
       weightKg: weight,
+      items: all.map(({ weight, length, width, height, quantity }) => ({ weight, length, width, height, quantity })),
       distanceKm: route.distanceKm,
       straightLineDistanceKm: route.straightLineDistanceKm,
       deliverySpeed: speed(),
       paymentMethod: byId('paymentChoice').value
     };
+    if (scheduled) {
+      fields.scheduledDate = byId('adhocScheduledDate').value;
+      fields.scheduledWindow = byId('adhocScheduledWindow').value;
+    }
     if (!fields.sender || !fields.customerContact || !fields.pickupAddress || !fields.recipient
         || !fields.destination || !fields.courierId) {
       throw new Error('Complete the sender, recipient, address, and courier details.');
@@ -230,6 +256,27 @@
     } finally {
       byId('refreshCouriersButton').disabled = false;
     }
+  }
+
+  async function loadOperational() {
+    operational = await api('/api/operational-settings');
+    const zone = operational.timeZone;
+    const parts = new Intl.DateTimeFormat('en', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(new Date()).reduce((value, part) => (value[part.type] = part.value, value), {});
+    const today = `${parts.year}-${parts.month}-${parts.day}`;
+    const latest = new Date(`${today}T12:00:00Z`);
+    latest.setUTCDate(latest.getUTCDate() + operational.maxScheduleDaysAhead);
+    byId('adhocScheduledDate').min = today;
+    byId('adhocScheduledDate').max = latest.toISOString().slice(0, 10);
+    byId('adhocScheduledWindow').replaceChildren(...operational.deliveryWindows.map(window => {
+      const option = document.createElement('option');
+      option.value = window;
+      option.textContent = window;
+      return option;
+    }));
+    renderTiles();
+    renderManifest();
+    updateSummary();
   }
 
   async function createAdhoc(event) {
@@ -273,6 +320,9 @@
     byId('signOutButton').addEventListener('click', PP.signOut);
     byId('adhocForm').addEventListener('submit', createAdhoc);
     byId('adhocForm').addEventListener('change', updateSummary);
+    byId('adhocTiming').addEventListener('change', () => {
+      byId('adhocScheduleFields').hidden = byId('adhocTiming').value !== 'SCHEDULED';
+    });
     byId('refreshCouriersButton').addEventListener('click', loadCouriers);
     byId('calculateRouteButton').addEventListener('click', calculateRoute);
     ['adhocPickup', 'adhocDestination'].forEach(id => {
@@ -286,6 +336,9 @@
     updateSummary();
     await Promise.all([
       loadCouriers(),
+      loadOperational().catch(error => {
+        setMessage('adhocMessage', `Could not load delivery availability: ${error.message}`, 'error');
+      }),
       api('/api/pricing').then(value => {
         pricing = value;
         updateSummary();

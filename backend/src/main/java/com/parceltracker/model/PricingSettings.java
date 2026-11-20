@@ -22,6 +22,8 @@ public class PricingSettings {
     private double perKgRate;
     private double sameDayMultiplier;
     private String pricingMode = "ROUTE";
+    private String weightMode = "ACTUAL";
+    private double cubicDivisor = 5000;
     @JdbcTypeCode(SqlTypes.JSON)
     private List<RadiusBand> radiusBands = new ArrayList<>();
 
@@ -50,6 +52,10 @@ public class PricingSettings {
     public void setSameDayMultiplier(double sameDayMultiplier) { this.sameDayMultiplier = sameDayMultiplier; }
     public String getPricingMode() { return pricingMode; }
     public void setPricingMode(String pricingMode) { this.pricingMode = pricingMode; }
+    public String getWeightMode() { return weightMode; }
+    public void setWeightMode(String weightMode) { this.weightMode = weightMode; }
+    public double getCubicDivisor() { return cubicDivisor; }
+    public void setCubicDivisor(double cubicDivisor) { this.cubicDivisor = cubicDivisor; }
     public List<RadiusBand> getRadiusBands() { return radiusBands; }
     public void setRadiusBands(List<RadiusBand> radiusBands) { this.radiusBands = radiusBands; }
 }

@@ -76,6 +76,7 @@ Use HTTPS outside localhost and protect the database and backups, including encr
 | POST | `/api/credit/applications` | Submit an invitation and application for the authenticated customer |
 | GET | `/api/dispatch/parcels/{id}/account-type` | Read a linked customer's current credit classification (admin or dispatcher) |
 | GET, PUT | `/api/admin/service-area` | Read or change the Melbourne metro delivery restriction (admin only) |
+| GET, PUT, DELETE | `/api/admin/smtp` | Read or change SMTP settings, or revert to deployment settings (admin only; password remains a deployment secret) |
 | PUT, DELETE | `/api/admin/dispatchers/{username}/password`, `/api/admin/dispatchers/{username}` | Reset password or revoke dispatcher account (admin only) |
 | GET | `/api/admin/me` | Verify admin credentials |
 | GET | `/api/couriers/{courierId}/deliveries` | List that courier's active assigned deliveries |
@@ -123,6 +124,8 @@ The homepage quote calculator accepts origin, destination and parcel weight and 
 
 Administrators can update delivery estimate rates from **Admin settings** in the dispatch and ad hoc delivery pages. The saved rates are used for customer previews and newly created parcels; previously saved parcel estimates do not change. Defaults remain a $5 base fee, $1.20 per kilometer, $0.50 per kilogram and a 1.75 same-day multiplier.
 
+Weight charging defaults to actual (dead) weight. Admins can choose cubic weight or the greater of actual and cubic weight for each item. Cubic kilograms are length × width × height in centimetres divided by the configurable divisor (default 5,000 cm³/kg); each item weight is multiplied by its quantity and summed. Booking and ad hoc clients must provide an `items` array of `{weight, length, width, height, quantity}` when cubic or greater-weight pricing is enabled; older requests without item dimensions are rejected instead of silently undercharging. Existing parcel estimates are unchanged.
+
 **On-demand service levels:** General and Express default to delivery targets of 240 and 120 minutes, respectively. Administrators can change these targets and choose whether the clock starts when the booking is created or when the courier marks it picked up. The choice and duration are saved with each new booking, so later settings changes do not change its target. Direct has no time target and has the highest queue priority, followed by Express and General. These options use the standard demo estimate rate. Existing scheduled bookings remain in records; same-day remains available for new bookings.
 
 Dispatch displays an overdue indicator for active deliveries with a passed target; the queue and browser auto-dispatch process on-demand jobs in priority order, and assigned jobs are returned to couriers in that order. Coverage-area assignment and manual assignment can bypass the queue. Targets are not guarantees, and there is no automatic feasibility or courier availability check, dedicated overdue notification, or enforcement of an exclusive direct route. Dispatchers must manage these operationally.
@@ -166,6 +169,8 @@ export PARCEL_PASSWORD_RESET_ENABLED=true
 ```
 
 The request endpoint responds identically for existing and unknown accounts. Reset tokens are random, expire after 30 minutes, are stored only as hashes, and can be used once; a one-minute per-account resend cooldown applies. The reset page uses CSRF-protected requests, and reset links must point to the deployed HTTPS origin. Use SMTP credentials from a dedicated mail provider and store them as deployment secrets, not in source control.
+
+Admins can alternatively save the SMTP host, port, username, sender address and TLS mode in **Admin settings**. Saved settings override the deployment mail host configuration for password-reset messages immediately; **Use deployment settings** removes the override. The password is never saved in the database or returned by the API and must still be provided as `SPRING_MAIL_PASSWORD` on every backend instance. Authentication requires TLS or STARTTLS. Password recovery enablement and the reset URL remain deployment settings. Protect admin access and use a dedicated SMTP credential: an administrator can change the destination mail server.
 
 Customer orders are linked to the signed-in customer in the backend and load across browsers; demo support requests and courier ID suggestions still use local storage. Dispatch assignment and parcel-wide listing require admin or dispatcher authentication. Pricing, receipt, and support features are demos. Do not expose this portal or backend to the public internet without production payment/support integrations.
 

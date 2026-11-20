@@ -38,18 +38,20 @@ public class PasswordResetService {
     private final ObjectProvider<JavaMailSender> mailSender;
     private final String fromAddress;
     private final String resetUrl;
+    private final SmtpSettingsService smtpSettings;
 
     public PasswordResetService(CustomerAccountRepository customers, PasswordResetTokenRepository tokens,
                                 PasswordEncoder passwordEncoder, ObjectProvider<JavaMailSender> mailSender,
                                 @Value("${parcel.auth.password-reset.from:}") String fromAddress,
                                 @Value("${parcel.auth.password-reset.url:http://localhost:8080/forgot-password.html}")
-                                        String resetUrl) {
+                                        String resetUrl, SmtpSettingsService smtpSettings) {
         this.customers = customers;
         this.tokens = tokens;
         this.passwordEncoder = passwordEncoder;
         this.mailSender = mailSender;
         this.fromAddress = fromAddress;
         this.resetUrl = resetUrl;
+        this.smtpSettings = smtpSettings;
     }
 
     @Transactional
@@ -58,7 +60,15 @@ public class PasswordResetService {
         Optional<CustomerAccount> account = customers.findById(email);
         if (account.isEmpty()) return;
 
-        JavaMailSender sender = mailSender.getIfAvailable();
+        Optional<SmtpSettingsService.ConfiguredMail> configured;
+        try {
+            configured = smtpSettings.configuredMail();
+        } catch (IllegalStateException e) {
+            log.error("Password reset mail configuration is invalid", e);
+            return;
+        }
+        JavaMailSender sender = configured.map(SmtpSettingsService.ConfiguredMail::sender)
+                .orElseGet(mailSender::getIfAvailable);
         if (sender == null) {
             log.error("Password reset requested but no mail server is configured (spring.mail.host)");
             return;
@@ -75,7 +85,7 @@ public class PasswordResetService {
         tokens.save(new PasswordResetToken(hash(token), email, now, now.plus(TOKEN_LIFETIME)));
 
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
+        message.setFrom(configured.map(SmtpSettingsService.ConfiguredMail::fromAddress).orElse(fromAddress));
         message.setTo(email);
         message.setSubject("Reset your ParcelPilot password");
         message.setText("Use this link within 30 minutes to reset your customer account password:\n\n"

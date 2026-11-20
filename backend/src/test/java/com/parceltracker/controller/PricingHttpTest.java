@@ -9,6 +9,7 @@ import com.parceltracker.config.SecurityConfig;
 import com.parceltracker.model.PricingSettings;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.PricingSettingsRepository;
+import com.parceltracker.service.ConfigurationHistoryService;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -35,6 +36,7 @@ class PricingHttpTest {
     @LocalServerPort private int port;
     @MockitoBean private PricingSettingsRepository settings;
     @MockitoBean private CourierAccountRepository couriers;
+    @MockitoBean private ConfigurationHistoryService history;
 
     @Test
     void realHttpPricingSaveUsesCookieAndReportsBadInput() throws Exception {

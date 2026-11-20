@@ -9,18 +9,24 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.Authentication;
+import com.parceltracker.service.ConfigurationHistoryService;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 public class PricingController {
     private static final double MAX_RATE = 100_000.0;
 
     public record PricingRequest(Double baseFee, Double perKmRate, Double perKgRate, Double sameDayMultiplier,
-            String pricingMode, List<PricingSettings.RadiusBand> radiusBands) { }
+            String pricingMode, List<PricingSettings.RadiusBand> radiusBands,
+            String weightMode, Double cubicDivisor) { }
 
     private final PricingSettingsRepository repository;
+    private final ConfigurationHistoryService history;
 
-    public PricingController(PricingSettingsRepository repository) {
+    public PricingController(PricingSettingsRepository repository, ConfigurationHistoryService history) {
         this.repository = repository;
+        this.history = history;
     }
 
     @GetMapping("/api/pricing")
@@ -29,7 +35,8 @@ public class PricingController {
     }
 
     @PutMapping("/api/admin/pricing")
-    public PricingSettings update(@RequestBody PricingRequest request) {
+    @Transactional
+    public PricingSettings update(@RequestBody PricingRequest request, Authentication authentication) {
         validate("Base fee", request.baseFee(), 0, MAX_RATE);
         validate("Per-kilometer rate", request.perKmRate(), 0, MAX_RATE);
         validate("Per-kilogram rate", request.perKgRate(), 0, MAX_RATE);
@@ -41,15 +48,27 @@ public class PricingController {
         List<PricingSettings.RadiusBand> radiusBands = request.radiusBands() == null
                 ? List.of() : request.radiusBands();
         validateRadiusBands(pricingMode, radiusBands);
+        PricingSettings before = history.snapshot(
+                repository.findById(PricingSettings.SINGLETON_ID).orElse(null), PricingSettings.class);
         PricingSettings settings = repository.findById(PricingSettings.SINGLETON_ID)
                 .orElseGet(PricingSettings::defaults);
+        String weightMode = request.weightMode() == null ? settings.getWeightMode() : request.weightMode();
+        double cubicDivisor = request.cubicDivisor() == null ? settings.getCubicDivisor() : request.cubicDivisor();
+        if (!List.of("ACTUAL", "CUBIC", "GREATER").contains(weightMode)) {
+            throw invalid("Weight mode must be ACTUAL, CUBIC or GREATER.");
+        }
+        validate("Cubic divisor", cubicDivisor, 1, 1_000_000);
         settings.setBaseFee(request.baseFee());
         settings.setPerKmRate(request.perKmRate());
         settings.setPerKgRate(request.perKgRate());
         settings.setSameDayMultiplier(request.sameDayMultiplier());
         settings.setPricingMode(pricingMode);
         settings.setRadiusBands(radiusBands);
-        return repository.save(settings);
+        settings.setWeightMode(weightMode);
+        settings.setCubicDivisor(cubicDivisor);
+        PricingSettings saved = repository.save(settings);
+        history.record("PRICING", before, saved, authentication.getName());
+        return saved;
     }
 
     private static void validateRadiusBands(String pricingMode, List<PricingSettings.RadiusBand> bands) {

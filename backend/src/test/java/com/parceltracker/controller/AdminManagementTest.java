@@ -18,6 +18,7 @@ import com.parceltracker.model.CourierAccount;
 import com.parceltracker.repository.BrandingRepository;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.CourierPushSubscriptionRepository;
+import com.parceltracker.service.ConfigurationHistoryService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,7 @@ class AdminManagementTest {
     @MockitoBean private CourierAccountRepository accounts;
     @MockitoBean private BrandingRepository branding;
     @MockitoBean private CourierPushSubscriptionRepository pushSubscriptions;
+    @MockitoBean private ConfigurationHistoryService history;
 
     @Test
     void adminCreatesCourier() throws Exception {
@@ -62,11 +64,18 @@ class AdminManagementTest {
     @Test
     void adminResetsPassword() throws Exception {
         when(accounts.existsById("courier-7")).thenReturn(true);
+        CourierAccount courier = new CourierAccount("courier-7", "old-hash");
+        courier.setVehicleType("VAN");
+        courier.setMaxActiveParcels(8);
+        courier.setMaxPayloadWeightKg(700.0);
+        when(accounts.findById("courier-7")).thenReturn(Optional.of(courier));
         mvc.perform(put("/api/admin/couriers/courier-7/password").with(user("ops").roles("ADMIN")).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"password\":\"another-long-pass\"}"))
                 .andExpect(status().isOk());
         verify(accounts).save(any(CourierAccount.class));
+        org.junit.jupiter.api.Assertions.assertEquals(8, courier.getMaxActiveParcels());
+        org.junit.jupiter.api.Assertions.assertEquals(700.0, courier.getMaxPayloadWeightKg());
         verify(pushSubscriptions).deleteByCourierId("courier-7");
     }
 

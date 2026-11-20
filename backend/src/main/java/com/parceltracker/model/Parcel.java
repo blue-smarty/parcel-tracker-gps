@@ -16,6 +16,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -76,6 +77,12 @@ public class Parcel {
     @DecimalMin(value = "0.0", inclusive = false)
     @Column(name = "weight_kg")
     private Double weightKg;
+
+    @Valid
+    @Size(max = 100)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "items", columnDefinition = "jsonb")
+    private List<@jakarta.validation.constraints.NotNull ParcelItem> items;
 
     @Column(name = "delivery_speed")
     @Pattern(regexp = "SAME_DAY|SCHEDULED|GENERAL|EXPRESS|DIRECT")
@@ -180,6 +187,8 @@ public class Parcel {
     public void setHeightCm(Double heightCm) { this.heightCm = heightCm; }
     public Double getWeightKg() { return weightKg; }
     public void setWeightKg(Double weightKg) { this.weightKg = weightKg; }
+    public List<ParcelItem> getItems() { return items; }
+    public void setItems(List<ParcelItem> items) { this.items = items; }
     public String getDeliverySpeed() { return deliverySpeed; }
     public void setDeliverySpeed(String deliverySpeed) { this.deliverySpeed = deliverySpeed; }
     public Integer getTargetMinutes() { return targetMinutes; }

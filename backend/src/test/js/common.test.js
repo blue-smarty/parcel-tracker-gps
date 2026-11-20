@@ -138,6 +138,21 @@ test('calculates a fixed radius band charge while preserving weight and speed pr
   assert.equal(context.window.PP.estimatePrice(pricing, 20, 2, 'SAME_DAY', 4), 15.75);
 });
 
+test('calculates chargeable weight per item before applying quantities', () => {
+  const context = { window: {}, document: {}, sessionStorage: {}, localStorage: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/common.js'), 'utf8'), context);
+  const items = [{ weight: 1, length: 50, width: 40, height: 25, quantity: 2 },
+    { weight: 12, length: 10, width: 10, height: 10, quantity: 1 }];
+  const pricing = { weightMode: 'ACTUAL', cubicDivisor: 5000 };
+  assert.equal(context.window.PP.chargeableWeight(pricing, items), 14);
+  pricing.weightMode = 'CUBIC';
+  assert.equal(context.window.PP.chargeableWeight(pricing, items), 20.2);
+  pricing.weightMode = 'GREATER';
+  assert.equal(context.window.PP.chargeableWeight(pricing, items), 32);
+  pricing.cubicDivisor = 0;
+  assert.throws(() => context.window.PP.chargeableWeight(pricing, items), /divisor/);
+});
+
 test('shows configured on-demand targets and clock start', () => {
   const elements = { generalTarget: {}, expressTarget: {} };
   const context = {

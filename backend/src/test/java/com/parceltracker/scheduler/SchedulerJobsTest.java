@@ -15,7 +15,10 @@ import static org.mockito.Mockito.when;
 import com.parceltracker.model.Location;
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
+import com.parceltracker.model.OperationalSettings;
+import com.parceltracker.repository.OperationalSettingsRepository;
 import com.parceltracker.repository.ParcelRepository;
+import com.parceltracker.service.OperationalSettingsService;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -29,6 +32,8 @@ class SchedulerJobsTest {
 
     private ParcelRepository repository;
     private SchedulerProperties properties;
+    private OperationalSettings operational;
+    private OperationalSettingsService operationalSettings;
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @BeforeEach
@@ -38,6 +43,10 @@ class SchedulerJobsTest {
         properties.getStaleAssigned().setThreshold(Duration.ofHours(2));
         properties.getLocationInactivity().setThreshold(Duration.ofMinutes(15));
         properties.getAutoClose().setGracePeriod(Duration.ofHours(24));
+        operational = OperationalSettings.defaults();
+        OperationalSettingsRepository settingsRepository = mock(OperationalSettingsRepository.class);
+        when(settingsRepository.findById(OperationalSettings.SINGLETON_ID)).thenReturn(java.util.Optional.of(operational));
+        operationalSettings = new OperationalSettingsService(settingsRepository);
     }
 
     private Parcel parcel(ParcelStatus status, Instant updatedAt) {
@@ -53,7 +62,8 @@ class SchedulerJobsTest {
     @Test
     void staleNoCandidatesIsNoop() {
         when(repository.findStaleAssigned(any(), any())).thenReturn(List.of());
-        assertEquals(0, new StaleAssignedEscalationJob(repository, properties, clock, mock(com.parceltracker.service.CourierPushService.class)).execute());
+        assertEquals(0, new StaleAssignedEscalationJob(repository, properties, clock,
+                mock(com.parceltracker.service.CourierPushService.class), operationalSettings).execute());
         verify(repository, never()).save(any());
     }
 
@@ -63,7 +73,8 @@ class SchedulerJobsTest {
         Parcel justYounger = parcel(ParcelStatus.CREATED, NOW.minus(Duration.ofHours(2)).plusSeconds(1));
         Parcel noTimestamps = parcel(ParcelStatus.CREATED, null);
         when(repository.findStaleAssigned(any(), any())).thenReturn(List.of(atBoundary, justYounger, noTimestamps));
-        StaleAssignedEscalationJob job = new StaleAssignedEscalationJob(repository, properties, clock, mock(com.parceltracker.service.CourierPushService.class));
+        StaleAssignedEscalationJob job = new StaleAssignedEscalationJob(repository, properties, clock,
+                mock(com.parceltracker.service.CourierPushService.class), operationalSettings);
 
         assertEquals(1, job.execute());
         assertEquals(NOW, atBoundary.getEscalatedAt());
@@ -75,12 +86,13 @@ class SchedulerJobsTest {
 
     @Test
     void staleCanUnassignAndIsolatesErrors() {
-        properties.getStaleAssigned().setUnassign(true);
+        operational.setUnassignStaleAssignments(true);
         Parcel bad = parcel(ParcelStatus.CREATED, NOW.minus(Duration.ofHours(3)));
         Parcel good = parcel(ParcelStatus.CREATED, NOW.minus(Duration.ofHours(3)));
         when(repository.findStaleAssigned(any(), any())).thenReturn(List.of(bad, good));
         when(repository.save(bad)).thenThrow(new RuntimeException("boom"));
-        assertEquals(1, new StaleAssignedEscalationJob(repository, properties, clock, mock(com.parceltracker.service.CourierPushService.class)).execute());
+        assertEquals(1, new StaleAssignedEscalationJob(repository, properties, clock,
+                mock(com.parceltracker.service.CourierPushService.class), operationalSettings).execute());
         assertNull(good.getCourierId());
         assertNotNull(good.getEscalatedAt());
     }

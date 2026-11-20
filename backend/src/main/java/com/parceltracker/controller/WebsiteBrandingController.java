@@ -6,6 +6,7 @@ import com.parceltracker.model.WebsiteTheme;
 import com.parceltracker.repository.BrandingImageRepository;
 import com.parceltracker.repository.BrandingRepository;
 import com.parceltracker.repository.WebsiteThemeRepository;
+import com.parceltracker.service.ConfigurationHistoryService;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -27,6 +28,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 public class WebsiteBrandingController {
@@ -36,12 +39,15 @@ public class WebsiteBrandingController {
     private final BrandingRepository branding;
     private final WebsiteThemeRepository themes;
     private final BrandingImageRepository images;
+    private final ConfigurationHistoryService history;
 
     public WebsiteBrandingController(BrandingRepository branding, WebsiteThemeRepository themes,
-                                     BrandingImageRepository images) {
+                                     BrandingImageRepository images,
+                                     ConfigurationHistoryService history) {
         this.branding = branding;
         this.themes = themes;
         this.images = images;
+        this.history = history;
     }
 
     record WebsiteBranding(boolean configured, BrandingSettings branding, String fontFamily) {}
@@ -77,12 +83,15 @@ public class WebsiteBrandingController {
     }
 
     @PutMapping("/api/admin/website-theme")
-    public ThemeRequest updateTheme(@RequestBody ThemeRequest request) {
+    @Transactional
+    public ThemeRequest updateTheme(@RequestBody ThemeRequest request, Authentication authentication) {
         if (request.css() == null || request.css().length() > MAX_CSS_LENGTH) {
             throw bad("Stylesheet must be at most 200,000 characters");
         }
         if (request.fontFamily() == null || !FONTS.contains(request.fontFamily())) throw bad("Choose a supported font");
-        themes.save(new WebsiteTheme(request.css(), request.fontFamily()));
+        WebsiteTheme before = history.snapshot(themes.findById("default").orElse(null), WebsiteTheme.class);
+        WebsiteTheme saved = themes.save(new WebsiteTheme(request.css(), request.fontFamily()));
+        history.record("WEBSITE_THEME", before, saved, authentication.getName());
         return request;
     }
 

@@ -88,6 +88,13 @@
                 <label class="choice"><input type="radio" name="speed" value="DIRECT"><span><strong>Direct</strong><small>Highest dispatch priority</small></span></label>
               </div>
               <p class="field-note">Targets are not guarantees. Direct does not reserve a courier or guarantee an exclusive route.</p>
+              <label>Delivery timing
+                <select id="adhocTiming"><option value="ON_DEMAND">On demand</option><option value="SCHEDULED">Choose a delivery window</option></select>
+              </label>
+              <div id="adhocScheduleFields" class="manifest-fields" hidden>
+                <label>Delivery date<input id="adhocScheduledDate" type="date"></label>
+                <label>Delivery window<select id="adhocScheduledWindow"></select></label>
+              </div>
               <label class="payment-field">Payment (demo)
                 <select id="paymentChoice"><option value="DEMO_CARD">Demo card</option><option value="DEMO_MOBILE_WALLET">Demo mobile wallet</option><option value="CASH_ON_DELIVERY">Cash on delivery</option></select>
               </label>

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' } } = {}) {
+async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' }, historyChanges = [] } = {}) {
   const elements = new Map();
   function byId(id) {
     if (!elements.has(id)) elements.set(id, {
@@ -22,6 +22,14 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
   const messages = {};
   const PP = {
     byId, money: value => `$${Number(value).toFixed(2)}`,
+    chargeableWeight(pricing, items) {
+      return items.reduce((sum, item) => {
+        const cubic = item.length * item.width * item.height / pricing.cubicDivisor;
+        const each = pricing.weightMode === 'CUBIC' ? cubic
+          : pricing.weightMode === 'GREATER' ? Math.max(item.weight, cubic) : item.weight;
+        return sum + each * item.quantity;
+      }, 0);
+    },
     estimatePrice(pricing, distance, weight, speed, radiusDistance) {
       const charge = pricing.pricingMode === 'RADIUS'
         ? pricing.radiusBands.find(band => band.upToKm == null || radiusDistance <= band.upToKm)?.distanceFee
@@ -48,6 +56,18 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
         return { generalMinutes: 240, expressMinutes: 120, targetStart: 'BOOKING' };
       }
       if (route === '/api/admin/service-levels') return JSON.parse(options.body);
+      if (route === '/api/admin/smtp') return options?.method === 'PUT' ? JSON.parse(options.body) : null;
+      if (route === '/api/admin/operational-settings' && options?.method === 'PUT') return JSON.parse(options.body);
+      if (route === '/api/admin/operational-settings') return {
+        maxItemsPerBooking: 200, maxPackageLines: 10, maxQuantityPerItem: 20,
+        maxItemWeightKg: 10000, maxDimensionCm: 10000, bookingCutoff: '17:00',
+        timeZone: 'Australia/Melbourne', maxScheduleDaysAhead: 30,
+        deliveryWindows: ['08:00-10:00', '10:00-12:00'],
+        staleAssignmentEnabled: true, staleAssignmentMinutes: 120, unassignStaleAssignments: false
+      };
+      if (route === '/api/admin/courier-capacity') return [];
+      if (route === '/api/admin/configuration-history') return historyChanges;
+      if (route.startsWith('/api/admin/configuration-history/') && options?.method === 'POST') return {};
       if (route === '/api/admin/dispatchers') return [];
       throw new Error(`Unexpected request ${route}`);
     }
@@ -84,7 +104,7 @@ test('loads current pricing and previews sample estimates', async () => {
   const { byId, messages } = await setup();
   assert.equal(byId('settingsView').hidden, false);
   assert.equal(byId('baseFee').value, 5);
-  assert.equal(byId('pricingPreview').textContent, 'Example (10 km, 2 kg): scheduled $18.00 · same-day $31.50');
+  assert.equal(byId('pricingPreview').textContent, 'Example (10 km, 2 kg, 50 × 40 × 25 cm): scheduled $18.00 · same-day $31.50');
   assert.equal(messages.pricingMessage.kind, '');
 });
 
@@ -96,7 +116,7 @@ test('saves edited rates and reports success', async () => {
   assert.equal(request.options.method, 'PUT');
   assert.deepEqual(JSON.parse(request.options.body), {
     baseFee: 7, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75,
-    pricingMode: 'ROUTE', radiusBands: []
+    pricingMode: 'ROUTE', weightMode: 'ACTUAL', cubicDivisor: 5000, radiusBands: []
   });
   assert.match(messages.pricingMessage.message, /Pricing saved/);
 });
@@ -115,7 +135,35 @@ test('saves configurable radius bands and shows a radius-based preview', async (
   const request = requests.find(item => item.route === '/api/admin/pricing' && item.options?.method === 'PUT');
   assert.deepEqual(JSON.parse(request.options.body).radiusBands, [{ upToKm: null, distanceFee: 12 }]);
   assert.equal(JSON.parse(request.options.body).pricingMode, 'RADIUS');
-  assert.equal(byId('pricingPreview').textContent, 'Example (10 km, 2 kg): scheduled $18.00 · same-day $31.50');
+  assert.equal(byId('pricingPreview').textContent, 'Example (10 km, 2 kg, 50 × 40 × 25 cm): scheduled $18.00 · same-day $31.50');
+});
+
+test('previews and saves cubic weight pricing', async () => {
+  const { byId, requests } = await setup();
+  byId('weightMode').value = 'CUBIC';
+  byId('weightMode').listeners.change();
+  assert.match(byId('pricingPreview').textContent, /scheduled \$22\.00/);
+  await byId('pricingForm').listeners.submit({ preventDefault() {} });
+  const body = JSON.parse(requests.find(item => item.route === '/api/admin/pricing').options.body);
+  assert.equal(body.weightMode, 'CUBIC');
+  assert.equal(body.cubicDivisor, 5000);
+});
+
+test('saves SMTP settings and can return to deployment settings', async () => {
+  const { byId, requests, messages } = await setup();
+  byId('smtpHost').value = 'smtp.example.com';
+  byId('smtpPort').value = '587';
+  byId('smtpFrom').value = 'support@example.com';
+  byId('smtpSecurity').value = 'STARTTLS';
+  byId('smtpAuth').checked = true;
+  byId('smtpUsername').value = 'mailer';
+  await byId('smtpForm').listeners.submit({ preventDefault() {} });
+  const save = requests.find(item => item.route === '/api/admin/smtp' && item.options?.method === 'PUT');
+  assert.deepEqual(JSON.parse(save.options.body), { host: 'smtp.example.com', port: 587,
+    fromAddress: 'support@example.com', security: 'STARTTLS', authentication: true, username: 'mailer' });
+  await byId('clearSmtpButton').listeners.click();
+  assert.equal(requests.some(item => item.route === '/api/admin/smtp' && item.options?.method === 'DELETE'), true);
+  assert.match(messages.smtpMessage.message, /deployment settings/);
 });
 
 test('shows pricing load and save errors instead of claiming success', async () => {
@@ -142,4 +190,35 @@ test('creates a dispatcher through the admin-only endpoint', async () => {
   assert.deepEqual(JSON.parse(request.options.body), { username: 'dispatch1', password: 'strong-password' });
   assert.equal(byId('dispatcherPassword').value, '');
   assert.match(messages.dispatcherMessage.message, /created/);
+});
+
+test('loads and saves operational package, scheduling, and stale-assignment limits', async () => {
+  const { byId, requests, messages } = await setup();
+  assert.equal(byId('maxItemsPerBooking').value, 200);
+  byId('maxItemsPerBooking').value = '120';
+  byId('bookingCutoff').value = '16:30';
+  byId('timeZone').value = 'Australia/Sydney';
+  byId('deliveryWindows').value = '09:00-11:00, 13:00-15:00';
+  byId('staleAssignmentEnabled').checked = false;
+  await byId('operationalForm').listeners.submit({ preventDefault() {} });
+  const request = requests.find(item => item.route === '/api/admin/operational-settings'
+    && item.options?.method === 'PUT');
+  const body = JSON.parse(request.options.body);
+  assert.equal(body.maxItemsPerBooking, 120);
+  assert.equal(body.bookingCutoff, '16:30');
+  assert.equal(body.timeZone, 'Australia/Sydney');
+  assert.deepEqual(body.deliveryWindows, ['09:00-11:00', '13:00-15:00']);
+  assert.equal(body.staleAssignmentEnabled, false);
+  assert.match(messages.operationalMessage.message, /saved/);
+});
+
+test('allows restoring a configuration change whose prior state was unset', async () => {
+  const { byId, requests } = await setup({ historyChanges: [{
+    id: 8, category: 'SMTP', changedBy: 'Admin', changedAt: '2026-11-20T00:00:00Z', before: null, after: {}
+  }] });
+  const button = byId('configurationHistoryList').children[0].children[1];
+  assert.notEqual(button.disabled, true);
+  await button.listeners.click();
+  assert.equal(requests.some(item => item.route === '/api/admin/configuration-history/8/restore'
+    && item.options?.method === 'POST'), true);
 });

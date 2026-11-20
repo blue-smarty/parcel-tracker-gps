@@ -20,6 +20,7 @@ import com.parceltracker.repository.BrandingImageRepository;
 import com.parceltracker.repository.BrandingRepository;
 import com.parceltracker.repository.CourierAccountRepository;
 import com.parceltracker.repository.WebsiteThemeRepository;
+import com.parceltracker.service.ConfigurationHistoryService;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
@@ -41,6 +42,7 @@ class WebsiteBrandingControllerTest {
     @MockitoBean private WebsiteThemeRepository themes;
     @MockitoBean private BrandingImageRepository images;
     @MockitoBean private CourierAccountRepository accounts;
+    @MockitoBean private ConfigurationHistoryService history;
 
     @Test
     void servesDefaultAndSavedStylesheetsPublicly() throws Exception {

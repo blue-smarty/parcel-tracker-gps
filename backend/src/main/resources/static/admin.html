@@ -71,6 +71,11 @@
                 <p id="radiusBandsMessage" class="form-message" role="status"></p>
               </div>
               <label>Rate per kilogram ($)<input id="perKgRate" type="number" min="0" max="100000" step="0.01" required></label>
+              <label>Chargeable weight
+                <select id="weightMode"><option value="ACTUAL">Actual (dead) weight</option><option value="CUBIC">Cubic weight</option><option value="GREATER">Greater of actual and cubic per item</option></select>
+              </label>
+              <label>Cubic divisor (cm³ per kg)<input id="cubicDivisor" type="number" min="1" max="1000000" step="any" required></label>
+              <p class="field-note">Cubic weight per item is length × width × height (cm) divided by the divisor. Item weights are multiplied by quantity and summed. Cubic modes require individual item dimensions.</p>
               <label>Same-day multiplier<input id="sameDayMultiplier" type="number" min="1" max="10" step="0.01" required></label>
               <p class="field-note">Formula: (base fee + route/radius distance charge + weight × kilogram rate) × speed multiplier. Radius distance is the straight-line distance between the geocoded pickup and delivery addresses.</p>
               <div id="pricingPreview" class="settings-preview" aria-live="polite"></div>
@@ -80,6 +85,59 @@
               </div>
               <p id="pricingMessage" class="form-message" role="status" aria-live="polite"></p>
             </form>
+          </section>
+          <section class="panel settings-panel" aria-labelledby="smtpTitle">
+            <div class="panel-heading"><div><p class="eyebrow">CUSTOMER EMAIL</p><h3 id="smtpTitle">SMTP settings</h3></div></div>
+            <p class="field-note">Used for customer password reset email. Enable password recovery and set its public URL in deployment configuration. Set the SMTP password as the SPRING_MAIL_PASSWORD deployment secret; it is never stored here. Saving overrides deployment mail host settings.</p>
+            <form id="smtpForm" class="settings-form">
+              <label>SMTP host<input id="smtpHost" maxlength="253" required></label>
+              <label>Port<input id="smtpPort" type="number" min="1" max="65535" step="1" value="587" required></label>
+              <label>From email address<input id="smtpFrom" type="email" maxlength="255" required></label>
+              <label>Security<select id="smtpSecurity"><option value="STARTTLS">STARTTLS</option><option value="TLS">TLS</option><option value="NONE">None</option></select></label>
+              <label><input id="smtpAuth" type="checkbox"> Use SMTP authentication</label>
+              <label>Username<input id="smtpUsername" maxlength="255" autocomplete="off"></label>
+              <div class="settings-actions">
+                <button id="saveSmtpButton" class="button button-primary" type="submit">Save SMTP settings</button>
+                <button id="reloadSmtpButton" class="button button-quiet" type="button">Discard changes</button>
+                <button id="clearSmtpButton" class="button button-quiet" type="button">Use deployment settings</button>
+              </div>
+              <p id="smtpMessage" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+          <section class="panel settings-panel" aria-labelledby="operationsTitle">
+            <div class="panel-heading"><div><p class="eyebrow">BOOKING RULES</p><h3 id="operationsTitle">Operational limits</h3></div></div>
+            <p class="field-note">Limits are checked by the server for customer and admin bookings. Scheduled booking windows use the selected timezone.</p>
+            <form id="operationalForm" class="settings-form">
+              <label>Maximum item quantity per booking<input id="maxItemsPerBooking" type="number" min="1" max="1000" required></label>
+              <label>Maximum package lines<input id="maxPackageLines" type="number" min="1" max="100" required></label>
+              <label>Maximum quantity per item line<input id="maxQuantityPerItem" type="number" min="1" max="1000" required></label>
+              <label>Maximum weight per item (kg)<input id="maxItemWeightKg" type="number" min="0.1" max="1000000" step="0.1" required></label>
+              <label>Maximum item dimension (cm)<input id="maxDimensionCm" type="number" min="0.1" max="1000000" step="0.1" required></label>
+              <label>Same-day booking cutoff<input id="bookingCutoff" type="time" required></label>
+              <label>Scheduling timezone<input id="timeZone" maxlength="64" required placeholder="Australia/Melbourne"></label>
+              <label>Maximum days ahead<input id="maxScheduleDaysAhead" type="number" min="1" max="365" required></label>
+              <label>Available delivery windows (comma-separated HH:mm-HH:mm)<input id="deliveryWindows" required></label>
+              <label><input id="staleAssignmentEnabled" type="checkbox"> Escalate unaccepted courier assignments</label>
+              <label>Assignment timeout (minutes)<input id="staleAssignmentMinutes" type="number" min="1" max="10080" required></label>
+              <label><input id="unassignStaleAssignments" type="checkbox"> Unassign courier after timeout</label>
+              <div class="settings-actions">
+                <button id="saveOperationalButton" class="button button-primary" type="submit">Save operational limits</button>
+                <button id="reloadOperationalButton" class="button button-quiet" type="button">Discard changes</button>
+              </div>
+              <p id="operationalMessage" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+          <section class="panel settings-panel" aria-labelledby="courierCapacityTitle">
+            <div class="panel-heading"><div><p class="eyebrow">FLEET</p><h3 id="courierCapacityTitle">Courier vehicles and capacity</h3></div></div>
+            <p class="field-note">Configured limits are enforced when deliveries are assigned. Existing couriers without a profile remain uncapped until configured.</p>
+            <div id="courierCapacityList" class="support-list"></div>
+            <p id="courierCapacityMessage" class="form-message" role="status" aria-live="polite"></p>
+          </section>
+          <section class="panel settings-panel" aria-labelledby="configurationHistoryTitle">
+            <div class="panel-heading"><div><p class="eyebrow">CHANGE CONTROL</p><h3 id="configurationHistoryTitle">Configuration history</h3></div></div>
+            <p class="field-note">Review the last 100 pricing, email, service-level, service-area, branding, operational-limit, and fleet-capacity changes. Restoring a change creates a new history entry.</p>
+            <div id="configurationHistoryList" class="support-list"></div>
+            <p id="configurationHistoryMessage" class="form-message" role="status" aria-live="polite"></p>
           </section>
           <section class="panel settings-panel" aria-labelledby="dispatchersTitle">
             <div class="panel-heading"><div><p class="eyebrow">ACCESS</p><h3 id="dispatchersTitle">Dispatcher accounts</h3></div></div>

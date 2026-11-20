@@ -6,8 +6,13 @@ import static org.mockito.Mockito.*;
 
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
+import com.parceltracker.model.ParcelItem;
+import com.parceltracker.model.PricingSettings;
+import com.parceltracker.model.CourierAccount;
 import com.parceltracker.model.ServiceLevelSettings;
 import com.parceltracker.repository.ParcelRepository;
+import com.parceltracker.repository.CourierAccountRepository;
+import com.parceltracker.repository.OperationalSettingsRepository;
 import com.parceltracker.repository.PricingSettingsRepository;
 import com.parceltracker.repository.ServiceLevelSettingsRepository;
 import org.junit.jupiter.api.Test;
@@ -24,7 +29,8 @@ class ParcelServiceTest {
         when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
         ParcelService service = new ParcelService(repository,
                 new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class),
-                mock(CourierPushService.class), levels);
+                mock(CourierPushService.class), levels, mock(CourierAccountRepository.class),
+                new OperationalSettingsService(mock(OperationalSettingsRepository.class)));
         Parcel parcel = new Parcel();
         parcel.setDeliverySpeed("GENERAL");
         parcel.setTargetMinutes(1);
@@ -49,7 +55,8 @@ class ParcelServiceTest {
         when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
         ParcelService service = new ParcelService(repository,
                 new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class),
-                mock(CourierPushService.class), levels);
+                mock(CourierPushService.class), levels, mock(CourierAccountRepository.class),
+                new OperationalSettingsService(mock(OperationalSettingsRepository.class)));
         Parcel parcel = new Parcel();
         parcel.setDeliverySpeed("EXPRESS");
         service.create(parcel, null);
@@ -78,7 +85,8 @@ class ParcelServiceTest {
         when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
         ParcelService service = new ParcelService(repository,
                 new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class), push,
-                mock(ServiceLevelSettingsRepository.class));
+                mock(ServiceLevelSettingsRepository.class), mock(CourierAccountRepository.class),
+                new OperationalSettingsService(mock(OperationalSettingsRepository.class)));
 
         service.assignCourier("parcel", "new");
         verify(push).deliveryChanged("old");
@@ -95,7 +103,8 @@ class ParcelServiceTest {
         when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
         ParcelService service = new ParcelService(repository,
                 new DemoPricingService(mock(PricingSettingsRepository.class)), mock(ServiceAreaService.class), push,
-                mock(ServiceLevelSettingsRepository.class));
+                mock(ServiceLevelSettingsRepository.class), mock(CourierAccountRepository.class),
+                new OperationalSettingsService(mock(OperationalSettingsRepository.class)));
         Parcel parcel = new Parcel();
         parcel.setId("client-id");
         parcel.setTrackingNumber("client-tracking");
@@ -124,7 +133,8 @@ class ParcelServiceTest {
         when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
         ParcelService service = new ParcelService(repository,
                 new DemoPricingService(mock(PricingSettingsRepository.class)), area, mock(CourierPushService.class),
-                mock(ServiceLevelSettingsRepository.class));
+                mock(ServiceLevelSettingsRepository.class), mock(CourierAccountRepository.class),
+                new OperationalSettingsService(mock(OperationalSettingsRepository.class)));
         Parcel parcel = new Parcel();
         parcel.setPickupAddress("Pickup");
         parcel.setDestination("Destination");
@@ -142,7 +152,8 @@ class ParcelServiceTest {
                 .when(area).requireDelivery(anyString(), anyString());
         ParcelService service = new ParcelService(repository,
                 new DemoPricingService(mock(PricingSettingsRepository.class)), area, mock(CourierPushService.class),
-                mock(ServiceLevelSettingsRepository.class));
+                mock(ServiceLevelSettingsRepository.class), mock(CourierAccountRepository.class),
+                new OperationalSettingsService(mock(OperationalSettingsRepository.class)));
         Parcel parcel = new Parcel();
         parcel.setPickupAddress("Pickup");
         parcel.setDestination("Outside");
@@ -150,5 +161,66 @@ class ParcelServiceTest {
         assertThrows(ServiceAreaException.class, () -> service.create(parcel, "customer@example.com"));
         assertThrows(ServiceAreaException.class, () -> service.createAssigned(parcel, "courier"));
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void pricesAndStoresActualWeightFromTheIndividualItems() {
+        ParcelRepository repository = mock(ParcelRepository.class);
+        PricingSettingsRepository rates = mock(PricingSettingsRepository.class);
+        PricingSettings settings = new PricingSettings(0, 0, 1, 1);
+        settings.setWeightMode("GREATER");
+        when(rates.findById(PricingSettings.SINGLETON_ID)).thenReturn(Optional.of(settings));
+        when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
+        ParcelService service = new ParcelService(repository, new DemoPricingService(rates),
+                mock(ServiceAreaService.class), mock(CourierPushService.class), mock(ServiceLevelSettingsRepository.class),
+                mock(CourierAccountRepository.class), new OperationalSettingsService(mock(OperationalSettingsRepository.class)));
+        Parcel parcel = new Parcel();
+        parcel.setItems(java.util.List.of(new ParcelItem(1.0, 50.0, 40.0, 25.0, 2),
+                new ParcelItem(12.0, 10.0, 10.0, 10.0, 1)));
+        parcel.setWeightKg(999.0);
+        parcel.setDistanceKm(10.0);
+        parcel.setDeliverySpeed("SCHEDULED");
+        service.create(parcel, "customer@example.com");
+        assertEquals(14.0, parcel.getWeightKg());
+        assertEquals(32.0, parcel.getEstimatedPrice());
+        settings.setWeightMode("ACTUAL");
+        assertEquals(32.0, parcel.getEstimatedPrice());
+    }
+
+    @Test
+    void enforcesConfiguredCourierVehicleParcelAndPayloadLimits() {
+        ParcelRepository repository = mock(ParcelRepository.class);
+        CourierAccountRepository courierAccounts = mock(CourierAccountRepository.class);
+        CourierAccount courier = new CourierAccount("van-1", "hash");
+        courier.setVehicleType("VAN");
+        courier.setMaxActiveParcels(1);
+        courier.setMaxPayloadWeightKg(50.0);
+        when(courierAccounts.findForCapacityCheck("van-1")).thenReturn(Optional.of(courier));
+        when(repository.findByCourierIdAndStatusNotIn(anyString(), any())).thenReturn(java.util.List.of());
+        when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
+        ParcelService service = new ParcelService(repository, new DemoPricingService(mock(PricingSettingsRepository.class)),
+                mock(ServiceAreaService.class), mock(CourierPushService.class),
+                mock(ServiceLevelSettingsRepository.class), courierAccounts,
+                new OperationalSettingsService(mock(OperationalSettingsRepository.class)));
+        Parcel parcel = new Parcel();
+        parcel.setWeightKg(20.0);
+        service.createAssigned(parcel, "van-1");
+
+        Parcel existing = new Parcel();
+        existing.setId("existing");
+        existing.setCourierId("van-1");
+        existing.setWeightKg(25.0);
+        existing.setStatus(ParcelStatus.ACCEPTED);
+        when(repository.findByCourierIdAndStatusNotIn(anyString(), any())).thenReturn(java.util.List.of(existing));
+        Parcel tooHeavy = new Parcel();
+        tooHeavy.setWeightKg(30.0);
+        assertThrows(IllegalArgumentException.class, () -> service.createAssigned(tooHeavy, "van-1"));
+
+        when(repository.findByCourierIdAndStatusNotIn(anyString(), any())).thenReturn(java.util.List.of(existing));
+        courier.setMaxActiveParcels(2);
+        courier.setMaxPayloadWeightKg(40.0);
+        Parcel full = new Parcel();
+        full.setWeightKg(20.0);
+        assertThrows(IllegalArgumentException.class, () -> service.createAssigned(full, "van-1"));
     }
 }

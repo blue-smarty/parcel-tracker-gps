@@ -50,6 +50,7 @@ public class ParcelController {
         parcel.setLengthCm(request.lengthCm());
         parcel.setHeightCm(request.heightCm());
         parcel.setWeightKg(request.weightKg());
+        parcel.setItems(request.items());
         parcel.setDistanceKm(request.distanceKm());
         parcel.setStraightLineDistanceKm(request.straightLineDistanceKm());
         parcel.setDeliverySpeed(request.deliverySpeed());
