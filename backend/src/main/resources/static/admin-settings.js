@@ -101,6 +101,8 @@
     return {
       ...Object.fromEntries(fields.map(field => [field, Number(byId(field).value)])),
       pricingMode: byId('pricingMode').value,
+      weightMode: byId('weightMode').value,
+      cubicDivisor: Number(byId('cubicDivisor').value),
       radiusBands
     };
   }
@@ -113,18 +115,21 @@
       return;
     }
     try {
-      const standard = PP.estimatePrice(settings, 10, 2, 'SCHEDULED', 10);
-      const sameDay = PP.estimatePrice(settings, 10, 2, 'SAME_DAY', 10);
+      const chargeable = PP.chargeableWeight(settings, [{ weight: 2, length: 50, width: 40, height: 25, quantity: 1 }]);
+      const standard = PP.estimatePrice(settings, 10, chargeable, 'SCHEDULED', 10);
+      const sameDay = PP.estimatePrice(settings, 10, chargeable, 'SAME_DAY', 10);
       byId('pricingPreview').textContent =
-        `Example (10 km, 2 kg): scheduled ${money(standard)} · same-day ${money(sameDay)}`;
+        `Example (10 km, 2 kg, 50 × 40 × 25 cm): scheduled ${money(standard)} · same-day ${money(sameDay)}`;
     } catch (error) {
-      byId('pricingPreview').textContent = 'Add valid radius bands to preview example prices.';
+      byId('pricingPreview').textContent = 'Enter a valid cubic divisor and radius bands to preview example prices.';
     }
   }
 
   function applySettings(settings) {
     fields.forEach(field => { byId(field).value = settings[field]; });
     byId('pricingMode').value = settings.pricingMode || 'ROUTE';
+    byId('weightMode').value = settings.weightMode || 'ACTUAL';
+    byId('cubicDivisor').value = settings.cubicDivisor ?? 5000;
     radiusBands = (settings.radiusBands || []).map(band => ({ ...band }));
     renderRadiusBands();
     updatePricingMode();
@@ -199,6 +204,60 @@
     }
   }
 
+  function applySmtp(settings) {
+    byId('smtpHost').value = settings?.host || '';
+    byId('smtpPort').value = settings?.port || 587;
+    byId('smtpFrom').value = settings?.fromAddress || '';
+    byId('smtpSecurity').value = settings?.security || 'STARTTLS';
+    byId('smtpAuth').checked = settings?.authentication || false;
+    byId('smtpUsername').value = settings?.username || '';
+  }
+
+  async function loadSmtp() {
+    try {
+      const settings = await api('/api/admin/smtp');
+      applySmtp(settings);
+      setMessage('smtpMessage', settings ? 'Current SMTP settings loaded.' : 'Using deployment SMTP settings until saved here.');
+    } catch (error) {
+      setMessage('smtpMessage', `Could not load SMTP settings: ${error.message}`, 'error');
+    }
+  }
+
+  async function saveSmtp(event) {
+    event.preventDefault();
+    const button = byId('saveSmtpButton');
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      const settings = await api('/api/admin/smtp', { method: 'PUT', body: JSON.stringify({
+        host: byId('smtpHost').value.trim(), port: Number(byId('smtpPort').value),
+        fromAddress: byId('smtpFrom').value.trim(), security: byId('smtpSecurity').value,
+        authentication: byId('smtpAuth').checked, username: byId('smtpUsername').value.trim()
+      }) });
+      applySmtp(settings);
+      setMessage('smtpMessage', 'SMTP settings saved.', 'success');
+    } catch (error) {
+      setMessage('smtpMessage', `Could not save SMTP settings: ${error.message}`, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function clearSmtp() {
+    if (!window.confirm('Remove saved SMTP settings and use deployment settings instead?')) return;
+    const button = byId('clearSmtpButton');
+    button.disabled = true;
+    try {
+      await api('/api/admin/smtp', { method: 'DELETE' });
+      applySmtp(null);
+      setMessage('smtpMessage', 'Saved SMTP settings removed; using deployment settings.', 'success');
+    } catch (error) {
+      setMessage('smtpMessage', `Could not remove SMTP settings: ${error.message}`, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function createDispatcher(event) {
     event.preventDefault();
     const button = byId('createDispatcherButton');
@@ -268,10 +327,15 @@
     });
     byId('reloadPricingButton').addEventListener('click', loadPricing);
     byId('dispatcherForm').addEventListener('submit', createDispatcher);
+    byId('smtpForm').addEventListener('submit', saveSmtp);
+    byId('reloadSmtpButton').addEventListener('click', loadSmtp);
+    byId('clearSmtpButton').addEventListener('click', clearSmtp);
+    byId('weightMode').addEventListener('change', renderPreview);
+    byId('cubicDivisor').addEventListener('input', renderPreview);
     fields.forEach(field => byId(field).addEventListener('input', renderPreview));
     byId('settingsView').hidden = false;
     byId('settingsView').classList.add('active-view');
-    await Promise.all([loadPricing(), loadDispatchers(), loadServiceLevels()]);
+    await Promise.all([loadPricing(), loadDispatchers(), loadServiceLevels(), loadSmtp()]);
   }
 
   initialize();

@@ -71,6 +71,11 @@
                 <p id="radiusBandsMessage" class="form-message" role="status"></p>
               </div>
               <label>Rate per kilogram ($)<input id="perKgRate" type="number" min="0" max="100000" step="0.01" required></label>
+              <label>Chargeable weight
+                <select id="weightMode"><option value="ACTUAL">Actual (dead) weight</option><option value="CUBIC">Cubic weight</option><option value="GREATER">Greater of actual and cubic per item</option></select>
+              </label>
+              <label>Cubic divisor (cm³ per kg)<input id="cubicDivisor" type="number" min="1" max="1000000" step="any" required></label>
+              <p class="field-note">Cubic weight per item is length × width × height (cm) divided by the divisor. Item weights are multiplied by quantity and summed. Cubic modes require individual item dimensions.</p>
               <label>Same-day multiplier<input id="sameDayMultiplier" type="number" min="1" max="10" step="0.01" required></label>
               <p class="field-note">Formula: (base fee + route/radius distance charge + weight × kilogram rate) × speed multiplier. Radius distance is the straight-line distance between the geocoded pickup and delivery addresses.</p>
               <div id="pricingPreview" class="settings-preview" aria-live="polite"></div>
@@ -79,6 +84,24 @@
                 <button id="reloadPricingButton" class="button button-quiet" type="button">Discard changes</button>
               </div>
               <p id="pricingMessage" class="form-message" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+          <section class="panel settings-panel" aria-labelledby="smtpTitle">
+            <div class="panel-heading"><div><p class="eyebrow">CUSTOMER EMAIL</p><h3 id="smtpTitle">SMTP settings</h3></div></div>
+            <p class="field-note">Used for customer password reset email. Enable password recovery and set its public URL in deployment configuration. Set the SMTP password as the SPRING_MAIL_PASSWORD deployment secret; it is never stored here. Saving overrides deployment mail host settings.</p>
+            <form id="smtpForm" class="settings-form">
+              <label>SMTP host<input id="smtpHost" maxlength="253" required></label>
+              <label>Port<input id="smtpPort" type="number" min="1" max="65535" step="1" value="587" required></label>
+              <label>From email address<input id="smtpFrom" type="email" maxlength="255" required></label>
+              <label>Security<select id="smtpSecurity"><option value="STARTTLS">STARTTLS</option><option value="TLS">TLS</option><option value="NONE">None</option></select></label>
+              <label><input id="smtpAuth" type="checkbox"> Use SMTP authentication</label>
+              <label>Username<input id="smtpUsername" maxlength="255" autocomplete="off"></label>
+              <div class="settings-actions">
+                <button id="saveSmtpButton" class="button button-primary" type="submit">Save SMTP settings</button>
+                <button id="reloadSmtpButton" class="button button-quiet" type="button">Discard changes</button>
+                <button id="clearSmtpButton" class="button button-quiet" type="button">Use deployment settings</button>
+              </div>
+              <p id="smtpMessage" class="form-message" role="status" aria-live="polite"></p>
             </form>
           </section>
           <section class="panel settings-panel" aria-labelledby="dispatchersTitle">

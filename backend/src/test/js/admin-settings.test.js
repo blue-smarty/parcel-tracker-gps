@@ -22,6 +22,14 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
   const messages = {};
   const PP = {
     byId, money: value => `$${Number(value).toFixed(2)}`,
+    chargeableWeight(pricing, items) {
+      return items.reduce((sum, item) => {
+        const cubic = item.length * item.width * item.height / pricing.cubicDivisor;
+        const each = pricing.weightMode === 'CUBIC' ? cubic
+          : pricing.weightMode === 'GREATER' ? Math.max(item.weight, cubic) : item.weight;
+        return sum + each * item.quantity;
+      }, 0);
+    },
     estimatePrice(pricing, distance, weight, speed, radiusDistance) {
       const charge = pricing.pricingMode === 'RADIUS'
         ? pricing.radiusBands.find(band => band.upToKm == null || radiusDistance <= band.upToKm)?.distanceFee
@@ -48,6 +56,7 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
         return { generalMinutes: 240, expressMinutes: 120, targetStart: 'BOOKING' };
       }
       if (route === '/api/admin/service-levels') return JSON.parse(options.body);
+      if (route === '/api/admin/smtp') return options?.method === 'PUT' ? JSON.parse(options.body) : null;
       if (route === '/api/admin/dispatchers') return [];
       throw new Error(`Unexpected request ${route}`);
     }
@@ -84,7 +93,7 @@ test('loads current pricing and previews sample estimates', async () => {
   const { byId, messages } = await setup();
   assert.equal(byId('settingsView').hidden, false);
   assert.equal(byId('baseFee').value, 5);
-  assert.equal(byId('pricingPreview').textContent, 'Example (10 km, 2 kg): scheduled $18.00 · same-day $31.50');
+  assert.equal(byId('pricingPreview').textContent, 'Example (10 km, 2 kg, 50 × 40 × 25 cm): scheduled $18.00 · same-day $31.50');
   assert.equal(messages.pricingMessage.kind, '');
 });
 
@@ -96,7 +105,7 @@ test('saves edited rates and reports success', async () => {
   assert.equal(request.options.method, 'PUT');
   assert.deepEqual(JSON.parse(request.options.body), {
     baseFee: 7, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75,
-    pricingMode: 'ROUTE', radiusBands: []
+    pricingMode: 'ROUTE', weightMode: 'ACTUAL', cubicDivisor: 5000, radiusBands: []
   });
   assert.match(messages.pricingMessage.message, /Pricing saved/);
 });
@@ -115,7 +124,35 @@ test('saves configurable radius bands and shows a radius-based preview', async (
   const request = requests.find(item => item.route === '/api/admin/pricing' && item.options?.method === 'PUT');
   assert.deepEqual(JSON.parse(request.options.body).radiusBands, [{ upToKm: null, distanceFee: 12 }]);
   assert.equal(JSON.parse(request.options.body).pricingMode, 'RADIUS');
-  assert.equal(byId('pricingPreview').textContent, 'Example (10 km, 2 kg): scheduled $18.00 · same-day $31.50');
+  assert.equal(byId('pricingPreview').textContent, 'Example (10 km, 2 kg, 50 × 40 × 25 cm): scheduled $18.00 · same-day $31.50');
+});
+
+test('previews and saves cubic weight pricing', async () => {
+  const { byId, requests } = await setup();
+  byId('weightMode').value = 'CUBIC';
+  byId('weightMode').listeners.change();
+  assert.match(byId('pricingPreview').textContent, /scheduled \$22\.00/);
+  await byId('pricingForm').listeners.submit({ preventDefault() {} });
+  const body = JSON.parse(requests.find(item => item.route === '/api/admin/pricing').options.body);
+  assert.equal(body.weightMode, 'CUBIC');
+  assert.equal(body.cubicDivisor, 5000);
+});
+
+test('saves SMTP settings and can return to deployment settings', async () => {
+  const { byId, requests, messages } = await setup();
+  byId('smtpHost').value = 'smtp.example.com';
+  byId('smtpPort').value = '587';
+  byId('smtpFrom').value = 'support@example.com';
+  byId('smtpSecurity').value = 'STARTTLS';
+  byId('smtpAuth').checked = true;
+  byId('smtpUsername').value = 'mailer';
+  await byId('smtpForm').listeners.submit({ preventDefault() {} });
+  const save = requests.find(item => item.route === '/api/admin/smtp' && item.options?.method === 'PUT');
+  assert.deepEqual(JSON.parse(save.options.body), { host: 'smtp.example.com', port: 587,
+    fromAddress: 'support@example.com', security: 'STARTTLS', authentication: true, username: 'mailer' });
+  await byId('clearSmtpButton').listeners.click();
+  assert.equal(requests.some(item => item.route === '/api/admin/smtp' && item.options?.method === 'DELETE'), true);
+  assert.match(messages.smtpMessage.message, /deployment settings/);
 });
 
 test('shows pricing load and save errors instead of claiming success', async () => {

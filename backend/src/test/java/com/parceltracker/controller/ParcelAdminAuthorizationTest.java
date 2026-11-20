@@ -77,6 +77,23 @@ class ParcelAdminAuthorizationTest {
     }
 
     @Test
+    void adhocCarriesAndValidatesIndividualItems() throws Exception {
+        when(accounts.existsById("courier-1")).thenReturn(true);
+        when(service.createAssigned(any(Parcel.class), eq("courier-1"))).thenAnswer(call -> call.getArgument(0));
+        String item = "\"items\":[{\"weight\":2,\"length\":30,\"width\":20,\"height\":10,\"quantity\":2}],";
+        mvc.perform(post("/api/parcels/adhoc").with(user("admin").roles("ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(ADHOC.replace("{", "{" + item)))
+                .andExpect(status().isCreated());
+        ArgumentCaptor<Parcel> parcel = ArgumentCaptor.forClass(Parcel.class);
+        verify(service).createAssigned(parcel.capture(), eq("courier-1"));
+        assertEquals(2, parcel.getValue().getItems().get(0).quantity());
+        mvc.perform(post("/api/parcels/adhoc").with(user("admin").roles("ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(ADHOC.replace("{", "{" + item.replace("\"width\":20", "\"width\":0"))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void adhocRequiresAdminAndCsrf() throws Exception {
         mvc.perform(post("/api/parcels/adhoc").with(user("customer").roles("CUSTOMER")).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(ADHOC))

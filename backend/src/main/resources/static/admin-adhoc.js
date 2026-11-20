@@ -13,7 +13,7 @@
   const route = { request: 0, distanceKm: null, straightLineDistanceKm: null, origin: '', destination: '' };
   const speed = () => document.querySelector('input[name="speed"]:checked').value;
   const positive = value => Number.isFinite(value) && value > 0;
-  let pricing = { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75 };
+  let pricing = null;
 
   function addItem(id, change) {
     const item = catalog.find(entry => entry.id === id);
@@ -91,7 +91,8 @@
   function totals() {
     const all = [...lines.values()];
     const weight = all.reduce((sum, line) => sum + line.quantity * line.weight, 0);
-    const valid = all.length > 0 && all.every(line => [line.weight, line.length, line.width, line.height].every(positive));
+    const valid = all.length > 0 && all.every(line =>
+      [line.weight, line.length, line.width, line.height].every(value => positive(value) && value <= 10000));
     return { all, weight, valid };
   }
 
@@ -107,8 +108,8 @@
     byId('ticketWeight').textContent = valid ? `${(Math.round(weight * 100) / 100).toLocaleString()} kg` : '—';
     byId('ticketDistance').textContent = positive(distance) ? `${distance} km` : '—';
     byId('ticketSpeed').textContent = PP.serviceLevelName(selectedSpeed);
-    const amount = valid && positive(distance) && route.straightLineDistanceKm != null
-      ? estimatePrice(pricing, distance, weight, selectedSpeed, route.straightLineDistanceKm)
+    const amount = valid && pricing && positive(distance) && route.straightLineDistanceKm != null
+      ? estimatePrice(pricing, distance, PP.chargeableWeight(pricing, all), selectedSpeed, route.straightLineDistanceKm)
       : null;
     byId('ticketPrice').textContent = amount === null ? '$—' : money(Math.round(amount * 100) / 100);
   }
@@ -183,7 +184,7 @@
   function buildPayload() {
     const { all, weight, valid } = totals();
     if (!all.length) throw new Error('Choose at least one item to send.');
-    if (!valid) throw new Error('Enter a weight and size greater than zero for each item.');
+    if (!valid) throw new Error('Enter a weight and dimensions greater than zero and at most 10,000 for each item.');
     const origin = byId('adhocPickup').value.trim();
     const destination = byId('adhocDestination').value.trim();
     if (!positive(route.distanceKm) || route.origin !== origin || route.destination !== destination) {
@@ -202,6 +203,7 @@
       lengthCm: Math.max(...all.map(line => line.length)),
       heightCm: all.reduce((sum, line) => sum + line.quantity * line.height, 0),
       weightKg: weight,
+      items: all.map(({ weight, length, width, height, quantity }) => ({ weight, length, width, height, quantity })),
       distanceKm: route.distanceKm,
       straightLineDistanceKm: route.straightLineDistanceKm,
       deliverySpeed: speed(),

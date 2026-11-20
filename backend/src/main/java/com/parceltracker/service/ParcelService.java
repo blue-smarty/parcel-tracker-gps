@@ -76,13 +76,12 @@ public class ParcelService {
                 parcel.setTargetDeadline(now.plusSeconds(minutes * 60L));
             }
         }
-        if (parcel.getDistanceKm() != null && parcel.getWeightKg() != null
-                && parcel.getDeliverySpeed() != null) {
-            parcel.setEstimatedPrice(pricing.estimate(parcel.getDistanceKm(), parcel.getWeightKg(),
-                    parcel.getDeliverySpeed(), parcel.getStraightLineDistanceKm()));
-        } else {
-            parcel.setEstimatedPrice(null);
+        if (parcel.getItems() != null && !parcel.getItems().isEmpty()) {
+            parcel.setWeightKg(parcel.getItems().stream()
+                    .mapToDouble(item -> item.weight() * item.quantity()).sum());
         }
+        parcel.setEstimatedPrice(pricing.estimateParcel(parcel.getDistanceKm(), parcel.getWeightKg(),
+                parcel.getDeliverySpeed(), parcel.getStraightLineDistanceKm(), parcel.getItems()));
         parcel.setCreatedAt(now);
         parcel.setUpdatedAt(now);
     }

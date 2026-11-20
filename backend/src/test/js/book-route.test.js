@@ -35,7 +35,9 @@ async function setup(routeRequest, speed = 'SAME_DAY') {
   const maps = [];
   const bookings = [];
   const PP = {
-    byId, money: String, estimatePrice: () => 10, serviceLevelName: String, showServiceTargets() {},
+    byId, money: String, estimatePrice: () => 10,
+    chargeableWeight: (pricing, items) => items.reduce((sum, item) => sum + item.weight * item.quantity, 0),
+    serviceLevelName: String, showServiceTargets() {},
     setMessage: (id, message) => { byId(id).textContent = message; }, signOut() {},
     requireRole: async () => ({ name: 'Customer', username: 'customer' }),
     customerTracking: { initialize() {}, refresh: async () => {} },
@@ -129,6 +131,7 @@ test('requires a current calculated route before submitting a booking', async ()
   assert.equal(bookings.length, 1);
   assert.equal(bookings[0].distanceKm, 12.3);
   assert.equal(bookings[0].straightLineDistanceKm, 11);
+  assert.deepEqual(bookings[0].items, [{ weight: 0.5, length: 32, width: 23, height: 2, quantity: 1 }]);
 
   byId('deliveryAddress').value = 'Different address';
   byId('builderForm').dispatch('submit');

@@ -3,7 +3,6 @@
   const maxPackages = 10;
   const types = ['Carton/box', 'Documents', 'Satchel', 'Pallet', 'Other'];
   let routeRequest = 0;
-  let pricing = null;
 
   function numberField(label, name, min, max, step = '0.1') {
     const wrapper = document.createElement('label');
@@ -73,10 +72,10 @@
     byId('calculateQuote').disabled = false;
   }
 
-  function packageWeight() {
+  function packageItems() {
     const rows = [...byId('quotePackages').children];
     if (!rows.length) throw new Error('Add at least one package item.');
-    let total = 0;
+    const items = [];
     for (const row of rows) {
       const values = Object.fromEntries([...row.querySelectorAll('input')].map(input => [input.name, Number(input.value)]));
       for (const field of ['weight', 'length', 'width', 'height', 'quantity']) {
@@ -88,10 +87,9 @@
           || values.width > 10000 || values.height > 10000) {
         throw new Error('Check the quantity, weight and dimensions for each item.');
       }
-      total += values.weight * values.quantity;
+      items.push(values);
     }
-    if (!Number.isFinite(total)) throw new Error('The combined package weight is too large.');
-    return total;
+    return items;
   }
 
   async function calculate(event) {
@@ -102,9 +100,9 @@
       setMessage('quoteMessage', 'Enter both origin and destination.', 'error');
       return;
     }
-    let weight;
+    let items;
     try {
-      weight = packageWeight();
+      items = packageItems();
     } catch (error) {
       setMessage('quoteMessage', error.message, 'error');
       return;
@@ -118,7 +116,7 @@
     try {
       const [route, currentPricing] = await Promise.all([
         api('/api/booking-route', { method: 'POST', body: JSON.stringify({ origin, destination }) }),
-        pricing ? Promise.resolve(pricing) : api('/api/pricing')
+        api('/api/pricing')
       ]);
       if (requestId !== routeRequest) return;
       if (!Number.isFinite(route.distanceMeters) || route.distanceMeters < 0
@@ -131,9 +129,9 @@
           .every(value => Number.isFinite(value) && value >= 0)) {
         throw new Error('Current pricing is unavailable.');
       }
-      pricing = currentPricing;
+      const weight = PP.chargeableWeight(currentPricing, items);
       const distance = Math.max(0.1, Math.round(route.distanceMeters / 100) / 10);
-      const price = estimatePrice(pricing, distance, weight, 'SCHEDULED', route.straightLineDistanceKm);
+      const price = estimatePrice(currentPricing, distance, weight, 'SCHEDULED', route.straightLineDistanceKm);
       byId('quoteDistance').textContent = `${distance} km`;
       byId('quoteRadiusDistance').textContent = `${Math.round(route.straightLineDistanceKm * 100) / 100} km`;
       byId('quoteWeight').textContent = `${Math.round(weight * 100) / 100} kg`;

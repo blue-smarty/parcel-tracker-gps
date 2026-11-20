@@ -49,6 +49,7 @@ async function setup(api = async () => {}) {
     byId,
     api,
     money: value => `$${value.toFixed(2)}`,
+    chargeableWeight: (pricing, items) => items.reduce((sum, item) => sum + item.weight * item.quantity, 0),
     estimatePrice(pricing, distance, weight, speed, radiusDistance) {
       const charge = pricing.pricingMode === 'RADIUS'
         ? pricing.radiusBands.find(band => band.upToKm == null || radiusDistance <= band.upToKm).distanceFee

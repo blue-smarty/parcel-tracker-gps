@@ -6,6 +6,8 @@ import static org.mockito.Mockito.*;
 
 import com.parceltracker.model.Parcel;
 import com.parceltracker.model.ParcelStatus;
+import com.parceltracker.model.ParcelItem;
+import com.parceltracker.model.PricingSettings;
 import com.parceltracker.model.ServiceLevelSettings;
 import com.parceltracker.repository.ParcelRepository;
 import com.parceltracker.repository.PricingSettingsRepository;
@@ -150,5 +152,28 @@ class ParcelServiceTest {
         assertThrows(ServiceAreaException.class, () -> service.create(parcel, "customer@example.com"));
         assertThrows(ServiceAreaException.class, () -> service.createAssigned(parcel, "courier"));
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void pricesAndStoresActualWeightFromTheIndividualItems() {
+        ParcelRepository repository = mock(ParcelRepository.class);
+        PricingSettingsRepository rates = mock(PricingSettingsRepository.class);
+        PricingSettings settings = new PricingSettings(0, 0, 1, 1);
+        settings.setWeightMode("GREATER");
+        when(rates.findById(PricingSettings.SINGLETON_ID)).thenReturn(Optional.of(settings));
+        when(repository.save(any(Parcel.class))).thenAnswer(call -> call.getArgument(0));
+        ParcelService service = new ParcelService(repository, new DemoPricingService(rates),
+                mock(ServiceAreaService.class), mock(CourierPushService.class), mock(ServiceLevelSettingsRepository.class));
+        Parcel parcel = new Parcel();
+        parcel.setItems(java.util.List.of(new ParcelItem(1.0, 50.0, 40.0, 25.0, 2),
+                new ParcelItem(12.0, 10.0, 10.0, 10.0, 1)));
+        parcel.setWeightKg(999.0);
+        parcel.setDistanceKm(10.0);
+        parcel.setDeliverySpeed("SCHEDULED");
+        service.create(parcel, "customer@example.com");
+        assertEquals(14.0, parcel.getWeightKg());
+        assertEquals(32.0, parcel.getEstimatedPrice());
+        settings.setWeightMode("ACTUAL");
+        assertEquals(32.0, parcel.getEstimatedPrice());
     }
 }

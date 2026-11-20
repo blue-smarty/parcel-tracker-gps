@@ -15,7 +15,8 @@ public class PricingController {
     private static final double MAX_RATE = 100_000.0;
 
     public record PricingRequest(Double baseFee, Double perKmRate, Double perKgRate, Double sameDayMultiplier,
-            String pricingMode, List<PricingSettings.RadiusBand> radiusBands) { }
+            String pricingMode, List<PricingSettings.RadiusBand> radiusBands,
+            String weightMode, Double cubicDivisor) { }
 
     private final PricingSettingsRepository repository;
 
@@ -43,12 +44,20 @@ public class PricingController {
         validateRadiusBands(pricingMode, radiusBands);
         PricingSettings settings = repository.findById(PricingSettings.SINGLETON_ID)
                 .orElseGet(PricingSettings::defaults);
+        String weightMode = request.weightMode() == null ? settings.getWeightMode() : request.weightMode();
+        double cubicDivisor = request.cubicDivisor() == null ? settings.getCubicDivisor() : request.cubicDivisor();
+        if (!List.of("ACTUAL", "CUBIC", "GREATER").contains(weightMode)) {
+            throw invalid("Weight mode must be ACTUAL, CUBIC or GREATER.");
+        }
+        validate("Cubic divisor", cubicDivisor, 1, 1_000_000);
         settings.setBaseFee(request.baseFee());
         settings.setPerKmRate(request.perKmRate());
         settings.setPerKgRate(request.perKgRate());
         settings.setSameDayMultiplier(request.sameDayMultiplier());
         settings.setPricingMode(pricingMode);
         settings.setRadiusBands(radiusBands);
+        settings.setWeightMode(weightMode);
+        settings.setCubicDivisor(cubicDivisor);
         return repository.save(settings);
     }
 

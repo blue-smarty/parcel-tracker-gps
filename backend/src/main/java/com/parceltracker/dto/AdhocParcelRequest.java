@@ -6,6 +6,10 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
+import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import com.parceltracker.model.ParcelItem;
 
 public record AdhocParcelRequest(
         @NotBlank @Size(max = 255) String sender,
@@ -19,6 +23,7 @@ public record AdhocParcelRequest(
         @Positive Double lengthCm,
         @Positive Double heightCm,
         @Positive Double weightKg,
+        @Valid @Size(max = 10) List<@NotNull ParcelItem> items,
         @Positive Double distanceKm,
         @DecimalMin("0.0") Double straightLineDistanceKm,
         @Pattern(regexp = "SAME_DAY|SCHEDULED|GENERAL|EXPRESS|DIRECT") String deliverySpeed,

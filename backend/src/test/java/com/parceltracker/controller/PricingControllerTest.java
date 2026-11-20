@@ -105,4 +105,21 @@ class PricingControllerTest {
                 .andExpect(status().isForbidden());
         verify(pricingSettings, never()).save(any(PricingSettings.class));
     }
+
+    @Test
+    void savesWeightModeAndRejectsInvalidDivisor() throws Exception {
+        when(pricingSettings.save(any(PricingSettings.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        String body = """
+                {"baseFee":5,"perKmRate":1.2,"perKgRate":0.5,"sameDayMultiplier":1.75,
+                 "weightMode":"GREATER","cubicDivisor":4000}
+                """;
+        mvc.perform(put("/api/admin/pricing").with(user("ops").roles("ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.weightMode").value("GREATER"))
+                .andExpect(jsonPath("$.cubicDivisor").value(4000));
+        mvc.perform(put("/api/admin/pricing").with(user("ops").roles("ADMIN")).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(body.replace("4000", "0")))
+                .andExpect(status().isBadRequest());
+    }
 }

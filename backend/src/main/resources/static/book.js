@@ -12,7 +12,7 @@
   ];
   const sizeRank = { SMALL: 0, MEDIUM: 1, LARGE: 2 };
   const maxQuantity = 20;
-  let pricing = { baseFee: 5, perKmRate: 1.2, perKgRate: 0.5, sameDayMultiplier: 1.75 };
+  let pricing = null;
   const lines = new Map();
   const route = { request: 0, distanceKm: null, straightLineDistanceKm: null, origin: '', destination: '' };
   let user = null;
@@ -105,7 +105,8 @@
   function totals() {
     const all = [...lines.values()];
     const weight = all.reduce((sum, line) => sum + line.quantity * line.weight, 0);
-    const valid = all.length > 0 && all.every(line => [line.weight, line.length, line.width, line.height].every(positive));
+    const valid = all.length > 0 && all.every(line =>
+      [line.weight, line.length, line.width, line.height].every(value => positive(value) && value <= 10000));
     return { all, weight, valid };
   }
 
@@ -123,13 +124,13 @@
       ? `${distance} km route · ${Math.round((route.straightLineDistanceKm || 0) * 100) / 100} km straight-line` : '—';
     byId('ticketSpeed').textContent = PP.serviceLevelName(speed());
     byId('ticketPrice').textContent = valid && positive(distance) && pricing
-      ? money(estimatePrice(pricing, distance, weight, speed(), route.straightLineDistanceKm)) : '$—';
+      ? money(estimatePrice(pricing, distance, PP.chargeableWeight(pricing, all), speed(), route.straightLineDistanceKm)) : '$—';
   }
 
   function buildPayload() {
     const { all, weight, valid } = totals();
     if (!all.length) throw new Error('Choose at least one item to send.');
-    if (!valid) throw new Error('Enter a weight and size greater than zero for each item.');
+    if (!valid) throw new Error('Enter a weight and dimensions greater than zero and at most 10,000 for each item.');
     const distance = route.distanceKm;
     if (!positive(distance) || route.origin !== byId('pickupAddress').value.trim()
         || route.destination !== byId('deliveryAddress').value.trim()) {
@@ -152,6 +153,7 @@
       lengthCm: Math.max(...all.map(line => line.length)),
       heightCm: all.reduce((sum, line) => sum + line.quantity * line.height, 0),
       weightKg: weight,
+      items: all.map(({ weight, length, width, height, quantity }) => ({ weight, length, width, height, quantity })),
       distanceKm: distance,
       straightLineDistanceKm: route.straightLineDistanceKm,
       deliverySpeed: speed(),

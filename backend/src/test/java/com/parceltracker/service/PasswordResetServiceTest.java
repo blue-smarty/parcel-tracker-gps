@@ -38,16 +38,18 @@ class PasswordResetServiceTest {
     private final CustomerAccountRepository customers = mock(CustomerAccountRepository.class);
     private final PasswordResetTokenRepository tokens = mock(PasswordResetTokenRepository.class);
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
+    private final SmtpSettingsService smtpSettings = mock(SmtpSettingsService.class);
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     @SuppressWarnings("unchecked")
     private final org.springframework.beans.factory.ObjectProvider<JavaMailSender> mailProvider =
             mock(org.springframework.beans.factory.ObjectProvider.class);
     private final PasswordResetService service = new PasswordResetService(
             customers, tokens, passwordEncoder, mailProvider, "support@example.com",
-            "https://parcel.example/forgot-password.html");
+            "https://parcel.example/forgot-password.html", smtpSettings);
 
     {
         when(mailProvider.getIfAvailable()).thenReturn(mailSender);
+        when(smtpSettings.configuredMail()).thenReturn(Optional.empty());
     }
 
     @Test
@@ -85,6 +87,20 @@ class PasswordResetServiceTest {
         service.requestReset(EMAIL);
 
         verify(tokens, never()).save(any(PasswordResetToken.class));
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void usesAdminConfiguredSenderAndFromAddress() {
+        JavaMailSender configured = mock(JavaMailSender.class);
+        when(smtpSettings.configuredMail()).thenReturn(Optional.of(
+                new SmtpSettingsService.ConfiguredMail(configured, "new@example.com")));
+        when(customers.findById(EMAIL)).thenReturn(Optional.of(
+                new CustomerAccount(EMAIL, "Ada", passwordEncoder.encode("old password value"))));
+        service.requestReset(EMAIL);
+        ArgumentCaptor<SimpleMailMessage> message = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(configured).send(message.capture());
+        assertEquals("new@example.com", message.getValue().getFrom());
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
