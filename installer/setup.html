@@ -52,7 +52,20 @@
       event.preventDefault();
       const button = form.querySelector("button");
       button.disabled = true;
-      status.textContent = "Installing and starting the backend. This can take several minutes; keep this page open.";
+      status.textContent = "Starting installation. Keep this page open.";
+      let installing = true;
+      const pollProgress = async () => {
+        try {
+          const response = await fetch("/status", {headers: {"X-Setup-Token": token}});
+          if (!response.ok) throw new Error("Status request failed");
+          const result = await response.json();
+          if (installing && result.message !== "Waiting for installation.") status.textContent = result.message;
+        } catch (error) {
+          if (installing) status.textContent = "Unable to retrieve progress; installation may still be running. Check the setup terminal.";
+        }
+        if (installing) setTimeout(pollProgress, 2000);
+      };
+      setTimeout(pollProgress, 500);
       try {
         const response = await fetch("/install", {
           method: "POST",
@@ -60,6 +73,7 @@
           body: JSON.stringify(Object.fromEntries(new FormData(form)))
         });
         const result = await response.json();
+        installing = false;
         status.textContent = result.message;
         if (response.ok) {
           form.reset();
@@ -72,6 +86,7 @@
           button.disabled = false;
         }
       } catch (error) {
+        installing = false;
         status.textContent = "The setup server could not be reached. Check the terminal for details.";
         button.disabled = false;
       }

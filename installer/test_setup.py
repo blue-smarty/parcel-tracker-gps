@@ -3,6 +3,8 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -65,6 +67,21 @@ class ValidationTest(unittest.TestCase):
             self.assertEqual("untouched", marker.read_text())
 
 
+class CommandTest(unittest.TestCase):
+    def test_file_capture_does_not_wait_for_descendant_to_close_output(self):
+        script = ("import subprocess, sys; "
+                  "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(2)']); "
+                  "print('finished')")
+        self.assertEqual("finished", setup.command(
+            [sys.executable, "-c", script], timeout=1, capture_to_file=True))
+
+    def test_package_timeout_warns_about_remaining_processes(self):
+        with mock.patch.object(setup.subprocess, "run",
+                               side_effect=subprocess.TimeoutExpired("sudo", 1800)):
+            with self.assertRaisesRegex(setup.SetupError, "may still be running"):
+                setup.command(["sudo"], capture_to_file=True, timeout=1800)
+
+
 class InstallTest(unittest.TestCase):
     def test_installs_and_starts_without_exposing_postgres_password(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -98,6 +115,7 @@ class InstallTest(unittest.TestCase):
             response.__enter__.return_value.status = 200
             data = form(directory)
             data["pg_host"] = "database.example.com"
+            progress = []
             with mock.patch.object(setup, "ROOT", root), \
                     mock.patch.object(setup.shutil, "which", return_value="/usr/bin/test"), \
                     mock.patch.object(setup, "command", side_effect=command), \
@@ -106,7 +124,10 @@ class InstallTest(unittest.TestCase):
                                        return_value='"runner","S-1-5-21-1"'), \
                     mock.patch.object(setup.subprocess, "Popen", side_effect=launch), \
                     mock.patch.object(setup.urllib.request, "urlopen", return_value=response):
-                self.assertIn("Installation complete", setup.install(data))
+                self.assertIn("Installation complete", setup.install(data, progress.append))
+
+            self.assertTrue(any("Building" in message for message in progress))
+            self.assertTrue(any("Starting" in message for message in progress))
 
             config = json.loads((directory / "config.json").read_text())
             self.assertEqual("admin password 123", config["PARCEL_ADMIN_PASSWORD"])
@@ -174,8 +195,10 @@ class PostgresInstallTest(unittest.TestCase):
 
     def test_installs_and_sets_password_over_stdin(self):
         calls = self.run_installer()
-        self.assertIn(["sudo", "-n", "apt-get", "-y", "install", "postgresql-16", "postgresql-client-16"],
-                      [args for args, _ in calls])
+        apt = next((args, kwargs) for args, kwargs in calls if "apt-get" in args)
+        self.assertEqual(["sudo", "-n", "apt-get", "-o", "Dpkg::Use-Pty=0", "-y", "install",
+                          "postgresql-16", "postgresql-client-16"], apt[0])
+        self.assertEqual({"timeout": 1800, "capture_to_file": True}, apt[1])
         args, kwargs = calls[-1]
         self.assertEqual(["sudo", "-n", "-u", "postgres", "psql"], args[:5])
         self.assertNotIn("safe'password123", str(args))
@@ -213,6 +236,7 @@ class ServerTest(unittest.TestCase):
     def setUp(self):
         self.server = setup.ThreadingHTTPServer(("127.0.0.1", 0), setup.make_handler("private-token"))
         self.server.install_lock = threading.Lock()
+        self.server.progress = "Waiting for installation."
         self.thread = threading.Thread(target=self.server.serve_forever)
         self.thread.start()
         self.host = "127.0.0.1:{}".format(self.server.server_port)
@@ -250,7 +274,8 @@ class ServerTest(unittest.TestCase):
             status, body = self.request("POST", "/install", headers, json.dumps({"a": 1}))
             self.assertEqual(200, status)
             self.assertEqual("complete", json.loads(body)["message"])
-            install.assert_called_once_with({"a": 1})
+            install.assert_called_once()
+            self.assertEqual({"a": 1}, install.call_args.args[0])
             self.thread.join(timeout=3)
             self.assertFalse(self.thread.is_alive())
 
@@ -262,6 +287,32 @@ class ServerTest(unittest.TestCase):
             self.assertEqual(400, status)
             self.assertNotIn(b"secret", body)
             self.assertTrue(self.thread.is_alive())
+
+    def test_progress_requires_token_and_reports_current_step(self):
+        self.assertEqual(403, self.request("GET", "/status")[0])
+        self.assertEqual(403, self.request("GET", "/status", {"X-Setup-Token": "wrong"})[0])
+        started = threading.Event()
+        release = threading.Event()
+        headers = {"Host": self.host, "Content-Type": "application/json",
+                   "Origin": "http://" + self.host, "X-Setup-Token": "private-token"}
+
+        def fake_install(data, progress):
+            progress("Building the backend with Maven.")
+            started.set()
+            release.wait(5)
+            raise setup.SetupError("installation stopped")
+
+        with mock.patch.object(setup, "install", side_effect=fake_install):
+            worker = threading.Thread(target=self.request, args=("POST", "/install", headers, "{}"))
+            worker.start()
+            try:
+                self.assertTrue(started.wait(5))
+                status, body = self.request("GET", "/status", {"X-Setup-Token": "private-token"})
+                self.assertEqual(200, status)
+                self.assertEqual("Building the backend with Maven.", json.loads(body)["message"])
+            finally:
+                release.set()
+                worker.join()
 
 
 if __name__ == "__main__":

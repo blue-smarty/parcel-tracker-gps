@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Local, single-use browser setup for the native backend."""
 
+import contextlib
 import csv
 import hmac
 import json
@@ -12,6 +13,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -69,13 +71,20 @@ def validate(data):
             raise SetupError("The new PostgreSQL administrator password must contain 12-72 printable ASCII characters, including a non-space character.")
 
 
-def command(args, *, env=None, input_text=None, cwd=None):
+def command(args, *, env=None, input_text=None, cwd=None, timeout=600, capture_to_file=False):
     try:
-        result = subprocess.run(args, input=input_text,
-                                stdin=subprocess.DEVNULL if input_text is None else None,
-                                text=True, env=env, cwd=cwd,
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=600)
+        with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") if capture_to_file else contextlib.nullcontext() as output:
+            result = subprocess.run(args, input=input_text,
+                                    stdin=subprocess.DEVNULL if input_text is None else None,
+                                    text=True, env=env, cwd=cwd,
+                                    stdout=output if capture_to_file else subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, timeout=timeout)
+            if capture_to_file:
+                output.seek(0)
+                result.stdout = output.read()
     except (OSError, subprocess.TimeoutExpired) as exc:
+        if isinstance(exc, subprocess.TimeoutExpired) and capture_to_file:
+            raise SetupError("PostgreSQL package installation timed out. Package processes may still be running; inspect them and the package state before retrying.") from exc
         raise SetupError("Could not run {}: {}".format(args[0], exc)) from exc
     if result.returncode:
         if args[0] == "mvn":
@@ -111,7 +120,7 @@ def private_directory(path):
         path.chmod(0o700)
 
 
-def install_postgresql(password):
+def install_postgresql(password, progress=lambda message: None):
     if not sys.platform.startswith("linux") or not all(
             shutil.which(tool) for tool in ("sudo", "apt-get", "apt-cache", "dpkg-query")):
         raise SetupError("Automatic PostgreSQL installation is supported only on Ubuntu/Debian with apt and sudo.")
@@ -136,7 +145,11 @@ def install_postgresql(password):
     if not re.search(r"^\s*Candidate:\s+(?!\(none\))\S+", policy, re.MULTILINE):
         raise SetupError("PostgreSQL 16 is not available in the configured apt repositories. Install it separately, then use the existing-server option.")
     try:
-        command(["sudo", "-n", "apt-get", "-y", "install", "postgresql-16", "postgresql-client-16"])
+        progress("Installing PostgreSQL packages. This can take up to 30 minutes; keep this page open.")
+        # A newly started service can inherit output descriptors and keep a pipe or dpkg PTY open.
+        command(["sudo", "-n", "apt-get", "-o", "Dpkg::Use-Pty=0", "-y", "install",
+                 "postgresql-16", "postgresql-client-16"], timeout=1800, capture_to_file=True)
+        progress("Checking the PostgreSQL cluster and configuring its administrator.")
         clusters = command(["pg_lsclusters", "--no-header"])
         rows = [line.split() for line in clusters.splitlines() if line.strip()]
         if len(rows) != 1 or len(rows[0]) < 4 or rows[0][:3] != ["16", "main", "5432"]:
@@ -154,7 +167,8 @@ def install_postgresql(password):
         raise SetupError("PostgreSQL installation or password setup failed. Packages or a cluster may now exist; inspect them and use the existing-server option after fixing the problem. {}".format(exc)) from exc
 
 
-def install(data):
+def install(data, progress=lambda message: None):
+    progress("Checking installation prerequisites.")
     validate(data)
     for tool in ("java", "mvn"):
         if not shutil.which(tool):
@@ -175,10 +189,11 @@ def install(data):
         raise SetupError("Port 8080 is unavailable. Stop the existing service before installing.") from exc
 
     if data["postgres_install"] == "install":
-        install_postgresql(data["pg_password"])
+        install_postgresql(data["pg_password"], progress)
     if not shutil.which("psql"):
         raise SetupError("Missing required tool: psql")
 
+    progress("Checking the PostgreSQL connection and database names.")
     env = os.environ.copy()
     if data["pg_password"]:
         env["PGPASSWORD"] = data["pg_password"]
@@ -200,11 +215,13 @@ def install(data):
     if existing:
         raise SetupError("The database role or database already exists. Choose new names; existing resources are never modified.")
 
+    progress("Building the backend with Maven.")
     command(["mvn", "-B", "-q", "-f", str(ROOT / "backend" / "pom.xml"),
              "-DskipTests", "package"], cwd=str(ROOT))
     jar = ROOT / "backend" / "target" / "parcel-tracker-backend-1.0.0.jar"
     if not jar.is_file():
         raise SetupError("The backend build did not produce the expected jar.")
+    progress("Creating the installation and database.")
     private_directory(directory)
     db_password = secrets.token_urlsafe(32)
     config = {
@@ -230,6 +247,7 @@ def install(data):
     except SetupError as exc:
         raise SetupError("{} Configuration remains in {}. A role or database may have been created; inspect PostgreSQL before retrying with new names.".format(exc, directory)) from exc
 
+    progress("Starting the backend and waiting for it to become ready.")
     log_path = directory / "backend.log"
     fd = os.open(str(log_path), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
     with os.fdopen(fd, "a", encoding="utf-8") as log:
@@ -273,7 +291,17 @@ def make_handler(token):
             return self.headers.get("Host") == "127.0.0.1:{}".format(self.server.server_port)
 
         def do_GET(self):
-            if not self.allowed_host() or self.path != "/":
+            if not self.allowed_host():
+                self.send_error(404)
+                return
+            if self.path == "/status":
+                supplied_token = self.headers.get("X-Setup-Token", "")
+                if not supplied_token.isascii() or not hmac.compare_digest(supplied_token, token):
+                    self.send_error(403)
+                    return
+                self.reply(200, self.server.progress)
+                return
+            if self.path != "/":
                 self.send_error(404)
                 return
             page = (INSTALLER / "setup.html").read_text(encoding="utf-8")
@@ -310,9 +338,10 @@ def make_handler(token):
                 self.reply(409, "An installation is already in progress.")
                 return
             try:
+                self.server.progress = "Checking installation prerequisites."
                 try:
                     data = json.loads(self.rfile.read(length))
-                    message = install(data)
+                    message = install(data, lambda message: setattr(self.server, "progress", message))
                 except (ValueError, UnicodeDecodeError, SetupError, OSError) as exc:
                     self.reply(400, str(exc))
                     return
@@ -339,6 +368,7 @@ def main():
     token = secrets.token_urlsafe(32)
     with ThreadingHTTPServer(("127.0.0.1", 0), make_handler(token)) as server:
         server.install_lock = threading.Lock()
+        server.progress = "Waiting for installation."
         url = "http://127.0.0.1:{}/#{}".format(server.server_port, token)
         print("Open this private setup link in a browser: {}".format(url), flush=True)
         print("Press Ctrl+C to cancel. Do not share the link.", flush=True)
