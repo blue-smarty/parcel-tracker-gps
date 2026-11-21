@@ -4,6 +4,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
+test('admin navigation links to all settings panels and related workspaces', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin.html'), 'utf8');
+  const navigation = html.match(/<nav aria-label="Administration navigation">([\s\S]*?)<\/nav>/)[1];
+  for (const id of ['service-levels', 'pricing', 'operations', 'courier-capacity', 'email',
+    'dispatchers', 'notifications', 'configuration-history']) {
+    assert.ok(navigation.includes(`href="#${id}"`));
+    assert.ok(html.includes(`id="${id}"`));
+  }
+  for (const url of ['/admin-branding.html', '/admin-credit.html', '/delivery-coverage.html',
+    '/address-book.html', '/dispatch.html']) {
+    assert.ok(navigation.includes(`href="${url}"`));
+  }
+});
+
 async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' }, historyChanges = [] } = {}) {
   const elements = new Map();
   function byId(id) {

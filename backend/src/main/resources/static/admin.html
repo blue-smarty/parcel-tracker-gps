@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ParcelPilot — Administration</title>
   <link rel="stylesheet" href="/api/branding/stylesheet">
+  <link rel="stylesheet" href="/admin-layout.css">
   <script src="/common.js" defer></script>
   <script src="/website-branding.js" defer></script>
   <script src="/admin-settings.js" defer></script>
   <script src="/admin-push.js" defer></script>
 </head>
-<body>
-  <div class="shell">
+<body class="admin-page">
+  <div class="shell admin-shell">
     <header class="topbar">
       <a class="brand" href="/" aria-label="ParcelPilot home"><span class="brand-mark">P</span><span>parcel<span class="brand-light">pilot</span></span></a>
       <div class="topbar-right">
@@ -22,18 +23,33 @@
     </header>
     <main>
       <section id="settingsView" class="view" hidden>
-        <div class="section-heading">
-          <div><p class="eyebrow">ADMINISTRATION</p><h2>Admin settings</h2></div>
-          <div class="dispatch-actions">
-            <a class="button button-secondary" href="/admin-branding.html">Website branding</a>
-            <a class="button button-secondary" href="/admin-credit.html">Credit applications</a>
-            <a class="button button-primary" href="/delivery-coverage.html">Delivery coverage</a>
-            <a class="button button-secondary" href="/address-book.html">Customer address books</a>
-            <a class="button button-secondary" href="/dispatch.html">Open dispatch workspace</a>
-          </div>
-        </div>
-        <div class="settings-grid">
-          <section class="panel settings-panel" aria-labelledby="serviceLevelsTitle">
+        <div class="admin-layout">
+          <aside class="admin-sidebar">
+            <nav aria-label="Administration navigation">
+              <p class="admin-nav-heading">Settings</p>
+              <a href="#service-levels">Service levels</a>
+              <a href="#pricing">Pricing</a>
+              <a href="#operations">Operational limits</a>
+              <a href="#courier-capacity">Courier capacity</a>
+              <a href="#email">Email settings</a>
+              <a href="#dispatchers">Dispatcher accounts</a>
+              <a href="#notifications">Notifications</a>
+              <a href="#configuration-history">Configuration history</a>
+              <p class="admin-nav-heading">Workspaces</p>
+              <a href="/admin-branding.html">Website branding</a>
+              <a href="/admin-credit.html">Credit applications</a>
+              <a href="/delivery-coverage.html">Delivery coverage</a>
+              <a href="/address-book.html">Customer address books</a>
+              <a href="/dispatch.html">Dispatch workspace <span aria-hidden="true">↗</span></a>
+            </nav>
+          </aside>
+          <div class="admin-content">
+            <div class="admin-page-heading">
+              <div><p class="eyebrow">ADMINISTRATION</p><h1>Admin settings</h1>
+                <p>Manage your delivery rules, team and business settings in one place.</p></div>
+            </div>
+            <div class="settings-grid admin-settings-grid">
+          <section id="service-levels" class="panel settings-panel" aria-labelledby="serviceLevelsTitle">
             <div class="panel-heading"><div><p class="eyebrow">ON-DEMAND DELIVERY</p><h3 id="serviceLevelsTitle">Service levels</h3></div></div>
             <p class="field-note">Targets apply to new bookings only and are not guarantees. Direct has highest dispatch priority but does not reserve a courier or enforce a direct route.</p>
             <form id="serviceLevelsForm" class="settings-form">
@@ -50,7 +66,7 @@
               <p id="serviceLevelsMessage" class="form-message" role="status" aria-live="polite"></p>
             </form>
           </section>
-          <section class="panel settings-panel" aria-labelledby="pricingTitle">
+          <section id="pricing" class="panel settings-panel" aria-labelledby="pricingTitle">
             <div class="panel-heading"><div><p class="eyebrow">DELIVERY PRICING</p><h3 id="pricingTitle">Estimate rates</h3></div></div>
             <p class="field-note">These rates determine estimates for new parcels. Existing parcel estimates are not changed.</p>
             <form id="pricingForm" class="settings-form">
@@ -86,7 +102,7 @@
               <p id="pricingMessage" class="form-message" role="status" aria-live="polite"></p>
             </form>
           </section>
-          <section class="panel settings-panel" aria-labelledby="smtpTitle">
+          <section id="email" class="panel settings-panel" aria-labelledby="smtpTitle">
             <div class="panel-heading"><div><p class="eyebrow">CUSTOMER EMAIL</p><h3 id="smtpTitle">SMTP settings</h3></div></div>
             <p class="field-note">Used for customer password reset email. Enable password recovery and set its public URL in deployment configuration. Set the SMTP password as the SPRING_MAIL_PASSWORD deployment secret; it is never stored here. Saving overrides deployment mail host settings.</p>
             <form id="smtpForm" class="settings-form">
@@ -104,7 +120,7 @@
               <p id="smtpMessage" class="form-message" role="status" aria-live="polite"></p>
             </form>
           </section>
-          <section class="panel settings-panel" aria-labelledby="operationsTitle">
+          <section id="operations" class="panel settings-panel" aria-labelledby="operationsTitle">
             <div class="panel-heading"><div><p class="eyebrow">BOOKING RULES</p><h3 id="operationsTitle">Operational limits</h3></div></div>
             <p class="field-note">Limits are checked by the server for customer and admin bookings. Scheduled booking windows use the selected timezone.</p>
             <form id="operationalForm" class="settings-form">
@@ -127,19 +143,19 @@
               <p id="operationalMessage" class="form-message" role="status" aria-live="polite"></p>
             </form>
           </section>
-          <section class="panel settings-panel" aria-labelledby="courierCapacityTitle">
+          <section id="courier-capacity" class="panel settings-panel" aria-labelledby="courierCapacityTitle">
             <div class="panel-heading"><div><p class="eyebrow">FLEET</p><h3 id="courierCapacityTitle">Courier vehicles and capacity</h3></div></div>
             <p class="field-note">Configured limits are enforced when deliveries are assigned. Existing couriers without a profile remain uncapped until configured.</p>
             <div id="courierCapacityList" class="support-list"></div>
             <p id="courierCapacityMessage" class="form-message" role="status" aria-live="polite"></p>
           </section>
-          <section class="panel settings-panel" aria-labelledby="configurationHistoryTitle">
+          <section id="configuration-history" class="panel settings-panel" aria-labelledby="configurationHistoryTitle">
             <div class="panel-heading"><div><p class="eyebrow">CHANGE CONTROL</p><h3 id="configurationHistoryTitle">Configuration history</h3></div></div>
             <p class="field-note">Review the last 100 pricing, email, service-level, service-area, branding, operational-limit, and fleet-capacity changes. Restoring a change creates a new history entry.</p>
             <div id="configurationHistoryList" class="support-list"></div>
             <p id="configurationHistoryMessage" class="form-message" role="status" aria-live="polite"></p>
           </section>
-          <section class="panel settings-panel" aria-labelledby="dispatchersTitle">
+          <section id="dispatchers" class="panel settings-panel" aria-labelledby="dispatchersTitle">
             <div class="panel-heading"><div><p class="eyebrow">ACCESS</p><h3 id="dispatchersTitle">Dispatcher accounts</h3></div></div>
             <p class="field-note">Dispatchers can manage deliveries and assignments, but cannot change admin settings.</p>
             <form id="dispatcherForm" class="settings-form">
@@ -150,7 +166,7 @@
             <div id="dispatcherList" class="support-list"></div>
             <p id="dispatcherMessage" class="form-message" role="status" aria-live="polite"></p>
           </section>
-          <section class="panel settings-panel" aria-labelledby="courierMessageTitle">
+          <section id="notifications" class="panel settings-panel" aria-labelledby="courierMessageTitle">
             <div class="panel-heading"><div><p class="eyebrow">COURIER COMMUNICATION</p><h3 id="courierMessageTitle">Send a notification</h3></div></div>
             <p class="field-note">Messages may appear on a lock screen. Avoid sensitive information.</p>
             <form id="courierMessageForm" class="settings-form">
@@ -160,6 +176,8 @@
             </form>
             <p id="courierMessageStatus" class="form-message" role="status"></p>
           </section>
+            </div>
+          </div>
         </div>
       </section>
     </main>
