@@ -69,6 +69,14 @@ class DispatcherAccessTest {
     }
 
     @Test
+    void adminPageAssetsArePublicButSettingsRemainAdminOnly() throws Exception {
+        mvc.perform(get("/admin.html")).andExpect(status().isOk());
+        mvc.perform(get("/admin-layout.css")).andExpect(status().isOk());
+        mvc.perform(get("/admin-navigation.js")).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/pricing")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void adminCreatesAndRevokesDispatcherButOtherRolesCannot() throws Exception {
         String body = "{\"username\":\"Dispatch-1\",\"password\":\"a-strong-password\"}";
         mvc.perform(post("/api/admin/dispatchers").with(user("admin").roles("ADMIN")).with(csrf())
