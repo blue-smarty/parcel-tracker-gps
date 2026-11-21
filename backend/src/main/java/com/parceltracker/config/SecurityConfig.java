@@ -61,6 +61,7 @@ public class SecurityConfig {
                                 "/book.html",
                                 "/styles.css", "/common.js", "/auth.js", "/password-reset.js", "/quote.js",
                                 "/customer.js", "/admin.js", "/admin-adhoc.js", "/admin-settings.js",
+                                "/admin-layout.css", "/admin-navigation.js",
                                 "/admin-coverage.js", "/admin-push.js", "/book.js", "/address-book.html", "/address-book.js",
                                 "/admin-branding.html", "/admin-branding.js", "/website-branding.js",
                                 "/admin-credit.html", "/admin-credit.js", "/credit-application.html", "/credit-application.js")
