@@ -47,6 +47,7 @@
         <div class="dispatch-grid">
           <div class="panel dispatch-list-panel">
             <div class="panel-heading dispatch-heading"><div><p class="eyebrow">PARCEL QUEUE</p><h3>Delivery operations</h3></div><select id="dispatchFilter" aria-label="Filter parcels"><option value="ACTIVE">Active parcels</option><option value="ALL">All parcels</option><option value="UNASSIGNED">Needs assignment</option></select></div>
+            <p id="dispatchCourierFilter" class="field-note" hidden>Showing courier: <strong id="dispatchCourierName"></strong> <button id="clearCourierFilter" class="button button-quiet" type="button">Show all couriers</button></p>
             <div class="table-wrap">
               <table><thead><tr><th>TRACKING</th><th>RECIPIENT</th><th>STATUS</th><th>COURIER</th><th></th></tr></thead><tbody id="dispatchRows"><tr><td colspan="5" class="empty-state">Loading parcels…</td></tr></tbody></table>
             </div>

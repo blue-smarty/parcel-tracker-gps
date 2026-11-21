@@ -2,6 +2,7 @@
   const { keys, terminalStatuses, byId, money, text, statusText, escapeHtml, readArray, saveArray,
     api, setMessage, detail, drawMap } = PP;
   const state = { parcels: [], selectedDispatchId: new URLSearchParams(window.location.search).get('parcel') };
+  let courierFilter = new URLSearchParams(window.location.search).get('courier');
 
   function isActive(parcel) {
     return !terminalStatuses.has(String(parcel.status || '').toUpperCase());
@@ -19,8 +20,10 @@
   async function refreshDispatch() {
     try {
       state.parcels = await api('/api/parcels');
-      if (!state.parcels.some(parcel => parcel.id === state.selectedDispatchId)) {
-        state.selectedDispatchId = state.parcels.find(isActive)?.id || state.parcels[0]?.id || null;
+      if (!state.parcels.some(parcel => parcel.id === state.selectedDispatchId
+          && (!courierFilter || parcel.courierId === courierFilter))) {
+        const candidates = state.parcels.filter(parcel => !courierFilter || parcel.courierId === courierFilter);
+        state.selectedDispatchId = candidates.find(isActive)?.id || candidates[0]?.id || null;
       }
       renderDispatch();
       setMessage('dispatchMessage', `Loaded ${state.parcels.length} parcels.`);
@@ -46,7 +49,7 @@
       parcel.status === 'CREATED' && !parcel.courierId).length;
     byId('valueMetric').textContent = money(deliveredValue);
     byId('escalatedMetric').textContent = state.parcels.filter(parcel => parcel.escalatedAt).length;
-    const rows = filteredParcels();
+    const rows = filteredParcels().filter(parcel => !courierFilter || parcel.courierId === courierFilter);
     const tbody = byId('dispatchRows');
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No parcels match this filter.</td></tr>';
@@ -65,7 +68,8 @@
     const selected = state.parcels.find(parcel => parcel.id === state.selectedDispatchId);
     byId('assignButton').disabled = !selected;
     renderSelectedParcel(selected);
-    drawMap(byId('dispatchMap'), active, state.selectedDispatchId, []);
+    drawMap(byId('dispatchMap'), active.filter(parcel => !courierFilter || parcel.courierId === courierFilter),
+      state.selectedDispatchId, []);
     renderSupportTickets();
   }
 
@@ -205,6 +209,15 @@
     byId('signOutButton').addEventListener('click', PP.signOut);
     byId('refreshDispatchButton').addEventListener('click', refreshDispatch);
     byId('dispatchFilter').addEventListener('change', renderDispatch);
+    if (courierFilter) {
+      byId('dispatchCourierFilter').hidden = false;
+      byId('dispatchCourierName').textContent = courierFilter;
+    }
+    byId('clearCourierFilter').addEventListener('click', () => {
+      courierFilter = null;
+      byId('dispatchCourierFilter').hidden = true;
+      renderDispatch();
+    });
     byId('assignButton').addEventListener('click', assignSelected);
     byId('autoDispatchButton').addEventListener('click', autoDispatch);
     const savedCourierIds = localStorage.getItem(keys.couriers);
