@@ -147,8 +147,9 @@
           </section>
           <section id="courier-capacity" data-admin-group="fleet-access" class="panel settings-panel" aria-labelledby="courierCapacityTitle" hidden>
             <div class="panel-heading"><div><p class="eyebrow">FLEET</p><h3 id="courierCapacityTitle">Courier vehicles and capacity</h3></div></div>
-            <p class="field-note">Configured limits are enforced when deliveries are assigned. Existing couriers without a profile remain uncapped until configured.</p>
-            <div id="courierCapacityList" class="support-list"></div>
+            <p class="field-note">Configured limits are enforced when deliveries are assigned. Existing couriers without a profile remain uncapped until configured. Availability is not tracked; parcel GPS may not be the courier's current location.</p>
+            <button id="refreshCourierCapacityButton" class="button button-quiet courier-refresh" type="button">Refresh courier cards</button>
+            <div id="courierCapacityList" class="courier-card-grid"></div>
             <p id="courierCapacityMessage" class="form-message" role="status" aria-live="polite"></p>
           </section>
           <section id="configuration-history" data-admin-group="system-comms" class="panel settings-panel" aria-labelledby="configurationHistoryTitle" hidden>

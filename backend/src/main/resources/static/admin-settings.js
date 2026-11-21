@@ -1,5 +1,5 @@
 (() => {
-  const { byId, api, money, setMessage } = PP;
+  const { byId, api, money, setMessage, terminalStatuses } = PP;
   const fields = ['baseFee', 'perKmRate', 'perKgRate', 'sameDayMultiplier'];
   let radiusBands = [];
 
@@ -313,20 +313,20 @@
     }
   }
 
-  async function saveCourierCapacity(courier, row) {
-    const save = row.querySelector('button');
+  async function saveCourierCapacity(courier, vehicle, parcels, weight, updateSummary, save) {
     save.disabled = true;
     try {
-      await api(`/api/admin/courier-capacity/${encodeURIComponent(courier.courierId)}`, {
+      const saved = await api(`/api/admin/courier-capacity/${encodeURIComponent(courier.courierId)}`, {
         method: 'PUT',
         body: JSON.stringify({
-          vehicleType: row.querySelector('select').value,
-          maxActiveParcels: Number(row.querySelector('[name="maxActiveParcels"]').value),
-          maxPayloadWeightKg: Number(row.querySelector('[name="maxPayloadWeightKg"]').value)
+          vehicleType: vehicle.value,
+          maxActiveParcels: Number(parcels.value),
+          maxPayloadWeightKg: Number(weight.value)
         })
       });
+      Object.assign(courier, saved);
+      updateSummary();
       setMessage('courierCapacityMessage', `Vehicle and capacity saved for ${courier.courierId}.`, 'success');
-      await loadCourierCapacity();
       await loadConfigurationHistory();
     } catch (error) {
       setMessage('courierCapacityMessage', `Could not save courier capacity: ${error.message}`, 'error');
@@ -342,22 +342,63 @@
       list.replaceChildren();
       if (!couriers.length) {
         list.textContent = 'No courier accounts yet.';
+        setMessage('courierCapacityMessage', '');
         return;
       }
+      let allParcels = null;
+      let workloadError = '';
+      try {
+        allParcels = await api('/api/parcels');
+      } catch (error) {
+        workloadError = `Could not load courier workloads: ${error.message}`;
+      }
+      const loadedAt = new Date();
       couriers.forEach(courier => {
-        const row = document.createElement('div');
-        row.className = 'support-item';
+        const row = document.createElement('article');
+        row.className = 'courier-card';
         const name = document.createElement('strong');
         name.textContent = courier.courierId;
+        const summary = document.createElement('p');
+        summary.className = 'courier-card-summary';
+        const deliveries = allParcels?.filter(parcel => parcel.courierId === courier.courierId
+          && !terminalStatuses.has(String(parcel.status || '').toUpperCase()));
+        function updateSummary() {
+          if (!deliveries) {
+            summary.textContent = 'Workload unavailable. Availability is not tracked.';
+            return;
+          }
+          const knownWeights = deliveries.filter(parcel => typeof parcel.weightKg === 'number' && Number.isFinite(parcel.weightKg));
+          const weightTotal = knownWeights.reduce((sum, parcel) => sum + parcel.weightKg, 0);
+          const weightText = knownWeights.length === deliveries.length ? `${Number(weightTotal.toFixed(2))} kg` : 'Unknown (missing weights)';
+          const overdue = deliveries.filter(parcel => parcel.targetDeadline && Date.parse(parcel.targetDeadline) < Date.now()).length;
+          const locationTimes = deliveries.map(parcel => Date.parse(parcel.currentLocation?.timestamp)).filter(Number.isFinite);
+          const latest = locationTimes.length ? new Date(Math.max(...locationTimes)).toLocaleString() : 'No timestamp available';
+          summary.textContent = `Active deliveries: ${deliveries.length} / ${courier.maxActiveParcels ?? 'uncapped'} · `
+            + `Workload: ${weightText} / ${courier.maxPayloadWeightKg == null ? 'uncapped' : `${courier.maxPayloadWeightKg} kg`} · `
+            + `Overdue targets: ${overdue}. Latest assigned parcel GPS: ${latest}. Availability not tracked.`;
+        }
+        updateSummary();
+        const form = document.createElement('form');
+        form.className = 'courier-card-form';
+        function field(labelText, control) {
+          const label = document.createElement('label');
+          label.textContent = labelText;
+          label.append(control);
+          return label;
+        }
         const vehicle = document.createElement('select');
-        vehicle.setAttribute('aria-label', `Vehicle type for ${courier.courierId}`);
+        vehicle.required = true;
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select vehicle';
+        vehicle.append(placeholder);
         [['MOTORCYCLE', 'Motorcycle'], ['CAR', 'Car'], ['VAN', 'Van'], ['TRUCK', 'Truck']].forEach(([value, label]) => {
           const option = document.createElement('option');
           option.value = value;
           option.textContent = label;
           vehicle.append(option);
         });
-        vehicle.value = courier.vehicleType || 'MOTORCYCLE';
+        vehicle.value = courier.vehicleType || '';
         const parcels = document.createElement('input');
         parcels.type = 'number';
         parcels.name = 'maxActiveParcels';
@@ -376,14 +417,24 @@
         weight.placeholder = 'Payload limit (kg)';
         weight.value = courier.maxPayloadWeightKg ?? '';
         const save = document.createElement('button');
-        save.type = 'button';
+        save.type = 'submit';
         save.className = 'button button-quiet';
         save.textContent = 'Save capacity';
-        save.addEventListener('click', () => saveCourierCapacity(courier, row));
-        row.append(name, vehicle, parcels, weight, save);
+        form.addEventListener('submit', event => {
+          event.preventDefault();
+          saveCourierCapacity(courier, vehicle, parcels, weight, updateSummary, save);
+        });
+        form.append(field('Vehicle type', vehicle), field('Active parcel limit', parcels),
+          field('Payload limit (kg)', weight), save);
+        const dispatch = document.createElement('a');
+        dispatch.className = 'button button-quiet courier-card-link';
+        dispatch.href = `/dispatch.html?courier=${encodeURIComponent(courier.courierId)}`;
+        dispatch.textContent = 'View deliveries';
+        row.append(name, summary, form, dispatch);
         list.append(row);
       });
-      setMessage('courierCapacityMessage', '');
+      setMessage('courierCapacityMessage', workloadError || `Workload snapshot loaded ${loadedAt.toLocaleString()}.`,
+        workloadError ? 'error' : '');
     } catch (error) {
       setMessage('courierCapacityMessage', `Could not load courier capacities: ${error.message}`, 'error');
     }
@@ -504,6 +555,9 @@
     byId('smtpForm').addEventListener('submit', saveSmtp);
     byId('reloadSmtpButton').addEventListener('click', loadSmtp);
     byId('clearSmtpButton').addEventListener('click', clearSmtp);
+    byId('refreshCourierCapacityButton').addEventListener('click', () => {
+      if (window.confirm('Refresh courier cards? Unsaved capacity edits will be discarded.')) loadCourierCapacity();
+    });
     byId('weightMode').addEventListener('change', renderPreview);
     byId('cubicDivisor').addEventListener('input', renderPreview);
     fields.forEach(field => byId(field).addEventListener('input', renderPreview));

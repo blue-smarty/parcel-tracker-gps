@@ -63,6 +63,40 @@ test('dispatchers see the dispatch workspace without the admin link', async () =
   assert.equal(byId('adminSettingsLink').hidden, true);
 });
 
+test('courier link filters the dispatch queue and can be cleared', async () => {
+  const elements = new Map();
+  const byId = id => {
+    if (!elements.has(id)) elements.set(id, {
+      value: 'ACTIVE', textContent: '', innerHTML: '', hidden: true, listeners: {},
+      classList: { add() {} }, addEventListener(event, callback) { this.listeners[event] = callback; },
+      querySelectorAll() { return []; }
+    });
+    return elements.get(id);
+  };
+  const parcels = [
+    { id: 'one', courierId: 'driver/1', status: 'CREATED', trackingNumber: 'ONE', recipient: 'A' },
+    { id: 'two', courierId: 'driver-2', status: 'CREATED', trackingNumber: 'TWO', recipient: 'B' }
+  ];
+  const PP = {
+    keys: { couriers: 'couriers', tickets: 'tickets' }, terminalStatuses: new Set(),
+    byId, money: String, statusText: String, escapeHtml: String, serviceLevelName: String,
+    readArray: () => [], saveArray() {}, setMessage() {}, detail: () => '', drawMap() {}, signOut() {},
+    requireRole: async () => ({ name: 'Admin', role: 'ADMIN' }),
+    api: async route => route === '/api/parcels' ? parcels : {}
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin.js'), 'utf8'), {
+    PP, URLSearchParams, window: { location: { search: '?courier=driver%2F1' }, setInterval() {} },
+    localStorage: { getItem() { return null; } }
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(byId('dispatchCourierName').textContent, 'driver/1');
+  assert.match(byId('dispatchRows').innerHTML, /ONE/);
+  assert.doesNotMatch(byId('dispatchRows').innerHTML, /TWO/);
+  byId('clearCourierFilter').listeners.click();
+  assert.equal(byId('dispatchCourierFilter').hidden, true);
+  assert.match(byId('dispatchRows').innerHTML, /TWO/);
+});
+
 test('auto-dispatch processes direct before express and general', async () => {
   const elements = new Map();
   const byId = id => {

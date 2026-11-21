@@ -56,7 +56,8 @@ test('switches sidebar groups and supports links to individual settings without 
   assert.deepEqual(panels.filter(panel => !panel.hidden).map(panel => panel.id), ['service-levels', 'pricing']);
 });
 
-async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' }, historyChanges = [] } = {}) {
+async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' }, historyChanges = [],
+  couriers = [], parcels = [], failWorkload = false } = {}) {
   const elements = new Map();
   function byId(id) {
     if (!elements.has(id)) elements.set(id, {
@@ -74,6 +75,7 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
   const messages = {};
   const PP = {
     byId, money: value => `$${Number(value).toFixed(2)}`,
+    terminalStatuses: new Set(['DELIVERED', 'FAILED', 'RETURNED', 'CANCELLED']),
     chargeableWeight(pricing, items) {
       return items.reduce((sum, item) => {
         const cubic = item.length * item.width * item.height / pricing.cubicDivisor;
@@ -117,7 +119,12 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
         deliveryWindows: ['08:00-10:00', '10:00-12:00'],
         staleAssignmentEnabled: true, staleAssignmentMinutes: 120, unassignStaleAssignments: false
       };
-      if (route === '/api/admin/courier-capacity') return [];
+      if (route === '/api/admin/courier-capacity') return couriers;
+      if (route.startsWith('/api/admin/courier-capacity/') && options?.method === 'PUT') return JSON.parse(options.body);
+      if (route === '/api/parcels') {
+        if (failWorkload) throw new Error('Unavailable');
+        return parcels;
+      }
       if (route === '/api/admin/configuration-history') return historyChanges;
       if (route.startsWith('/api/admin/configuration-history/') && options?.method === 'POST') return {};
       if (route === '/api/admin/dispatchers') return [];
@@ -136,6 +143,39 @@ async function setup({ failLoad = false, failSave = false, user = { name: 'Admin
   await new Promise(resolve => setImmediate(resolve));
   return { byId, requests, messages };
 }
+
+test('courier cards show active workload and save capacity without resetting other cards', async () => {
+  const { byId, requests } = await setup({
+    couriers: [{ courierId: 'driver/1', vehicleType: 'VAN', maxActiveParcels: 4, maxPayloadWeightKg: 20 },
+      { courierId: 'driver-2', vehicleType: null, maxActiveParcels: null, maxPayloadWeightKg: null }],
+    parcels: [{ courierId: 'driver/1', status: 'PICKED_UP', weightKg: 5, targetDeadline: '2020-01-01T00:00:00Z' },
+      { courierId: 'driver/1', status: 'DELIVERED', weightKg: 100 },
+      { courierId: 'driver/1', status: 'CREATED', weightKg: null }]
+  });
+  const [card, second] = byId('courierCapacityList').children;
+  assert.match(card.children[1].textContent, /Active deliveries: 2 \/ 4/);
+  assert.match(card.children[1].textContent, /Unknown \(missing weights\)/);
+  assert.match(card.children[1].textContent, /Overdue targets: 1/);
+  assert.match(second.children[1].textContent, /0 \/ uncapped/);
+  assert.equal(card.children[3].href, '/dispatch.html?courier=driver%2F1');
+  const form = card.children[2];
+  form.children[1].children[0].value = '8';
+  form.children[2].children[0].value = '30';
+  form.listeners.submit({ preventDefault() {} });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(JSON.parse(requests.find(request => request.options?.method === 'PUT'
+    && request.route.includes('courier-capacity')).options.body),
+  { vehicleType: 'VAN', maxActiveParcels: 8, maxPayloadWeightKg: 30 });
+  assert.match(card.children[1].textContent, /2 \/ 8/);
+  assert.equal(byId('courierCapacityList').children[1], second);
+});
+
+test('courier cards remain editable if workload loading fails', async () => {
+  const { byId, messages } = await setup({ couriers: [{ courierId: 'driver-1' }], failWorkload: true });
+  assert.match(byId('courierCapacityList').children[0].children[1].textContent, /Workload unavailable/);
+  assert.match(messages.courierCapacityMessage.message, /Could not load courier workloads/);
+  assert.equal(byId('courierCapacityList').children[0].children[2].children[0].children[0].value, '');
+});
 
 test('loads and saves configurable delivery targets and clock start', async () => {
   const { byId, requests, messages } = await setup();
