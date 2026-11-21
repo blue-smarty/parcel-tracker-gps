@@ -4,6 +4,58 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
+test('admin navigation groups all settings and retains related workspaces', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin.html'), 'utf8');
+  const navigation = html.match(/<nav aria-label="Administration navigation">([\s\S]*?)<\/nav>/)[1];
+  for (const group of ['delivery-pricing', 'booking-limits', 'fleet-access', 'system-comms']) {
+    assert.ok(navigation.includes(`href="#${group}"`));
+    assert.ok(html.includes(`data-admin-group="${group}"`));
+  }
+  for (const url of ['/admin-branding.html', '/admin-credit.html', '/delivery-coverage.html',
+    '/address-book.html', '/dispatch.html']) {
+    assert.ok(html.includes(`href="${url}"`));
+  }
+});
+
+test('switches sidebar groups and supports links to individual settings without losing edits', () => {
+  const groups = {
+    'service-levels': 'delivery-pricing', pricing: 'delivery-pricing', operations: 'booking-limits',
+    'courier-capacity': 'fleet-access', dispatchers: 'fleet-access',
+    email: 'system-comms', notifications: 'system-comms', 'configuration-history': 'system-comms'
+  };
+  const panels = Object.entries(groups).map(([id, group]) => ({
+    id, dataset: { adminGroup: group }, hidden: false, value: 'unsaved edit'
+  }));
+  const links = [...new Set(Object.values(groups))].map(group => ({
+    dataset: { adminNav: group }, attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; }
+  }));
+  const title = {}, description = {};
+  const window = { location: { hash: '' }, addEventListener(event, callback) { this[event] = callback; } };
+  const document = {
+    querySelectorAll: selector => selector === '[data-admin-group]' ? panels : links,
+    getElementById: id => id === 'adminSectionTitle' ? title : description
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../main/resources/static/admin-navigation.js'), 'utf8'),
+    { document, window });
+  assert.equal(title.textContent, 'Delivery & Pricing');
+  assert.deepEqual(panels.filter(panel => !panel.hidden).map(panel => panel.id), ['service-levels', 'pricing']);
+  window.location.hash = '#fleet-access';
+  window.hashchange();
+  assert.deepEqual(panels.filter(panel => !panel.hidden).map(panel => panel.id), ['courier-capacity', 'dispatchers']);
+  assert.equal(links.find(link => link.dataset.adminNav === 'fleet-access').attributes['aria-current'], 'page');
+  window.location.hash = '#email';
+  window.hashchange();
+  assert.equal(title.textContent, 'System & Comms');
+  assert.equal(panels.find(panel => panel.id === 'email').hidden, false);
+  assert.equal(panels.find(panel => panel.id === 'pricing').value, 'unsaved edit');
+  window.location.hash = '#constructor';
+  window.hashchange();
+  assert.equal(title.textContent, 'Delivery & Pricing');
+  assert.deepEqual(panels.filter(panel => !panel.hidden).map(panel => panel.id), ['service-levels', 'pricing']);
+});
+
 async function setup({ failLoad = false, failSave = false, user = { name: 'Admin' }, historyChanges = [] } = {}) {
   const elements = new Map();
   function byId(id) {
